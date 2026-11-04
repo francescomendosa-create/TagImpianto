@@ -1,14 +1,15 @@
 {
-  "id": "/TagImpianto/",
+  "id": "/TagImpianto/v2",
   "name": "Tag Impianto",
   "short_name": "Tag Impianto",
   "description": "Ricerca e evidenziazione tag su mappe DCS impianto",
-  "start_url": "./index.html",
+  "start_url": "./index.html?pwa=2",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0f1419",
   "theme_color": "#0f1419",
   "orientation": "any",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "icons/icon-192.png",

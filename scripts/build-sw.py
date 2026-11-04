@@ -41,7 +41,7 @@ else:
     rest = install_block
 
 lines = [
-    'const CACHE = "tag-impianto-shell-v15";',
+    'const CACHE = "tag-impianto-shell-v16";',
     "const SHELL = [",
     '  "./",',
     '  "./index.html",',
