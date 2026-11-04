@@ -10,7 +10,7 @@ idx = old.find('self.addEventListener("install"')
 rest = old[idx:] if idx >= 0 else ""
 
 lines = [
-    'const CACHE = "tag-impianto-shell-v10";',
+    'const CACHE = "tag-impianto-shell-v13";',
     "const SHELL = [",
     '  "./",',
     '  "./index.html",',
