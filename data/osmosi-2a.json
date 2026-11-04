@@ -1,0 +1,32 @@
+{
+  "id": "osmosi-2a",
+  "name": "Osmosi 2° passo A",
+  "image": "assets/maps/osmosi-2a.png",
+  "width": 916,
+  "height": 502,
+  "cropLeft": 108,
+  "area": "wwt",
+  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "tags": [
+    {
+      "id": "TK-11011A",
+      "label": "TK-11011A PERMEATO R.O.",
+      "kind": "serbatoio",
+      "x": 0.2,
+      "y": 0.45,
+      "w": 0.14,
+      "h": 0.28,
+      "source": "seed"
+    },
+    {
+      "id": "TK-11013",
+      "label": "TK-11013 PERMEATO R.O. 2° PASSO",
+      "kind": "serbatoio",
+      "x": 0.75,
+      "y": 0.4,
+      "w": 0.14,
+      "h": 0.3,
+      "source": "seed"
+    }
+  ]
+}

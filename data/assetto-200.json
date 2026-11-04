@@ -1,0 +1,52 @@
+{
+  "id": "assetto-200",
+  "name": "Assetto a 200 m³/h",
+  "image": "assets/maps/assetto-200.png",
+  "width": 916,
+  "height": 497,
+  "cropLeft": 108,
+  "area": "assetto",
+  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "tags": [
+    {
+      "id": "P11040A",
+      "label": "P11040A",
+      "kind": "pompa",
+      "x": 0.15,
+      "y": 0.35,
+      "w": 0.05,
+      "h": 0.08,
+      "source": "seed"
+    },
+    {
+      "id": "P11040B",
+      "label": "P11040B",
+      "kind": "pompa",
+      "x": 0.22,
+      "y": 0.35,
+      "w": 0.05,
+      "h": 0.08,
+      "source": "seed"
+    },
+    {
+      "id": "P11040C",
+      "label": "P11040C",
+      "kind": "pompa",
+      "x": 0.29,
+      "y": 0.35,
+      "w": 0.05,
+      "h": 0.08,
+      "source": "seed"
+    },
+    {
+      "id": "S-837",
+      "label": "S-837",
+      "kind": "serbatoio",
+      "x": 0.75,
+      "y": 0.65,
+      "w": 0.1,
+      "h": 0.18,
+      "source": "seed"
+    }
+  ]
+}

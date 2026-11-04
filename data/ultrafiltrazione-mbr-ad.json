@@ -1,0 +1,32 @@
+{
+  "id": "ultrafiltrazione-mbr-ad",
+  "name": "Ultrafiltrazione MBR A-D",
+  "image": "assets/maps/ultrafiltrazione-mbr-ad.png",
+  "width": 916,
+  "height": 496,
+  "cropLeft": 108,
+  "notes": "Coordinate di primo tiro. Affina con OCR + Riposiziona.",
+  "tags": [
+    { "id": "TK-11007", "label": "TK-11007 PERMEATO MBR", "kind": "serbatoio", "x": 0.42, "y": 0.28, "w": 0.12, "h": 0.28, "source": "seed" },
+    { "id": "TK-11008", "label": "TK-11008 IPOCLORITO DI SODIO", "kind": "serbatoio", "x": 0.78, "y": 0.22, "w": 0.08, "h": 0.18, "source": "seed" },
+    { "id": "TK-11009", "label": "TK-11009 ACIDO CITRICO", "kind": "serbatoio", "x": 0.88, "y": 0.22, "w": 0.08, "h": 0.18, "source": "seed" },
+    { "id": "FIL-11007A", "label": "FIL-11007A", "kind": "apparecchio", "x": 0.22, "y": 0.62, "w": 0.07, "h": 0.12, "source": "seed" },
+    { "id": "FIL-11007B", "label": "FIL-11007B", "kind": "apparecchio", "x": 0.32, "y": 0.62, "w": 0.07, "h": 0.12, "source": "seed" },
+    { "id": "FIL-11007C", "label": "FIL-11007C", "kind": "apparecchio", "x": 0.42, "y": 0.62, "w": 0.07, "h": 0.12, "source": "seed" },
+    { "id": "FIL-11007D", "label": "FIL-11007D", "kind": "apparecchio", "x": 0.52, "y": 0.62, "w": 0.07, "h": 0.12, "source": "seed" },
+
+    { "id": "P11012A", "label": "P11012A", "kind": "pompa", "x": 0.12, "y": 0.22, "w": 0.035, "h": 0.06, "source": "seed" },
+    { "id": "P11012B", "label": "P11012B", "kind": "pompa", "x": 0.16, "y": 0.22, "w": 0.035, "h": 0.06, "source": "seed" },
+    { "id": "P11012C", "label": "P11012C", "kind": "pompa", "x": 0.20, "y": 0.22, "w": 0.035, "h": 0.06, "source": "seed" },
+    { "id": "P11012D", "label": "P11012D", "kind": "pompa", "x": 0.24, "y": 0.22, "w": 0.035, "h": 0.06, "source": "seed" },
+    { "id": "P11013A", "label": "P11013A", "kind": "pompa", "x": 0.12, "y": 0.36, "w": 0.035, "h": 0.06, "source": "seed" },
+    { "id": "P11013B", "label": "P11013B", "kind": "pompa", "x": 0.16, "y": 0.36, "w": 0.035, "h": 0.06, "source": "seed" },
+    { "id": "P11013C", "label": "P11013C", "kind": "pompa", "x": 0.20, "y": 0.36, "w": 0.035, "h": 0.06, "source": "seed" },
+    { "id": "P11013D", "label": "P11013D", "kind": "pompa", "x": 0.24, "y": 0.36, "w": 0.035, "h": 0.06, "source": "seed" },
+
+    { "id": "XV11006", "label": "XV11006", "kind": "valvola", "x": 0.30, "y": 0.30, "w": 0.04, "h": 0.05, "source": "seed" },
+    { "id": "XV11007", "label": "XV11007", "kind": "valvola", "x": 0.34, "y": 0.30, "w": 0.04, "h": 0.05, "source": "seed" },
+    { "id": "XV11008", "label": "XV11008", "kind": "valvola", "x": 0.38, "y": 0.30, "w": 0.04, "h": 0.05, "source": "seed" },
+    { "id": "XV11009", "label": "XV11009", "kind": "valvola", "x": 0.42, "y": 0.30, "w": 0.04, "h": 0.05, "source": "seed" }
+  ]
+}

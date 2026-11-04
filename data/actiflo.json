@@ -1,0 +1,42 @@
+{
+  "id": "actiflo",
+  "name": "Actiflo",
+  "image": "assets/maps/actiflo.png",
+  "width": 916,
+  "height": 487,
+  "cropLeft": 108,
+  "area": "sf3",
+  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "tags": [
+    {
+      "id": "TK107",
+      "label": "TK107",
+      "kind": "serbatoio",
+      "x": 0.25,
+      "y": 0.3,
+      "w": 0.12,
+      "h": 0.28,
+      "source": "seed"
+    },
+    {
+      "id": "DEP108",
+      "label": "DEP108",
+      "kind": "apparecchio",
+      "x": 0.5,
+      "y": 0.28,
+      "w": 0.22,
+      "h": 0.32,
+      "source": "seed"
+    },
+    {
+      "id": "P108A",
+      "label": "P108A",
+      "kind": "pompa",
+      "x": 0.7,
+      "y": 0.55,
+      "w": 0.04,
+      "h": 0.07,
+      "source": "seed"
+    }
+  ]
+}

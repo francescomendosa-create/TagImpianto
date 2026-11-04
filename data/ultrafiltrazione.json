@@ -1,0 +1,42 @@
+{
+  "id": "ultrafiltrazione",
+  "name": "Ultrafiltrazione",
+  "image": "assets/maps/ultrafiltrazione.png",
+  "width": 916,
+  "height": 486,
+  "cropLeft": 108,
+  "area": "wwt",
+  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "tags": [
+    {
+      "id": "TK-11020",
+      "label": "TK-11020 LAVAGGIO CIP",
+      "kind": "serbatoio",
+      "x": 0.12,
+      "y": 0.2,
+      "w": 0.1,
+      "h": 0.22,
+      "source": "seed"
+    },
+    {
+      "id": "TK-11021",
+      "label": "TK-11021",
+      "kind": "serbatoio",
+      "x": 0.72,
+      "y": 0.28,
+      "w": 0.12,
+      "h": 0.3,
+      "source": "seed"
+    },
+    {
+      "id": "FIL-11011",
+      "label": "FIL-11011",
+      "kind": "apparecchio",
+      "x": 0.4,
+      "y": 0.3,
+      "w": 0.14,
+      "h": 0.28,
+      "source": "seed"
+    }
+  ]
+}

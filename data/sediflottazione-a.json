@@ -1,0 +1,42 @@
+{
+  "id": "sediflottazione-a",
+  "name": "Sediflottazione A",
+  "image": "assets/maps/sediflottazione-a.png",
+  "width": 916,
+  "height": 481,
+  "cropLeft": 108,
+  "area": "wwt",
+  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "tags": [
+    {
+      "id": "TK-11100A",
+      "label": "TK-11100A COAGULAZIONE",
+      "kind": "serbatoio",
+      "x": 0.3,
+      "y": 0.28,
+      "w": 0.12,
+      "h": 0.28,
+      "source": "seed"
+    },
+    {
+      "id": "A-11005A",
+      "label": "A-11005A SEDI-FLOTTATORE",
+      "kind": "apparecchio",
+      "x": 0.5,
+      "y": 0.35,
+      "w": 0.22,
+      "h": 0.28,
+      "source": "seed"
+    },
+    {
+      "id": "TK-11000",
+      "label": "TK-11000 SODA",
+      "kind": "serbatoio",
+      "x": 0.08,
+      "y": 0.25,
+      "w": 0.07,
+      "h": 0.2,
+      "source": "seed"
+    }
+  ]
+}

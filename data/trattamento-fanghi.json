@@ -1,0 +1,37 @@
+{
+  "id": "trattamento-fanghi",
+  "name": "Trattamento fanghi",
+  "image": "assets/maps/trattamento-fanghi.png",
+  "width": 1600,
+  "height": 755,
+  "cropLeft": 0,
+  "seedRev": 3,
+  "area": "wwt",
+  "notes": "Screenshot HD 1600x755 senza ritaglio. Affina con OCR + Riposiziona.",
+  "tags": [
+    { "id": "TK-11016", "label": "TK-11016", "kind": "serbatoio", "x": 0.22, "y": 0.18, "w": 0.07, "h": 0.28, "source": "seed" },
+    { "id": "TK-11017", "label": "TK-11017", "kind": "serbatoio", "x": 0.34, "y": 0.22, "w": 0.14, "h": 0.30, "source": "seed" },
+    { "id": "MX11009A", "label": "MX11009A", "kind": "mixer", "x": 0.36, "y": 0.30, "w": 0.035, "h": 0.06, "source": "seed" },
+    { "id": "MX11009B", "label": "MX11009B", "kind": "mixer", "x": 0.40, "y": 0.30, "w": 0.035, "h": 0.06, "source": "seed" },
+    { "id": "MX11009C", "label": "MX11009C", "kind": "mixer", "x": 0.44, "y": 0.30, "w": 0.035, "h": 0.06, "source": "seed" },
+    { "id": "V-1010", "label": "V-1010 OMOGENEIZZAZ. FANGHI", "kind": "apparecchio", "x": 0.52, "y": 0.28, "w": 0.16, "h": 0.32, "source": "seed" },
+    { "id": "EM10103", "label": "EM10103", "kind": "mixer", "x": 0.58, "y": 0.38, "w": 0.04, "h": 0.07, "source": "seed" },
+
+    { "id": "P11005A", "label": "P11005A", "kind": "pompa", "x": 0.14, "y": 0.48, "w": 0.035, "h": 0.06, "source": "seed" },
+    { "id": "P11005B", "label": "P11005B", "kind": "pompa", "x": 0.18, "y": 0.48, "w": 0.035, "h": 0.06, "source": "seed" },
+    { "id": "P11030A", "label": "P11030A", "kind": "pompa", "x": 0.28, "y": 0.58, "w": 0.035, "h": 0.06, "source": "seed" },
+    { "id": "P11030B", "label": "P11030B", "kind": "pompa", "x": 0.32, "y": 0.58, "w": 0.035, "h": 0.06, "source": "seed" },
+    { "id": "P10102A", "label": "P10102A", "kind": "pompa", "x": 0.48, "y": 0.62, "w": 0.035, "h": 0.06, "source": "seed" },
+    { "id": "P10102B", "label": "P10102B", "kind": "pompa", "x": 0.52, "y": 0.62, "w": 0.035, "h": 0.06, "source": "seed" },
+
+    { "id": "CENTRIFUGA", "label": "CENTRIFUGA", "kind": "apparecchio", "x": 0.12, "y": 0.62, "w": 0.10, "h": 0.14, "source": "seed" },
+
+    { "id": "110LIT05", "label": "110LIT05", "kind": "strumento", "x": 0.78, "y": 0.28, "w": 0.06, "h": 0.06, "source": "seed" },
+    { "id": "110LIT06", "label": "110LIT06", "kind": "strumento", "x": 0.88, "y": 0.28, "w": 0.06, "h": 0.06, "source": "seed" },
+    { "id": "110LIT12", "label": "110LIT12", "kind": "strumento", "x": 0.38, "y": 0.48, "w": 0.055, "h": 0.055, "source": "seed" },
+    { "id": "110FIT15", "label": "110FIT15", "kind": "strumento", "x": 0.55, "y": 0.52, "w": 0.055, "h": 0.055, "source": "seed" },
+
+    { "id": "XV11069", "label": "XV11069", "kind": "valvola", "x": 0.42, "y": 0.55, "w": 0.04, "h": 0.05, "source": "seed" },
+    { "id": "XV11034", "label": "XV11034", "kind": "valvola", "x": 0.62, "y": 0.55, "w": 0.04, "h": 0.05, "source": "seed" }
+  ]
+}

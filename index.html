@@ -16,11 +16,12 @@
   <div id="app">
     <header class="topbar">
       <div class="brand">TAG <span>IMPIANTO</span></div>
-      <select id="mapSelect" class="map-select" aria-label="Parte di impianto"></select>
+      <select id="mapSelect" class="map-select visually-hidden" aria-label="Parte di impianto" tabindex="-1"></select>
+      <div class="map-title" id="mapTitle" aria-live="polite"></div>
       <div class="top-actions">
-        <button type="button" class="btn" id="btnFit" title="Adatta">Adatta</button>
-        <button type="button" class="btn" id="btnShowAll" title="Mostra tutti i box">Tutti</button>
-        <button type="button" class="btn" id="btnAnnotate" title="Annota tag">Annota</button>
+        <button type="button" class="btn" id="btnFit" title="Adatta all’inquadratura">Adatta</button>
+        <button type="button" class="btn" id="btnOcr" title="OCR automatico + poi correggi a mano">OCR</button>
+        <button type="button" class="btn" id="btnAnnotate" title="Riposiziona il tag evidenziato">Riposiziona</button>
         <button type="button" class="btn" id="btnNotes" title="Nota sul tag">Nota</button>
         <button type="button" class="btn primary" id="btnSync" title="Sync Firestore">Sync</button>
       </div>
@@ -44,15 +45,18 @@
     <div id="suggestions" class="suggestions" role="listbox"></div>
 
     <main class="stage">
-      <div id="viewport" class="viewport">
-        <div id="world" class="world">
-          <img id="mapImage" alt="Mappa impianto" />
-          <div id="overlay" class="overlay"></div>
+      <aside id="plantNav" class="plant-nav" aria-label="Menu parti impianto"></aside>
+      <div class="stage-main">
+        <div id="viewport" class="viewport">
+          <div id="world" class="world">
+            <img id="mapImage" alt="Mappa impianto" />
+            <div id="overlay" class="overlay"></div>
+          </div>
         </div>
-      </div>
 
-      <div id="status" class="status">Caricamento…</div>
-      <div id="cloudBadge" class="status" style="left:auto;right:12px;bottom:12px;"></div>
+        <div id="status" class="status">Caricamento…</div>
+        <div id="cloudBadge" class="status cloud-badge"></div>
+      </div>
 
       <aside id="drawer" class="drawer" aria-hidden="true">
         <h2>Tag / nota</h2>

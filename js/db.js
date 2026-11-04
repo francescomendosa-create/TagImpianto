@@ -71,16 +71,132 @@ export async function initCloud() {
   }
 }
 
+function remapTagsAfterCrop(tags, cropLeft, oldW, newW) {
+  return (tags || []).map((t) => {
+    const x = Number(t.x) * oldW;
+    const w = Number(t.w) * oldW;
+    return {
+      ...t,
+      x: Math.max(0, (x - cropLeft) / newW),
+      w: Math.max(0.02, w / newW),
+    };
+  });
+}
+
+async function resolveSeedPaths() {
+  try {
+    const res = await fetch("./data/manifest.json", { cache: "no-store" });
+    if (res.ok) {
+      const man = await res.json();
+      if (Array.isArray(man.maps) && man.maps.length) return man.maps;
+    }
+  } catch (_) {
+    /* fallback sotto */
+  }
+  return [
+    "./data/sediflottatore-b.json",
+    "./data/biologico-mbbr-123.json",
+    "./data/ultrafiltrazione-mbr-ad.json",
+  ];
+}
+
+/** Carica seed mancanti e allinea immagini ritagliate (colonna menu rimossa). */
 export async function loadSeedIfEmpty() {
   const existing = await idbGetAll();
-  if (existing.length) return existing;
+  const byId = new Map(existing.map((m) => [m.id, m]));
+  const paths = await resolveSeedPaths();
 
-  const res = await fetch("./data/sediflottatore-b.json", { cache: "no-store" });
-  if (!res.ok) throw new Error("Seed mappa non trovato");
-  const map = await res.json();
-  map.updatedAt = Date.now();
-  await idbPut(map);
-  return [map];
+  for (const path of paths) {
+    try {
+      const res = await fetch(path, { cache: "no-store" });
+      if (!res.ok) continue;
+      const seed = await res.json();
+      if (!seed?.id) continue;
+      const local = byId.get(seed.id);
+
+      if (!local) {
+        seed.updatedAt = Date.now();
+        await idbPut(seed);
+        byId.set(seed.id, seed);
+        continue;
+      }
+
+      let changed = false;
+      const seedRev = Number(seed.seedRev) || 0;
+      const localRev = Number(local.seedRev) || 0;
+      if (seedRev > localRev) {
+        const locked = new Map(
+          (local.tags || [])
+            .filter((t) => t.locked || t.source === "manual")
+            .map((t) => [String(t.id).toUpperCase(), t])
+        );
+        const merged = (seed.tags || []).map((t) => {
+          const keep = locked.get(String(t.id).toUpperCase());
+          return keep ? { ...t, ...keep, id: keep.id } : { ...t };
+        });
+        for (const [key, t] of locked) {
+          if (!merged.some((x) => String(x.id).toUpperCase() === key)) merged.push(t);
+        }
+        local.image = seed.image;
+        local.width = seed.width;
+        local.height = seed.height;
+        local.cropLeft = seed.cropLeft ?? 0;
+        local.name = seed.name || local.name;
+        local.area = seed.area || local.area;
+        local.notes = seed.notes || local.notes;
+        local.seedRev = seedRev;
+        local.tags = merged;
+        local.updatedAt = Date.now();
+        await idbPut(local);
+        byId.set(seed.id, local);
+        continue;
+      }
+
+      const cropLeft = Number(seed.cropLeft) || 0;
+      if (
+        cropLeft > 0 &&
+        local.width &&
+        seed.width &&
+        local.width > seed.width &&
+        local.width - seed.width === cropLeft
+      ) {
+        local.tags = remapTagsAfterCrop(local.tags, cropLeft, local.width, seed.width);
+        local.width = seed.width;
+        local.height = seed.height;
+        local.cropLeft = cropLeft;
+        changed = true;
+      }
+
+      if (seed.image && local.image !== seed.image) {
+        local.image = seed.image;
+        changed = true;
+      }
+      if (seed.width && local.width !== seed.width && !changed) {
+        local.width = seed.width;
+        local.height = seed.height;
+        local.cropLeft = seed.cropLeft;
+        if (!(local.tags || []).length) local.tags = seed.tags || [];
+        changed = true;
+      }
+      if (seed.name && local.name !== seed.name) {
+        local.name = seed.name;
+        changed = true;
+      }
+      if (seed.area && local.area !== seed.area) {
+        local.area = seed.area;
+        changed = true;
+      }
+
+      if (changed) {
+        local.updatedAt = Date.now();
+        await idbPut(local);
+      }
+    } catch (err) {
+      console.warn("Seed mappa non caricato:", path, err);
+    }
+  }
+
+  return idbGetAll();
 }
 
 export async function listMaps() {
@@ -112,29 +228,181 @@ export async function saveMap(map, { sync = true } = {}) {
   return map;
 }
 
+/** Confronti ricerca: ignora spazi, -, _, punti e maiuscole (tk 11002 ≈ TK-11002 ≈ tk11002). */
+export function normalizeSearchKey(s) {
+  return String(s || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+}
+
+function tagSearchKeys(tag) {
+  const id = String(tag.id || "");
+  const label = String(tag.label || "");
+  const note = String(tag.note || "").trim();
+  const keys = new Set();
+  keys.add(normalizeSearchKey(id));
+  keys.add(normalizeSearchKey(label));
+  const codePart = label.split(/\s+/)[0] || "";
+  if (codePart) keys.add(normalizeSearchKey(codePart));
+  // Nota: tutta la dicitura + singole parole (≥3) per ritrovare dalla descrizione
+  if (note) {
+    keys.add(normalizeSearchKey(note));
+    for (const word of note.split(/[\s,;./\\|+]+/)) {
+      if (word.length >= 3) keys.add(normalizeSearchKey(word));
+    }
+  }
+  return [...keys].filter(Boolean);
+}
+
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const row = new Array(b.length + 1);
+  for (let j = 0; j <= b.length; j++) row[j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    let prev = i - 1;
+    row[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const tmp = row[j];
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + cost);
+      prev = tmp;
+    }
+  }
+  return row[b.length];
+}
+
+/** Punteggio 0–100 + motivo leggibile per suggerimenti “intelligenti”. */
+function scoreAgainstKey(q, key) {
+  if (!q || !key) return null;
+  if (key === q) {
+    return { score: 100, tier: "exact", reason: "Corrispondenza esatta" };
+  }
+  if (key.startsWith(q)) {
+    return {
+      score: 92 - Math.min(10, key.length - q.length),
+      tier: "exact",
+      reason: "Inizia con la sigla digitata",
+    };
+  }
+  if (q.startsWith(key) && key.length >= 4) {
+    return {
+      score: 88,
+      tier: "exact",
+      reason: "Sigla più corta, stesso inizio",
+    };
+  }
+  if (key.includes(q) && q.length >= 3) {
+    return {
+      score: 82,
+      tier: "exact",
+      reason: "Contiene la sequenza digitata",
+    };
+  }
+  if (q.includes(key) && key.length >= 4) {
+    return {
+      score: 78,
+      tier: "near",
+      reason: "Hai digitato più caratteri del necessario",
+    };
+  }
+
+  const dist = levenshtein(q, key);
+  const maxLen = Math.max(q.length, key.length);
+  const sim = 1 - dist / maxLen;
+
+  // 1–2 caratteri di differenza (trattino già ignorato in normalize)
+  if (q.length >= 4 && dist <= 2) {
+    return {
+      score: Math.round(70 - dist * 8 + sim * 15),
+      tier: "near",
+      reason:
+        dist === 1
+          ? "Sigla vicina (forse 1 carattere diverso / mancante)"
+          : "Sigla simile (piccola differenza)",
+    };
+  }
+  if (q.length >= 5 && sim >= 0.75) {
+    return {
+      score: Math.round(55 + sim * 20),
+      tier: "near",
+      reason: "Possibile corrispondenza per somiglianza",
+    };
+  }
+
+  // stesso “nucleo” numerico: TK11002 vs 11002 o P11100A vs 11100A
+  const qDigits = q.replace(/\D/g, "");
+  const kDigits = key.replace(/\D/g, "");
+  if (qDigits.length >= 4 && kDigits.includes(qDigits)) {
+    return {
+      score: 74,
+      tier: "near",
+      reason: "Stesso numero di tag, prefisso diverso o assente",
+    };
+  }
+  if (kDigits.length >= 4 && qDigits.includes(kDigits) && q.length >= 4) {
+    return {
+      score: 72,
+      tier: "near",
+      reason: "Numero interno della sigla riconosciuto",
+    };
+  }
+
+  return null;
+}
+
+function bestScoreForTag(q, keys) {
+  let best = null;
+  for (const key of keys) {
+    const s = scoreAgainstKey(q, key);
+    if (!s) continue;
+    if (!best || s.score > best.score) best = { ...s, key };
+  }
+  return best;
+}
+
+/**
+ * Ricerca intelligente: match normalizzati + proposte vicine con motivo.
+ * @returns {Promise<Array<{mapId,mapName,tag,match:{score,tier,reason}}>>}
+ */
 export async function searchAllTags(query) {
-  const q = String(query || "").trim().toUpperCase();
-  if (!q) return [];
+  const qRaw = String(query || "").trim();
+  const q = normalizeSearchKey(qRaw);
+  if (!q || q.length < 2) return [];
+
   const maps = await listMaps();
   const hits = [];
   for (const map of maps) {
     for (const tag of map.tags || []) {
-      const label = String(tag.label || tag.id || "").toUpperCase();
-      const id = String(tag.id || "").toUpperCase();
-      if (label.includes(q) || id.includes(q)) {
-        hits.push({ mapId: map.id, mapName: map.name, tag });
-      }
+      const keys = tagSearchKeys(tag);
+      const match = bestScoreForTag(q, keys);
+      if (!match || match.score < 55) continue;
+      hits.push({
+        mapId: map.id,
+        mapName: map.name,
+        tag,
+        match: {
+          score: match.score,
+          tier: match.tier,
+          reason: match.reason,
+        },
+      });
     }
   }
+
   hits.sort((a, b) => {
-    const ai = String(a.tag.id).toUpperCase();
-    const bi = String(b.tag.id).toUpperCase();
-    const aExact = ai === q || String(a.tag.label || "").toUpperCase() === q;
-    const bExact = bi === q || String(b.tag.label || "").toUpperCase() === q;
-    if (aExact !== bExact) return aExact ? -1 : 1;
-    return ai.localeCompare(bi);
+    if (b.match.score !== a.match.score) return b.match.score - a.match.score;
+    if (a.match.tier !== b.match.tier) return a.match.tier === "exact" ? -1 : 1;
+    return String(a.tag.id).localeCompare(String(b.tag.id), "it");
   });
-  return hits;
+
+  // Se ci sono match “exact”, tieni anche i near ma dopo; limita rumore
+  const exactCount = hits.filter((h) => h.match.tier === "exact").length;
+  if (exactCount >= 8) {
+    return hits.filter((h) => h.match.tier === "exact").slice(0, 40);
+  }
+  return hits.slice(0, 40);
 }
 
 async function pushMapToCloud(map) {

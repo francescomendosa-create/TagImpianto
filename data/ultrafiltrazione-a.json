@@ -1,0 +1,32 @@
+{
+  "id": "ultrafiltrazione-a",
+  "name": "Ultrafiltrazione A",
+  "image": "assets/maps/ultrafiltrazione-a.png",
+  "width": 916,
+  "height": 525,
+  "cropLeft": 108,
+  "area": "wwt",
+  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "tags": [
+    {
+      "id": "FIL-11011A",
+      "label": "FIL-11011A",
+      "kind": "apparecchio",
+      "x": 0.4,
+      "y": 0.28,
+      "w": 0.14,
+      "h": 0.28,
+      "source": "seed"
+    },
+    {
+      "id": "TK-11021",
+      "label": "TK-11021",
+      "kind": "serbatoio",
+      "x": 0.72,
+      "y": 0.3,
+      "w": 0.12,
+      "h": 0.28,
+      "source": "seed"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "id": "holdup-pgs-ovest",
+  "name": "HOLD-UP PGS Ovest",
+  "image": "assets/maps/holdup-pgs-ovest.png",
+  "width": 916,
+  "height": 480,
+  "cropLeft": 108,
+  "area": "holdup",
+  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "tags": [
+    {
+      "id": "TK8066",
+      "label": "TK8066",
+      "kind": "serbatoio",
+      "x": 0.55,
+      "y": 0.25,
+      "w": 0.12,
+      "h": 0.3,
+      "source": "seed"
+    },
+    {
+      "id": "TK8063",
+      "label": "TK8063",
+      "kind": "serbatoio",
+      "x": 0.72,
+      "y": 0.25,
+      "w": 0.12,
+      "h": 0.3,
+      "source": "seed"
+    },
+    {
+      "id": "P-13000A",
+      "label": "P-13000A",
+      "kind": "pompa",
+      "x": 0.22,
+      "y": 0.4,
+      "w": 0.05,
+      "h": 0.08,
+      "source": "seed"
+    }
+  ]
+}

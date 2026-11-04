@@ -1,0 +1,42 @@
+{
+  "id": "osmosi-1b",
+  "name": "Osmosi 1° passo B",
+  "image": "assets/maps/osmosi-1b.png",
+  "width": 916,
+  "height": 504,
+  "cropLeft": 108,
+  "area": "wwt",
+  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "tags": [
+    {
+      "id": "TK-11021",
+      "label": "TK-11021",
+      "kind": "serbatoio",
+      "x": 0.08,
+      "y": 0.25,
+      "w": 0.12,
+      "h": 0.3,
+      "source": "seed"
+    },
+    {
+      "id": "FIL-11009B",
+      "label": "FIL-11009B",
+      "kind": "apparecchio",
+      "x": 0.45,
+      "y": 0.35,
+      "w": 0.2,
+      "h": 0.22,
+      "source": "seed"
+    },
+    {
+      "id": "TK-11011B",
+      "label": "TK-11011B PERMEATO R.O.",
+      "kind": "serbatoio",
+      "x": 0.75,
+      "y": 0.5,
+      "w": 0.12,
+      "h": 0.25,
+      "source": "seed"
+    }
+  ]
+}

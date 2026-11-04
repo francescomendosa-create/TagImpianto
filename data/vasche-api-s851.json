@@ -1,0 +1,42 @@
+{
+  "id": "vasche-api-s851",
+  "name": "S-851 Vasche API",
+  "image": "assets/maps/vasche-api-s851.png",
+  "width": 916,
+  "height": 499,
+  "cropLeft": 108,
+  "area": "vasche-api",
+  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "tags": [
+    {
+      "id": "S-851",
+      "label": "S-851",
+      "kind": "serbatoio",
+      "x": 0.25,
+      "y": 0.25,
+      "w": 0.18,
+      "h": 0.4,
+      "source": "seed"
+    },
+    {
+      "id": "P-13007A",
+      "label": "P-13007A",
+      "kind": "pompa",
+      "x": 0.3,
+      "y": 0.7,
+      "w": 0.05,
+      "h": 0.08,
+      "source": "seed"
+    },
+    {
+      "id": "P-13007B",
+      "label": "P-13007B",
+      "kind": "pompa",
+      "x": 0.38,
+      "y": 0.7,
+      "w": 0.05,
+      "h": 0.08,
+      "source": "seed"
+    }
+  ]
+}

@@ -9,17 +9,21 @@ import {
   pullMapsFromCloud,
 } from "./db.js";
 import { MapViewer } from "./viewer.js";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js";
 
 const $ = (sel) => document.querySelector(sel);
 
 const els = {
   mapSelect: $("#mapSelect"),
+  mapTitle: $("#mapTitle"),
+  plantNav: $("#plantNav"),
   searchInput: $("#searchInput"),
   clearBtn: $("#clearBtn"),
   suggestions: $("#suggestions"),
   status: $("#status"),
   btnAnnotate: $("#btnAnnotate"),
-  btnShowAll: $("#btnShowAll"),
+  btnOcr: $("#btnOcr"),
   btnFit: $("#btnFit"),
   btnSync: $("#btnSync"),
   btnNotes: $("#btnNotes"),
@@ -48,24 +52,18 @@ const viewer = new MapViewer({
   overlayEl: $("#overlay"),
 });
 
-viewer.onAnnotatePlace = (x, y) => {
-  openNoteDrawer({
-    id: "",
-    label: "",
-    kind: "altro",
-    x: Math.max(0, x - 0.02),
-    y: Math.max(0, y - 0.02),
-    w: 0.04,
-    h: 0.06,
-    note: "",
-    isNew: true,
-  });
-};
+// Riposiziona: niente nuovi tag al tap — solo trascinamento del tag evidenziato
+viewer.onAnnotatePlace = null;
 
 viewer.onTagMoved = async (tagId) => {
   activeTagId = tagId;
+  const tag = currentMap?.tags?.find((t) => t.id === tagId);
+  if (tag) {
+    tag.source = "manual";
+    tag.locked = true;
+  }
   await persistCurrent();
-  toast("Posizione aggiornata");
+  toast("Posizione aggiornata (bloccata per OCR)");
 };
 
 function toast(msg) {
@@ -90,12 +88,26 @@ function fillMapSelect() {
   if (currentMap) els.mapSelect.value = currentMap.id;
 }
 
-async function selectMap(id, { keepHighlight = false } = {}) {
-  const map = await getMap(id);
-  if (!map) return;
-  currentMap = map;
+function syncPlantChrome(map) {
   fillMapSelect();
-  await viewer.loadMap(map);
+  setPlantNavActive(els.plantNav, map?.id || null);
+  if (els.mapTitle) {
+    els.mapTitle.innerHTML = map
+      ? `<strong>${escapeHtml(map.name)}</strong>`
+      : "";
+  }
+}
+
+async function selectMap(id, { keepHighlight = false, keepView = false } = {}) {
+  const map = await getMap(id);
+  if (!map) {
+    toast("Mappa non disponibile");
+    return;
+  }
+  const same = currentMap && currentMap.id === map.id;
+  currentMap = map;
+  syncPlantChrome(map);
+  await viewer.loadMap(map, { keepView: keepView || (keepHighlight && same) });
   if (!keepHighlight) {
     activeTagId = null;
     viewer.highlight(null);
@@ -109,11 +121,19 @@ async function selectMap(id, { keepHighlight = false } = {}) {
 
 async function refreshMaps() {
   maps = await listMaps();
-  fillMapSelect();
-  if (!currentMap && maps[0]) await selectMap(maps[0].id);
-  else if (currentMap) {
+  syncPlantChrome(currentMap);
+  if (!currentMap) {
+    const prefer =
+      maps.find((m) => m.id === "ultrafiltrazione-mbr-ad") ||
+      maps.find((m) => m.id === "biologico-mbbr-123") ||
+      maps[0];
+    if (prefer) await selectMap(prefer.id);
+  } else {
     const fresh = maps.find((m) => m.id === currentMap.id);
-    if (fresh) currentMap = fresh;
+    if (fresh) {
+      currentMap = fresh;
+      syncPlantChrome(currentMap);
+    }
   }
 }
 
@@ -141,22 +161,37 @@ async function runSearch(query, { autoPick = false } = {}) {
   const hits = await searchAllTags(query);
   if (!hits.length) {
     closeSuggestions();
-    if (query.trim()) setStatus(`Nessun tag per «${escapeHtml(query)}»`);
+    if (query.trim()) setStatus(`Nessuna sigla vicina a «${escapeHtml(query)}»`);
     return hits;
   }
 
+  const exactN = hits.filter((h) => h.match?.tier === "exact").length;
+  const nearN = hits.length - exactN;
+
   els.suggestions.innerHTML = hits
     .slice(0, 40)
-    .map(
-      (h, i) => `
-      <div class="sug-item${i === 0 && autoPick ? " active" : ""}" data-i="${i}" data-map="${escapeHtml(h.mapId)}" data-tag="${escapeHtml(h.tag.id)}">
+    .map((h, i) => {
+      const tier = h.match?.tier || "exact";
+      const reason = h.match?.reason || "";
+      const badge = tier === "near" ? "Vicino" : "Match";
+      const noteText = String(h.tag.note || "").trim();
+      const noteHtml = noteText
+        ? `<div class="sug-note">${escapeHtml(noteText)}</div>`
+        : "";
+      return `
+      <div class="sug-item sug-${tier}${i === 0 ? " active" : ""}" data-i="${i}" data-map="${escapeHtml(h.mapId)}" data-tag="${escapeHtml(h.tag.id)}">
         <div>
-          <div>${escapeHtml(h.tag.label || h.tag.id)}</div>
+          <div class="sug-title">
+            <span>${escapeHtml(h.tag.label || h.tag.id)}</span>
+            <span class="sug-badge ${tier}">${badge}</span>
+          </div>
+          ${noteHtml}
           <div class="kind">${escapeHtml(h.tag.kind || "")}</div>
+          <div class="sug-reason">${escapeHtml(reason)}</div>
         </div>
         <div class="map">${escapeHtml(h.mapName)}</div>
-      </div>`
-    )
+      </div>`;
+    })
     .join("");
   els.suggestions.classList.add("open");
   sugIndex = 0;
@@ -168,7 +203,20 @@ async function runSearch(query, { autoPick = false } = {}) {
     });
   });
 
-  if (autoPick && hits.length === 1) {
+  if (exactN && nearN) {
+    setStatus(
+      `<strong>${exactN}</strong> corrispondenze · <strong>${nearN}</strong> proposte vicine — scegli dalla lista`
+    );
+  } else if (!exactN && nearN) {
+    setStatus(
+      `Nessun match esatto — <strong>${nearN}</strong> sigle vicine, scegli quella giusta`
+    );
+  } else {
+    setStatus(`<strong>${exactN}</strong> risultati — seleziona o Invio`);
+  }
+
+  // Auto-pick solo se un unico match esatto (non sulle sole proposte “vicine”)
+  if (autoPick && exactN === 1 && hits[0].match?.tier === "exact") {
     await pickHit(hits[0]);
   }
   return hits;
@@ -179,15 +227,18 @@ async function pickHit(hit) {
   els.searchInput.value = hit.tag.label || hit.tag.id;
   els.clearBtn.classList.add("visible");
   if (!currentMap || currentMap.id !== hit.mapId) {
+    // nuova mappa: un solo fit iniziale; sulla stessa mappa non si tocca lo zoom
     await selectMap(hit.mapId, { keepHighlight: true });
   } else {
     currentMap = await getMap(hit.mapId);
+    viewer.map = currentMap;
   }
   activeTagId = hit.tag.id;
-  viewer.highlight(hit.tag.id, { center: true });
+  viewer.highlight(hit.tag.id);
   const note = hit.tag.note ? ` · nota: ${escapeHtml(hit.tag.note)}` : "";
+  const why = hit.match?.reason ? ` · ${escapeHtml(hit.match.reason)}` : "";
   setStatus(
-    `Trovato <strong>${escapeHtml(hit.tag.label || hit.tag.id)}</strong> in ${escapeHtml(hit.mapName)}${note}`
+    `Evidenziato <strong>${escapeHtml(hit.tag.label || hit.tag.id)}</strong> in ${escapeHtml(hit.mapName)}${why}${note}`
   );
 }
 
@@ -240,11 +291,12 @@ els.noteSave.addEventListener("click", async () => {
   tag.label = label;
   tag.kind = els.noteKind.value;
   tag.note = els.noteBody.value.trim();
+  tag.source = "manual";
+  tag.locked = true;
   await persistCurrent();
   activeTagId = id;
   viewer.map = currentMap;
-  viewer.highlight(id, { center: false });
-  viewer.renderOverlay();
+  viewer.highlight(id);
   closeDrawer();
   toast(isNew ? "Tag aggiunto" : "Tag salvato");
   setStatus(`Mappa: <strong>${escapeHtml(currentMap.name)}</strong> · ${currentMap.tags.length} tag`);
@@ -311,17 +363,54 @@ els.clearBtn.addEventListener("click", () => {
 
 els.btnFit.addEventListener("click", () => viewer.fit());
 
-els.btnShowAll.addEventListener("click", () => {
-  const on = !viewer.showAll;
-  viewer.setShowAll(on);
-  els.btnShowAll.classList.toggle("active", on);
-});
-
 els.btnAnnotate.addEventListener("click", () => {
+  if (!annotateMode && !activeTagId) {
+    toast("Prima cerca ed evidenzia una sigla");
+    return;
+  }
   annotateMode = !annotateMode;
   viewer.setAnnotate(annotateMode);
   els.btnAnnotate.classList.toggle("active", annotateMode);
-  toast(annotateMode ? "Annota: tap sulla mappa per nuovo tag" : "Annotazione off");
+  if (annotateMode) {
+    viewer.highlight(activeTagId);
+    toast("Trascina solo il riquadro evidenziato");
+  } else {
+    toast("Riposiziona off");
+  }
+});
+
+els.btnOcr.addEventListener("click", async () => {
+  const img = $("#mapImage");
+  if (!currentMap || !img?.naturalWidth) {
+    toast("Carica una mappa prima");
+    return;
+  }
+  els.btnOcr.disabled = true;
+  els.btnOcr.classList.add("active");
+  setStatus("OCR in corso… primo avvio può scaricare il motore (~minuto)");
+  try {
+    const found = await runMapOcr(img, {
+      onProgress: (p) => {
+        setStatus(`OCR… <strong>${Math.round(p * 100)}%</strong>`);
+      },
+    });
+    const { tags, added, updated, skipped } = mergeOcrIntoMap(currentMap, found);
+    currentMap.tags = tags;
+    await persistCurrent();
+    viewer.map = currentMap;
+    viewer.renderOverlay();
+    setStatus(
+      `OCR: <strong>${found.length}</strong> letti · +${added} nuovi · ${updated} aggiornati · ${skipped} bloccati (manuali). Cerca una sigla per evidenziarla.`
+    );
+    toast("OCR finito — cerca una sigla per vederla");
+  } catch (err) {
+    console.warn(err);
+    setStatus(`OCR fallita: ${escapeHtml(err.message || err)}`);
+    toast("OCR fallita");
+  } finally {
+    els.btnOcr.disabled = false;
+    els.btnOcr.classList.remove("active");
+  }
 });
 
 els.btnNotes.addEventListener("click", () => {
@@ -359,12 +448,15 @@ document.addEventListener("click", (e) => {
   }
 });
 
-window.addEventListener("resize", () => {
-  if (currentMap) viewer.fit();
-});
+// resize: non forzare fit — l’inquadratura resta quella dell’utente
 
 async function boot() {
   setStatus("Avvio Tag Impianto…");
+  renderPlantNav(els.plantNav, {
+    onSelect: (page) => {
+      if (page?.mapId) selectMap(page.mapId);
+    },
+  });
   await loadSeedIfEmpty();
   await refreshMaps();
 

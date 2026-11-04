@@ -11,7 +11,8 @@ export class MapViewer {
     this.map = null;
     this.highlightId = null;
     this.annotate = false;
-    this.showAll = false;
+    this._viewInitialized = false;
+    this._lastSrc = "";
 
     this._pointers = new Map();
     this._lastPinch = null;
@@ -50,27 +51,31 @@ export class MapViewer {
     this.renderOverlay();
   }
 
-  setShowAll(on) {
-    this.showAll = !!on;
-    this.renderOverlay();
-  }
-
-  async loadMap(map) {
+  async loadMap(map, { keepView = false } = {}) {
     this.map = map;
-    this.highlightId = null;
     const src = map.image;
-    await new Promise((resolve, reject) => {
-      this.imageEl.onload = () => resolve();
-      this.imageEl.onerror = () => reject(new Error("Immagine mappa non caricata"));
-      this.imageEl.src = src;
-    });
+    const sameImage = src === this._lastSrc && this.imageEl.naturalWidth;
+    if (!sameImage) {
+      await new Promise((resolve, reject) => {
+        this.imageEl.onload = () => resolve();
+        this.imageEl.onerror = () => reject(new Error("Immagine mappa non caricata"));
+        this.imageEl.src = src;
+      });
+      this._lastSrc = src;
+    }
     const w = map.width || this.imageEl.naturalWidth;
     const h = map.height || this.imageEl.naturalHeight;
     this.imageEl.width = w;
     this.imageEl.height = h;
     this.overlayEl.style.width = `${w}px`;
     this.overlayEl.style.height = `${h}px`;
-    this.fit();
+    // keepView / stessa immagine: non muovere zoom-pan. Nuova mappa: un fit.
+    if (keepView && sameImage) {
+      /* lascia inquadratura */
+    } else if (!this._viewInitialized || !sameImage) {
+      this.fit();
+      this._viewInitialized = true;
+    }
     this.renderOverlay();
   }
 
@@ -102,67 +107,46 @@ export class MapViewer {
     this.applyTransform();
   }
 
-  highlight(tagId, { center = true } = {}) {
+  /** Solo evidenzia: non cambia mai zoom/pan. */
+  highlight(tagId) {
     this.highlightId = tagId || null;
     this.renderOverlay();
-    if (center && tagId && this.map) {
-      const tag = (this.map.tags || []).find((t) => t.id === tagId);
-      if (tag) this.centerOnTag(tag);
-    }
-  }
-
-  centerOnTag(tag) {
-    const iw = this.imageEl.width;
-    const ih = this.imageEl.height;
-    const cxImg = (tag.x + tag.w / 2) * iw;
-    const cyImg = (tag.y + tag.h / 2) * ih;
-    const targetScale = Math.min(4, Math.max(this.scale, 1.6));
-    this.scale = targetScale;
-    const vw = this.viewport.clientWidth;
-    const vh = this.viewport.clientHeight;
-    this.tx = vw / 2 - cxImg * targetScale;
-    this.ty = vh / 2 - cyImg * targetScale;
-    this.applyTransform();
   }
 
   renderOverlay() {
     const overlay = this.overlayEl;
     overlay.innerHTML = "";
-    if (!this.map) return;
+    if (!this.map || !this.highlightId) return;
+    const tag = (this.map.tags || []).find((t) => t.id === this.highlightId);
+    if (!tag) return;
     const iw = this.imageEl.width;
     const ih = this.imageEl.height;
-    for (const tag of this.map.tags || []) {
-      const isHit = this.highlightId && tag.id === this.highlightId;
-      if (!this.annotate && !this.showAll && !isHit) continue;
-      const el = document.createElement("div");
-      el.className = "tag-box";
-      if (this.annotate) el.classList.add("edit");
-      else if (isHit) el.classList.add("hit");
-      else el.classList.add("dim");
-      el.style.left = `${tag.x * iw}px`;
-      el.style.top = `${tag.y * ih}px`;
-      el.style.width = `${tag.w * iw}px`;
-      el.style.height = `${tag.h * ih}px`;
-      el.dataset.tagId = tag.id;
-      const lab = document.createElement("div");
-      lab.className = "label";
-      lab.textContent = tag.label || tag.id;
-      el.appendChild(lab);
-      if (this.annotate) {
-        el.addEventListener("pointerdown", (e) => {
-          e.stopPropagation();
-          el.setPointerCapture(e.pointerId);
-          this._dragTag = {
-            id: tag.id,
-            startX: e.clientX,
-            startY: e.clientY,
-            ox: tag.x,
-            oy: tag.y,
-          };
-        });
-      }
-      overlay.appendChild(el);
+    const el = document.createElement("div");
+    el.className = "tag-box hit";
+    if (this.annotate) el.classList.add("edit");
+    el.style.left = `${tag.x * iw}px`;
+    el.style.top = `${tag.y * ih}px`;
+    el.style.width = `${tag.w * iw}px`;
+    el.style.height = `${tag.h * ih}px`;
+    el.dataset.tagId = tag.id;
+    const lab = document.createElement("div");
+    lab.className = "label";
+    lab.textContent = tag.label || tag.id;
+    el.appendChild(lab);
+    if (this.annotate) {
+      el.addEventListener("pointerdown", (e) => {
+        e.stopPropagation();
+        el.setPointerCapture(e.pointerId);
+        this._dragTag = {
+          id: tag.id,
+          startX: e.clientX,
+          startY: e.clientY,
+          ox: tag.x,
+          oy: tag.y,
+        };
+      });
     }
+    overlay.appendChild(el);
   }
 
   _onPointerDown(e) {
@@ -234,19 +218,9 @@ export class MapViewer {
     if (this._pointers.size < 2) this._lastPinch = null;
 
     if (this._pointers.size === 0) {
-      const clicked = this._panning && !this._moved && this.annotate && !wasDrag && had;
       this._panning = false;
       this.viewport.classList.remove("panning");
-      if (clicked) {
-        const rect = this.viewport.getBoundingClientRect();
-        const cx = e.clientX - rect.left;
-        const cy = e.clientY - rect.top;
-        const ix = (cx - this.tx) / this.scale / this.imageEl.width;
-        const iy = (cy - this.ty) / this.scale / this.imageEl.height;
-        if (ix >= 0 && iy >= 0 && ix <= 1 && iy <= 1 && this.onAnnotatePlace) {
-          this.onAnnotatePlace(ix, iy);
-        }
-      }
+      // Riposiziona: nessun tap per creare tag (solo drag del box evidenziato)
       this._panStart = null;
       this._moved = false;
     }

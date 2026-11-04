@@ -9,6 +9,7 @@ Progetto **separato** da MyMenu: nessun codice condiviso, nessun rischio di romp
 - Ricerca tag con suggerimenti
 - Highlight luminoso + zoom sulla zona
 - Più mappe impianto (select in alto)
+- **OCR + correzione a mano**: bottone OCR (Tesseract) propone i tag; poi **Annota** per spostare/correggere (i tag toccati a mano restano bloccati ai prossimi OCR)
 - Modalità **Annota**: tap per aggiungere tag, trascina i box per affinare
 - **Note** su ogni tag
 - Offline: IndexedDB + service worker
@@ -43,8 +44,18 @@ Collezioni usate:
 
 Finché la config è placeholder, l’app resta **solo locale** (seed Sediflottatore B incluso).
 
-## Prima mappa
+## Mappe seed
 
-`assets/maps/sediflottatore-b.png` + seed in `data/sediflottatore-b.json`.
+- Menu laterale digitale (stile DCS): colonna sinistra ritagliata dalle foto
+- Aree: **WWT**, **SF3**, **HOLD-UP**, **Interconn.**, **Vasche API**, **Assetto**
+- ~26 schermate caricate (osmosi, UF, MBR, fanghi, Actiflo, …)
+- Voci ancora grigie = screenshot mancante
 
-Le coordinate iniziali sono di primo tiro: usa **Annota** / trascina i box e **Salva**, poi **Sync** per il cloud.
+Le coordinate tag sono di primo tiro: **OCR** / **Riposiziona** / **Nota**, poi **Sync**.
+
+Per reimportare nuove foto WhatsApp:
+
+```bash
+python scripts/ingest-maps.py
+python scripts/build-sw.py
+```

@@ -1,0 +1,42 @@
+{
+  "id": "ultrafiltrazione-mbr-eh",
+  "name": "Ultrafiltrazione MBR E-H",
+  "image": "assets/maps/ultrafiltrazione-mbr-eh.png",
+  "width": 916,
+  "height": 533,
+  "cropLeft": 108,
+  "area": "wwt",
+  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "tags": [
+    {
+      "id": "TK-11007",
+      "label": "TK-11007 PERMEATO MBR",
+      "kind": "serbatoio",
+      "x": 0.4,
+      "y": 0.28,
+      "w": 0.14,
+      "h": 0.3,
+      "source": "seed"
+    },
+    {
+      "id": "FIL-11007E",
+      "label": "FIL-11007E",
+      "kind": "apparecchio",
+      "x": 0.2,
+      "y": 0.62,
+      "w": 0.08,
+      "h": 0.12,
+      "source": "seed"
+    },
+    {
+      "id": "FIL-11007H",
+      "label": "FIL-11007H",
+      "kind": "apparecchio",
+      "x": 0.55,
+      "y": 0.62,
+      "w": 0.08,
+      "h": 0.12,
+      "source": "seed"
+    }
+  ]
+}

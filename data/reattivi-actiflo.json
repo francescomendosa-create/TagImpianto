@@ -1,0 +1,42 @@
+{
+  "id": "reattivi-actiflo",
+  "name": "Reattivi Actiflo",
+  "image": "assets/maps/reattivi-actiflo.png",
+  "width": 916,
+  "height": 544,
+  "cropLeft": 108,
+  "area": "sf3",
+  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "tags": [
+    {
+      "id": "TK104",
+      "label": "TK104 COAGULANTE",
+      "kind": "serbatoio",
+      "x": 0.25,
+      "y": 0.3,
+      "w": 0.08,
+      "h": 0.22,
+      "source": "seed"
+    },
+    {
+      "id": "TK101",
+      "label": "TK101 SODA",
+      "kind": "serbatoio",
+      "x": 0.4,
+      "y": 0.3,
+      "w": 0.08,
+      "h": 0.22,
+      "source": "seed"
+    },
+    {
+      "id": "TK103",
+      "label": "TK103 ACIDO",
+      "kind": "serbatoio",
+      "x": 0.55,
+      "y": 0.3,
+      "w": 0.08,
+      "h": 0.22,
+      "source": "seed"
+    }
+  ]
+}
