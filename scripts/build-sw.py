@@ -83,7 +83,7 @@ self.addEventListener("fetch", (event) => {
 '''
 
 lines = [
-    'const CACHE = "tag-impianto-shell-v18";',
+    'const CACHE = "tag-impianto-shell-v19";',
     "const SHELL = [",
     '  "./",',
     '  "./index.html",',

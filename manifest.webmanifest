@@ -1,9 +1,9 @@
 {
-  "id": "/TagImpianto/v4",
+  "id": "./?pwa=clean-1",
   "name": "Tag Impianto",
   "short_name": "TagImpianto",
   "description": "Ricerca e evidenziazione tag su mappe DCS impianto",
-  "start_url": "./index.html?v=1.4.0",
+  "start_url": "./index.html?v=1.4.1",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0f1419",

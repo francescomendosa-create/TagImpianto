@@ -11,7 +11,7 @@ import {
 import { MapViewer } from "./viewer.js";
 import { runMapOcr, mergeOcrIntoMap } from "./ocr.js";
 import { renderPlantNav, setPlantNavActive } from "./plant-nav.js";
-import { APP_VERSION, APP_BUILD } from "./version.js";
+import { APP_VERSION, APP_BUILD, INSTALL_URL } from "./version.js";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -38,6 +38,7 @@ const els = {
   toast: $("#toast"),
   cloudBadge: $("#cloudBadge"),
   appVersion: $("#appVersion"),
+  installHint: $("#installHint"),
 };
 
 let maps = [];
@@ -487,10 +488,22 @@ async function boot() {
 
   if ("serviceWorker" in navigator) {
     try {
-      await navigator.serviceWorker.register("./sw.js?v=1.4.0", { updateViaCache: "none" });
+      await navigator.serviceWorker.register("./sw.js?v=1.4.1", { updateViaCache: "none" });
     } catch (_) {
       /* ignore */
     }
+  }
+
+  // Vecchio URL GitHub Pages: WebAPK fantasma → invita al mirror pulito
+  const onGhostHost =
+    /\/TagImpianto\/?/.test(location.pathname) &&
+    !/TagImpiantoApp/.test(location.pathname);
+  if (onGhostHost && els.installHint) {
+    els.installHint.hidden = false;
+    els.installHint.innerHTML =
+      `Per installare l’icona usa il link pulito: ` +
+      `<a href="${INSTALL_URL}">TagImpiantoApp</a> ` +
+      `(Chrome qui crede che l’app ci sia già)`;
   }
 
   els.searchInput.focus();
