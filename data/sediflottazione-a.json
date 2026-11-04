@@ -6,37 +6,129 @@
   "height": 481,
   "cropLeft": 108,
   "area": "wwt",
-  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
-    {
-      "id": "TK-11100A",
-      "label": "TK-11100A COAGULAZIONE",
-      "kind": "serbatoio",
-      "x": 0.3,
-      "y": 0.28,
-      "w": 0.12,
-      "h": 0.28,
-      "source": "seed"
-    },
-    {
-      "id": "A-11005A",
-      "label": "A-11005A SEDI-FLOTTATORE",
-      "kind": "apparecchio",
-      "x": 0.5,
-      "y": 0.35,
-      "w": 0.22,
-      "h": 0.28,
-      "source": "seed"
-    },
     {
       "id": "TK-11000",
       "label": "TK-11000 SODA",
       "kind": "serbatoio",
       "x": 0.08,
-      "y": 0.25,
-      "w": 0.07,
-      "h": 0.2,
-      "source": "seed"
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-11001",
+      "label": "TK-11001 ACIDO SOLF.",
+      "kind": "serbatoio",
+      "x": 0.22,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-11002",
+      "label": "TK-11002 COAGULANTE",
+      "kind": "serbatoio",
+      "x": 0.36,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-11100A",
+      "label": "TK-11100A COAGULAZIONE",
+      "kind": "serbatoio",
+      "x": 0.5,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-11104",
+      "label": "TK-11104 POLIELETTROLITA",
+      "kind": "serbatoio",
+      "x": 0.64,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "A-11005A",
+      "label": "A-11005A SEDI-FLOTTATORE",
+      "kind": "apparecchio",
+      "x": 0.78,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "A-11120",
+      "label": "A-11120 CHIARIFICATO",
+      "kind": "apparecchio",
+      "x": 0.08,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "A-11121",
+      "label": "A-11121 FANGHI",
+      "kind": "apparecchio",
+      "x": 0.22,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "MX11107A",
+      "label": "MX11107A",
+      "kind": "mixer",
+      "x": 0.36,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "MX11107B",
+      "label": "MX11107B",
+      "kind": "mixer",
+      "x": 0.5,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "MX11107C",
+      "label": "MX11107C",
+      "kind": "mixer",
+      "x": 0.64,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "FCV-31101",
+      "label": "FCV-31101",
+      "kind": "valvola",
+      "x": 0.1917,
+      "y": 0.2952,
+      "w": 0.0443,
+      "h": 0.03,
+      "confidence": 58.0,
+      "source": "ocr"
     }
-  ]
+  ],
+  "seedRev": 3
 }

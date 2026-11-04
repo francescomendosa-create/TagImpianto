@@ -6,37 +6,109 @@
   "height": 499,
   "cropLeft": 108,
   "area": "vasche-api",
-  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
     {
       "id": "S-851",
       "label": "S-851",
       "kind": "serbatoio",
-      "x": 0.25,
-      "y": 0.25,
-      "w": 0.18,
-      "h": 0.4,
-      "source": "seed"
+      "x": 0.08,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "P-13007A",
       "label": "P-13007A",
       "kind": "pompa",
-      "x": 0.3,
-      "y": 0.7,
-      "w": 0.05,
-      "h": 0.08,
-      "source": "seed"
+      "x": 0.22,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "P-13007B",
       "label": "P-13007B",
       "kind": "pompa",
-      "x": 0.38,
-      "y": 0.7,
-      "w": 0.05,
-      "h": 0.08,
-      "source": "seed"
+      "x": 0.36,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "AI_001",
+      "label": "AI_001",
+      "kind": "strumento",
+      "x": 0.5,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "LT_851",
+      "label": "LT_851",
+      "kind": "strumento",
+      "x": 0.64,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "LI_851_A",
+      "label": "LI_851_A",
+      "kind": "strumento",
+      "x": 0.78,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "LSH-851A",
+      "label": "LSH-851A",
+      "kind": "strumento",
+      "x": 0.08,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "LCV_31A",
+      "label": "LCV_31A",
+      "kind": "valvola",
+      "x": 0.22,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "XV001HU",
+      "label": "XV001HU",
+      "kind": "valvola",
+      "x": 0.36,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "S818",
+      "label": "S818",
+      "kind": "serbatoio",
+      "x": 0.8994,
+      "y": 0.2509,
+      "w": 0.0329,
+      "h": 0.03,
+      "confidence": 82.0,
+      "source": "ocr"
     }
-  ]
+  ],
+  "seedRev": 3
 }

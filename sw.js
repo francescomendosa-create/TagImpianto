@@ -1,4 +1,4 @@
-const CACHE = "tag-impianto-shell-v12";
+const CACHE = "tag-impianto-shell-v10";
 const SHELL = [
   "./",
   "./index.html",
@@ -36,6 +36,8 @@ const SHELL = [
   "./data/ultrafiltrazione.json",
   "./data/uscita-actiflo.json",
   "./data/vasche-api-s851.json",
+  "./assets/maps/_inspect-current-fanghi.png",
+  "./assets/maps/_inspect-wa-fanghi.png",
   "./assets/maps/actiflo.png",
   "./assets/maps/assetto-200.png",
   "./assets/maps/biologico-mbbr-123.png",

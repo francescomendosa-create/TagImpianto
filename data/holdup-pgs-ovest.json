@@ -6,37 +6,79 @@
   "height": 480,
   "cropLeft": 108,
   "area": "holdup",
-  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
     {
       "id": "TK8066",
       "label": "TK8066",
       "kind": "serbatoio",
-      "x": 0.55,
-      "y": 0.25,
-      "w": 0.12,
-      "h": 0.3,
-      "source": "seed"
+      "x": 0.08,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "TK8063",
       "label": "TK8063",
       "kind": "serbatoio",
-      "x": 0.72,
-      "y": 0.25,
-      "w": 0.12,
-      "h": 0.3,
-      "source": "seed"
+      "x": 0.22,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "P-13000A",
       "label": "P-13000A",
       "kind": "pompa",
-      "x": 0.22,
-      "y": 0.4,
-      "w": 0.05,
-      "h": 0.08,
-      "source": "seed"
+      "x": 0.36,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P-13000B",
+      "label": "P-13000B",
+      "kind": "pompa",
+      "x": 0.5,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "XV8066_1HU",
+      "label": "XV8066_1HU",
+      "kind": "valvola",
+      "x": 0.64,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "XV001HN_HU",
+      "label": "XV001HN_HU",
+      "kind": "valvola",
+      "x": 0.78,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "S200",
+      "label": "S200",
+      "kind": "serbatoio",
+      "x": 0.0563,
+      "y": 0.6131,
+      "w": 0.0204,
+      "h": 0.058,
+      "confidence": 47.0,
+      "source": "ocr"
     }
-  ]
+  ],
+  "seedRev": 3
 }

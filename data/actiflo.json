@@ -6,37 +6,168 @@
   "height": 487,
   "cropLeft": 108,
   "area": "sf3",
-  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
     {
       "id": "TK107",
       "label": "TK107",
       "kind": "serbatoio",
-      "x": 0.25,
-      "y": 0.3,
-      "w": 0.12,
-      "h": 0.28,
-      "source": "seed"
+      "x": 0.08,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK108",
+      "label": "TK108",
+      "kind": "serbatoio",
+      "x": 0.22,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "DEP108",
       "label": "DEP108",
       "kind": "apparecchio",
+      "x": 0.36,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "MX107",
+      "label": "MX107",
+      "kind": "mixer",
       "x": 0.5,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "MX108A",
+      "label": "MX108A",
+      "kind": "mixer",
+      "x": 0.64,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "MX108B",
+      "label": "MX108B",
+      "kind": "mixer",
+      "x": 0.78,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "MX108C",
+      "label": "MX108C",
+      "kind": "mixer",
+      "x": 0.08,
       "y": 0.28,
-      "w": 0.22,
-      "h": 0.32,
-      "source": "seed"
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "MX108D",
+      "label": "MX108D",
+      "kind": "mixer",
+      "x": 0.22,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "P108A",
       "label": "P108A",
       "kind": "pompa",
-      "x": 0.7,
-      "y": 0.55,
-      "w": 0.04,
-      "h": 0.07,
-      "source": "seed"
+      "x": 0.36,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P108B",
+      "label": "P108B",
+      "kind": "pompa",
+      "x": 0.5,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "FIT101",
+      "label": "FIT101",
+      "kind": "strumento",
+      "x": 0.64,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "AIT107C",
+      "label": "AIT107C",
+      "kind": "strumento",
+      "x": 0.78,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "PIT108A",
+      "label": "PIT108A",
+      "kind": "strumento",
+      "x": 0.08,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "LSH107",
+      "label": "LSH107",
+      "kind": "strumento",
+      "x": 0.22,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "XV103A",
+      "label": "XV103A",
+      "kind": "valvola",
+      "x": 0.36,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "XV106B",
+      "label": "XV106B",
+      "kind": "valvola",
+      "x": 0.5,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     }
-  ]
+  ],
+  "seedRev": 3
 }

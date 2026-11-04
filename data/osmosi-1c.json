@@ -6,37 +6,179 @@
   "height": 483,
   "cropLeft": 108,
   "area": "wwt",
-  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
     {
       "id": "TK-11021",
       "label": "TK-11021",
       "kind": "serbatoio",
       "x": 0.08,
-      "y": 0.25,
-      "w": 0.12,
-      "h": 0.3,
-      "source": "seed"
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
-      "id": "FIL-11009C",
-      "label": "FIL-11009C",
-      "kind": "apparecchio",
-      "x": 0.45,
-      "y": 0.35,
-      "w": 0.2,
-      "h": 0.22,
-      "source": "seed"
+      "id": "TK-11001",
+      "label": "TK-11001 ACIDO SOLF.",
+      "kind": "serbatoio",
+      "x": 0.22,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-11010C",
+      "label": "TK-11010C ANTINCROSTANTE",
+      "kind": "serbatoio",
+      "x": 0.36,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-11000",
+      "label": "TK-11000 SODA",
+      "kind": "serbatoio",
+      "x": 0.5,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "TK-11011C",
       "label": "TK-11011C PERMEATO R.O.",
       "kind": "serbatoio",
-      "x": 0.75,
-      "y": 0.5,
-      "w": 0.12,
-      "h": 0.25,
-      "source": "seed"
+      "x": 0.64,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "FIL-11004C",
+      "label": "FIL-11004C",
+      "kind": "apparecchio",
+      "x": 0.78,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "FIL-11005C",
+      "label": "FIL-11005C",
+      "kind": "apparecchio",
+      "x": 0.08,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "FIL-11009C",
+      "label": "FIL-11009C",
+      "kind": "apparecchio",
+      "x": 0.22,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11020C",
+      "label": "P11020C",
+      "kind": "pompa",
+      "x": 0.36,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11040A",
+      "label": "P11040A",
+      "kind": "pompa",
+      "x": 0.5,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11040B",
+      "label": "P11040B",
+      "kind": "pompa",
+      "x": 0.64,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11040C",
+      "label": "P11040C",
+      "kind": "pompa",
+      "x": 0.78,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11040D",
+      "label": "P11040D",
+      "kind": "pompa",
+      "x": 0.08,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11032A",
+      "label": "P11032A",
+      "kind": "pompa",
+      "x": 0.22,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11032B",
+      "label": "P11032B",
+      "kind": "pompa",
+      "x": 0.36,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11032C",
+      "label": "P11032C",
+      "kind": "pompa",
+      "x": 0.5,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-11040",
+      "label": "TK-11040",
+      "kind": "serbatoio",
+      "x": 0.4915,
+      "y": 0.9161,
+      "w": 0.0358,
+      "h": 0.03,
+      "confidence": 76.0,
+      "source": "ocr"
     }
-  ]
+  ],
+  "seedRev": 3
 }

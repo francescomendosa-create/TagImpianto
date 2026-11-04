@@ -5,28 +5,232 @@
   "width": 916,
   "height": 496,
   "cropLeft": 108,
-  "notes": "Coordinate di primo tiro. Affina con OCR + Riposiziona.",
+  "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
-    { "id": "TK-11007", "label": "TK-11007 PERMEATO MBR", "kind": "serbatoio", "x": 0.42, "y": 0.28, "w": 0.12, "h": 0.28, "source": "seed" },
-    { "id": "TK-11008", "label": "TK-11008 IPOCLORITO DI SODIO", "kind": "serbatoio", "x": 0.78, "y": 0.22, "w": 0.08, "h": 0.18, "source": "seed" },
-    { "id": "TK-11009", "label": "TK-11009 ACIDO CITRICO", "kind": "serbatoio", "x": 0.88, "y": 0.22, "w": 0.08, "h": 0.18, "source": "seed" },
-    { "id": "FIL-11007A", "label": "FIL-11007A", "kind": "apparecchio", "x": 0.22, "y": 0.62, "w": 0.07, "h": 0.12, "source": "seed" },
-    { "id": "FIL-11007B", "label": "FIL-11007B", "kind": "apparecchio", "x": 0.32, "y": 0.62, "w": 0.07, "h": 0.12, "source": "seed" },
-    { "id": "FIL-11007C", "label": "FIL-11007C", "kind": "apparecchio", "x": 0.42, "y": 0.62, "w": 0.07, "h": 0.12, "source": "seed" },
-    { "id": "FIL-11007D", "label": "FIL-11007D", "kind": "apparecchio", "x": 0.52, "y": 0.62, "w": 0.07, "h": 0.12, "source": "seed" },
-
-    { "id": "P11012A", "label": "P11012A", "kind": "pompa", "x": 0.12, "y": 0.22, "w": 0.035, "h": 0.06, "source": "seed" },
-    { "id": "P11012B", "label": "P11012B", "kind": "pompa", "x": 0.16, "y": 0.22, "w": 0.035, "h": 0.06, "source": "seed" },
-    { "id": "P11012C", "label": "P11012C", "kind": "pompa", "x": 0.20, "y": 0.22, "w": 0.035, "h": 0.06, "source": "seed" },
-    { "id": "P11012D", "label": "P11012D", "kind": "pompa", "x": 0.24, "y": 0.22, "w": 0.035, "h": 0.06, "source": "seed" },
-    { "id": "P11013A", "label": "P11013A", "kind": "pompa", "x": 0.12, "y": 0.36, "w": 0.035, "h": 0.06, "source": "seed" },
-    { "id": "P11013B", "label": "P11013B", "kind": "pompa", "x": 0.16, "y": 0.36, "w": 0.035, "h": 0.06, "source": "seed" },
-    { "id": "P11013C", "label": "P11013C", "kind": "pompa", "x": 0.20, "y": 0.36, "w": 0.035, "h": 0.06, "source": "seed" },
-    { "id": "P11013D", "label": "P11013D", "kind": "pompa", "x": 0.24, "y": 0.36, "w": 0.035, "h": 0.06, "source": "seed" },
-
-    { "id": "XV11006", "label": "XV11006", "kind": "valvola", "x": 0.30, "y": 0.30, "w": 0.04, "h": 0.05, "source": "seed" },
-    { "id": "XV11007", "label": "XV11007", "kind": "valvola", "x": 0.34, "y": 0.30, "w": 0.04, "h": 0.05, "source": "seed" },
-    { "id": "XV11008", "label": "XV11008", "kind": "valvola", "x": 0.38, "y": 0.30, "w": 0.04, "h": 0.05, "source": "seed" },
-    { "id": "XV11009", "label": "XV11009", "kind": "valvola", "x": 0.42, "y": 0.30, "w": 0.04, "h": 0.05, "source": "seed" }
-  ]
+    {
+      "id": "TK-11007",
+      "label": "TK-11007 PERMEATO MBR",
+      "kind": "serbatoio",
+      "x": 0.08,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-11008",
+      "label": "TK-11008 IPOCLORITO DI SODIO",
+      "kind": "serbatoio",
+      "x": 0.7217,
+      "y": 0.9131,
+      "w": 0.0383,
+      "h": 0.035,
+      "source": "ocr",
+      "confidence": 66.0
+    },
+    {
+      "id": "TK-11009",
+      "label": "TK-11009 ACIDO CITRICO",
+      "kind": "serbatoio",
+      "x": 0.36,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "FIL-11007A",
+      "label": "FIL-11007A",
+      "kind": "apparecchio",
+      "x": 0.5,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "FIL-11007B",
+      "label": "FIL-11007B",
+      "kind": "apparecchio",
+      "x": 0.64,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "FIL-11007C",
+      "label": "FIL-11007C",
+      "kind": "apparecchio",
+      "x": 0.78,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "FIL-11007D",
+      "label": "FIL-11007D",
+      "kind": "apparecchio",
+      "x": 0.08,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11012A",
+      "label": "P11012A",
+      "kind": "pompa",
+      "x": 0.22,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11012B",
+      "label": "P11012B",
+      "kind": "pompa",
+      "x": 0.36,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11012C",
+      "label": "P11012C",
+      "kind": "pompa",
+      "x": 0.5,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11012D",
+      "label": "P11012D",
+      "kind": "pompa",
+      "x": 0.64,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11013A",
+      "label": "P11013A",
+      "kind": "pompa",
+      "x": 0.78,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11013B",
+      "label": "P11013B",
+      "kind": "pompa",
+      "x": 0.08,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11013C",
+      "label": "P11013C",
+      "kind": "pompa",
+      "x": 0.22,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11013D",
+      "label": "P11013D",
+      "kind": "pompa",
+      "x": 0.36,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "XV11006",
+      "label": "XV11006",
+      "kind": "valvola",
+      "x": 0.5,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "XV11007",
+      "label": "XV11007",
+      "kind": "valvola",
+      "x": 0.64,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "XV11008",
+      "label": "XV11008",
+      "kind": "valvola",
+      "x": 0.78,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "XV11009",
+      "label": "XV11009",
+      "kind": "valvola",
+      "x": 0.08,
+      "y": 0.52,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "K-11007J",
+      "label": "K-11007J",
+      "kind": "compressor",
+      "x": 0.8358,
+      "y": 0.3853,
+      "w": 0.079,
+      "h": 0.0332,
+      "confidence": 55.0,
+      "source": "ocr"
+    },
+    {
+      "id": "TK-11008P",
+      "label": "TK-11008P",
+      "kind": "serbatoio",
+      "x": 0.7217,
+      "y": 0.9131,
+      "w": 0.0383,
+      "h": 0.035,
+      "confidence": 66.0,
+      "source": "ocr"
+    },
+    {
+      "id": "XV11070",
+      "label": "XV11070",
+      "kind": "valvola",
+      "x": 0.1133,
+      "y": 0.4778,
+      "w": 0.0398,
+      "h": 0.03,
+      "confidence": 50.0,
+      "source": "ocr"
+    }
+  ],
+  "seedRev": 3
 }

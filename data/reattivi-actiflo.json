@@ -6,37 +6,198 @@
   "height": 544,
   "cropLeft": 108,
   "area": "sf3",
-  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
     {
       "id": "TK104",
       "label": "TK104 COAGULANTE",
       "kind": "serbatoio",
-      "x": 0.25,
-      "y": 0.3,
-      "w": 0.08,
-      "h": 0.22,
-      "source": "seed"
+      "x": 0.08,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "TK101",
       "label": "TK101 SODA",
       "kind": "serbatoio",
-      "x": 0.4,
-      "y": 0.3,
-      "w": 0.08,
-      "h": 0.22,
-      "source": "seed"
+      "x": 0.22,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK102",
+      "label": "TK102 CLORURO DI CALCIO",
+      "kind": "serbatoio",
+      "x": 0.36,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "TK103",
       "label": "TK103 ACIDO",
       "kind": "serbatoio",
-      "x": 0.55,
-      "y": 0.3,
-      "w": 0.08,
-      "h": 0.22,
-      "source": "seed"
+      "x": 0.5,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK111",
+      "label": "TK111 ANTISCHIUMA",
+      "kind": "serbatoio",
+      "x": 0.64,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "PK106",
+      "label": "PK106 POLIPREPARATORE",
+      "kind": "apparecchio",
+      "x": 0.78,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P106A",
+      "label": "P106A",
+      "kind": "pompa",
+      "x": 0.08,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P106B",
+      "label": "P106B",
+      "kind": "pompa",
+      "x": 0.22,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P104A",
+      "label": "P104A",
+      "kind": "pompa",
+      "x": 0.36,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P104B",
+      "label": "P104B",
+      "kind": "pompa",
+      "x": 0.5,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P104C",
+      "label": "P104C",
+      "kind": "pompa",
+      "x": 0.64,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P101A",
+      "label": "P101A",
+      "kind": "pompa",
+      "x": 0.78,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P101B",
+      "label": "P101B",
+      "kind": "pompa",
+      "x": 0.08,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P102A",
+      "label": "P102A",
+      "kind": "pompa",
+      "x": 0.22,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P102B",
+      "label": "P102B",
+      "kind": "pompa",
+      "x": 0.36,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P103A",
+      "label": "P103A",
+      "kind": "pompa",
+      "x": 0.5,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P103B",
+      "label": "P103B",
+      "kind": "pompa",
+      "x": 0.64,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P111A",
+      "label": "P111A",
+      "kind": "pompa",
+      "x": 0.78,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P111B",
+      "label": "P111B",
+      "kind": "pompa",
+      "x": 0.08,
+      "y": 0.52,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     }
-  ]
+  ],
+  "seedRev": 3
 }

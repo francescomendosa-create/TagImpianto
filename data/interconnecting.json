@@ -6,27 +6,48 @@
   "height": 470,
   "cropLeft": 108,
   "area": "interconnecting",
-  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
     {
       "id": "S-829",
       "label": "S-829",
       "kind": "serbatoio",
-      "x": 0.78,
-      "y": 0.7,
-      "w": 0.1,
-      "h": 0.18,
-      "source": "seed"
+      "x": 0.08,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "AIT107A",
+      "label": "AIT107A",
+      "kind": "strumento",
+      "x": 0.22,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "AIT107C",
+      "label": "AIT107C",
+      "kind": "strumento",
+      "x": 0.36,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "FCV_1000",
       "label": "FCV_1000",
       "kind": "valvola",
-      "x": 0.4,
-      "y": 0.4,
+      "x": 0.5,
+      "y": 0.16,
       "w": 0.06,
-      "h": 0.08,
-      "source": "seed"
+      "h": 0.06,
+      "source": "catalog"
     }
-  ]
+  ],
+  "seedRev": 3
 }

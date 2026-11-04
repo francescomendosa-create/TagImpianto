@@ -6,37 +6,89 @@
   "height": 510,
   "cropLeft": 108,
   "area": "holdup",
-  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
     {
       "id": "S-817",
       "label": "S-817",
       "kind": "serbatoio",
-      "x": 0.2,
-      "y": 0.2,
-      "w": 0.1,
-      "h": 0.25,
-      "source": "seed"
+      "x": 0.08,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "S-818",
       "label": "S-818",
       "kind": "serbatoio",
-      "x": 0.35,
-      "y": 0.2,
-      "w": 0.1,
-      "h": 0.25,
-      "source": "seed"
+      "x": 0.22,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "S-813",
+      "label": "S-813",
+      "kind": "serbatoio",
+      "x": 0.36,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "A-10605",
       "label": "A-10605",
       "kind": "apparecchio",
-      "x": 0.3,
-      "y": 0.55,
-      "w": 0.25,
-      "h": 0.2,
-      "source": "seed"
+      "x": 0.42,
+      "y": 0.6332,
+      "w": 0.0428,
+      "h": 0.03,
+      "source": "ocr",
+      "confidence": 84.0
+    },
+    {
+      "id": "P-13001A",
+      "label": "P-13001A",
+      "kind": "pompa",
+      "x": 0.64,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P-13001B",
+      "label": "P-13001B",
+      "kind": "pompa",
+      "x": 0.78,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P-13005A",
+      "label": "P-13005A",
+      "kind": "pompa",
+      "x": 0.08,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P-13005B",
+      "label": "P-13005B",
+      "kind": "pompa",
+      "x": 0.22,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     }
-  ]
+  ],
+  "seedRev": 3
 }

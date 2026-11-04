@@ -6,27 +6,109 @@
   "height": 471,
   "cropLeft": 108,
   "area": "wwt",
-  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
+    {
+      "id": "TK-11000",
+      "label": "TK-11000 SODA",
+      "kind": "serbatoio",
+      "x": 0.08,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-11012C",
+      "label": "TK-11012C ANTINCROSTANTE",
+      "kind": "serbatoio",
+      "x": 0.0865,
+      "y": 0.4327,
+      "w": 0.02,
+      "h": 0.03,
+      "source": "ocr",
+      "confidence": 86.0
+    },
     {
       "id": "TK-11011C",
       "label": "TK-11011C PERMEATO R.O.",
       "kind": "serbatoio",
-      "x": 0.2,
-      "y": 0.45,
-      "w": 0.14,
-      "h": 0.28,
-      "source": "seed"
+      "x": 0.36,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-11040",
+      "label": "TK-11040 BIOCIDA",
+      "kind": "serbatoio",
+      "x": 0.5,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "TK-11013",
       "label": "TK-11013 PERMEATO R.O. 2° PASSO",
       "kind": "serbatoio",
-      "x": 0.75,
-      "y": 0.4,
-      "w": 0.14,
-      "h": 0.3,
-      "source": "seed"
+      "x": 0.64,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11024D",
+      "label": "P11024D",
+      "kind": "pompa",
+      "x": 0.78,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11026C",
+      "label": "P11026C",
+      "kind": "pompa",
+      "x": 0.08,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11041A",
+      "label": "P11041A",
+      "kind": "pompa",
+      "x": 0.22,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "RT11001C",
+      "label": "RT11001C",
+      "kind": "mixer",
+      "x": 0.36,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "XV13200",
+      "label": "XV13200",
+      "kind": "valvola",
+      "x": 0.5,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     }
-  ]
+  ],
+  "seedRev": 3
 }

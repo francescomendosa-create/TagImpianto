@@ -6,27 +6,119 @@
   "height": 482,
   "cropLeft": 108,
   "area": "wwt",
-  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
     {
       "id": "FIL-11011B",
       "label": "FIL-11011B",
       "kind": "apparecchio",
-      "x": 0.4,
-      "y": 0.28,
-      "w": 0.14,
-      "h": 0.28,
-      "source": "seed"
+      "x": 0.08,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-11020",
+      "label": "TK-11020",
+      "kind": "serbatoio",
+      "x": 0.22,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "TK-11021",
       "label": "TK-11021",
       "kind": "serbatoio",
-      "x": 0.72,
-      "y": 0.3,
-      "w": 0.12,
-      "h": 0.28,
-      "source": "seed"
+      "x": 0.36,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-11018",
+      "label": "TK-11018 BIOCIDA",
+      "kind": "serbatoio",
+      "x": 0.5,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-11039",
+      "label": "TK-11039 IPOCLORITO",
+      "kind": "serbatoio",
+      "x": 0.64,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-11038",
+      "label": "TK-11038 SODA",
+      "kind": "serbatoio",
+      "x": 0.78,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-11037",
+      "label": "TK-11037 ACIDO CLOR.",
+      "kind": "serbatoio",
+      "x": 0.08,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-11019",
+      "label": "TK-11019 BISOLFITO",
+      "kind": "serbatoio",
+      "x": 0.22,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11033A",
+      "label": "P11033A",
+      "kind": "pompa",
+      "x": 0.36,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11040D",
+      "label": "P11040D",
+      "kind": "pompa",
+      "x": 0.5,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "XV06201",
+      "label": "XV06201",
+      "kind": "valvola",
+      "x": 0.8547,
+      "y": 0.3484,
+      "w": 0.0378,
+      "h": 0.03,
+      "confidence": 51.0,
+      "source": "ocr"
     }
-  ]
+  ],
+  "seedRev": 3
 }

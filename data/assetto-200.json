@@ -6,47 +6,118 @@
   "height": 497,
   "cropLeft": 108,
   "area": "assetto",
-  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
     {
       "id": "P11040A",
       "label": "P11040A",
       "kind": "pompa",
-      "x": 0.15,
-      "y": 0.35,
-      "w": 0.05,
-      "h": 0.08,
-      "source": "seed"
+      "x": 0.08,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "P11040B",
       "label": "P11040B",
       "kind": "pompa",
       "x": 0.22,
-      "y": 0.35,
-      "w": 0.05,
-      "h": 0.08,
-      "source": "seed"
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "P11040C",
       "label": "P11040C",
       "kind": "pompa",
-      "x": 0.29,
-      "y": 0.35,
-      "w": 0.05,
-      "h": 0.08,
-      "source": "seed"
+      "x": 0.36,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "XV11093",
+      "label": "XV11093",
+      "kind": "valvola",
+      "x": 0.5,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "XV11094",
+      "label": "XV11094",
+      "kind": "valvola",
+      "x": 0.64,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "XV11201",
+      "label": "XV11201",
+      "kind": "valvola",
+      "x": 0.78,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "FCV_1000",
+      "label": "FCV_1000",
+      "kind": "valvola",
+      "x": 0.08,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TT_1000",
+      "label": "TT_1000",
+      "kind": "strumento",
+      "x": 0.22,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "AIT_1000",
+      "label": "AIT_1000",
+      "kind": "strumento",
+      "x": 0.36,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "S-837",
       "label": "S-837",
       "kind": "serbatoio",
-      "x": 0.75,
-      "y": 0.65,
-      "w": 0.1,
-      "h": 0.18,
-      "source": "seed"
+      "x": 0.5,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "111_LI_837",
+      "label": "111_LI_837",
+      "kind": "strumento",
+      "x": 0.64,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     }
-  ]
+  ],
+  "seedRev": 3
 }

@@ -4,7 +4,7 @@
   "image": "assets/maps/sediflottatore-b.png",
   "width": 916,
   "height": 448,
-  "notes": "Coordinate normalizzate 0–1 sull’immagine intera. Affina in modalità Annota.",
+  "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
     {
       "id": "TK-11000",
@@ -716,7 +716,41 @@
       "y": 0.55,
       "w": 0.0503,
       "h": 0.06
+    },
+    {
+      "id": "A11100S",
+      "label": "A11100S",
+      "kind": "apparecchio",
+      "x": 0.5758,
+      "y": 0.807,
+      "w": 0.0244,
+      "h": 0.0448,
+      "confidence": 55.0,
+      "source": "ocr"
+    },
+    {
+      "id": "XV19926",
+      "label": "XV19926",
+      "kind": "valvola",
+      "x": 0.1769,
+      "y": 0.2967,
+      "w": 0.0383,
+      "h": 0.0312,
+      "confidence": 53.0,
+      "source": "ocr"
+    },
+    {
+      "id": "XV19928",
+      "label": "XV19928",
+      "kind": "valvola",
+      "x": 0.1749,
+      "y": 0.2865,
+      "w": 0.0403,
+      "h": 0.0469,
+      "confidence": 45.0,
+      "source": "ocr"
     }
   ],
-  "cropLeft": 108
+  "cropLeft": 108,
+  "seedRev": 3
 }

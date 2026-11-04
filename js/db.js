@@ -124,27 +124,37 @@ export async function loadSeedIfEmpty() {
       let changed = false;
       const seedRev = Number(seed.seedRev) || 0;
       const localRev = Number(local.seedRev) || 0;
-      if (seedRev > localRev) {
+      const seedTagN = (seed.tags || []).length;
+      const localTagN = (local.tags || []).length;
+      // Aggiorna se revision più nuova OPPURE il seed ha molti più tag (fix catalogo/OCR)
+      if (seedRev > localRev || seedTagN > localTagN + 3) {
         const locked = new Map(
           (local.tags || [])
             .filter((t) => t.locked || t.source === "manual")
             .map((t) => [String(t.id).toUpperCase(), t])
         );
-        const merged = (seed.tags || []).map((t) => {
-          const keep = locked.get(String(t.id).toUpperCase());
-          return keep ? { ...t, ...keep, id: keep.id } : { ...t };
-        });
-        for (const [key, t] of locked) {
-          if (!merged.some((x) => String(x.id).toUpperCase() === key)) merged.push(t);
+        const bySeed = new Map(
+          (seed.tags || []).map((t) => [String(t.id).toUpperCase(), { ...t }])
+        );
+        // parti dal seed, poi aggiungi manuali mancanti; se manuale e seed coincidono tieni manuale
+        const merged = [];
+        const seen = new Set();
+        for (const [key, t] of bySeed) {
+          const keep = locked.get(key);
+          merged.push(keep ? { ...t, ...keep, id: keep.id } : t);
+          seen.add(key);
         }
-        local.image = seed.image;
-        local.width = seed.width;
-        local.height = seed.height;
-        local.cropLeft = seed.cropLeft ?? 0;
+        for (const [key, t] of locked) {
+          if (!seen.has(key)) merged.push(t);
+        }
+        local.image = seed.image || local.image;
+        local.width = seed.width || local.width;
+        local.height = seed.height || local.height;
+        local.cropLeft = seed.cropLeft ?? local.cropLeft ?? 0;
         local.name = seed.name || local.name;
         local.area = seed.area || local.area;
         local.notes = seed.notes || local.notes;
-        local.seedRev = seedRev;
+        local.seedRev = Math.max(seedRev, localRev, 1);
         local.tags = merged;
         local.updatedAt = Date.now();
         await idbPut(local);

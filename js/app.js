@@ -161,7 +161,11 @@ async function runSearch(query, { autoPick = false } = {}) {
   const hits = await searchAllTags(query);
   if (!hits.length) {
     closeSuggestions();
-    if (query.trim()) setStatus(`Nessuna sigla vicina a «${escapeHtml(query)}»`);
+    if (query.trim()) {
+      setStatus(
+        `Nessuna sigla vicina a «${escapeHtml(query)}» — apri la mappa e premi <strong>OCR</strong>, oppure prova senza trattini (es. tk11007)`
+      );
+    }
     return hits;
   }
 

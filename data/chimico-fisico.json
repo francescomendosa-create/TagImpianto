@@ -6,47 +6,190 @@
   "height": 481,
   "cropLeft": 108,
   "area": "wwt",
-  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
     {
       "id": "TK-11000",
       "label": "TK-11000 SODA",
       "kind": "serbatoio",
-      "x": 0.28,
-      "y": 0.22,
-      "w": 0.07,
-      "h": 0.22,
-      "source": "seed"
+      "x": 0.08,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "TK-11001",
       "label": "TK-11001 ACIDO SOLF.",
       "kind": "serbatoio",
-      "x": 0.36,
-      "y": 0.22,
-      "w": 0.07,
-      "h": 0.22,
-      "source": "seed"
+      "x": 0.22,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "TK-11002",
       "label": "TK-11002 COAGULANTE",
       "kind": "serbatoio",
-      "x": 0.44,
-      "y": 0.22,
-      "w": 0.07,
-      "h": 0.22,
-      "source": "seed"
+      "x": 0.36,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-11000C",
+      "label": "TK-11000 COAGULAZIONE",
+      "kind": "serbatoio",
+      "x": 0.5,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-11001F",
+      "label": "TK-11001 FLOCCULAZIONE",
+      "kind": "serbatoio",
+      "x": 0.64,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "A-11005",
       "label": "A-11005 SEDI-FLOTTATORE",
       "kind": "apparecchio",
-      "x": 0.42,
-      "y": 0.55,
-      "w": 0.22,
-      "h": 0.22,
-      "source": "seed"
+      "x": 0.78,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "MX11000",
+      "label": "MX11000",
+      "kind": "mixer",
+      "x": 0.08,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "MX11001",
+      "label": "MX11001",
+      "kind": "mixer",
+      "x": 0.22,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11000A",
+      "label": "P11000A",
+      "kind": "pompa",
+      "x": 0.36,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11000B",
+      "label": "P11000B",
+      "kind": "pompa",
+      "x": 0.5,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11001A",
+      "label": "P11001A",
+      "kind": "pompa",
+      "x": 0.64,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11001B",
+      "label": "P11001B",
+      "kind": "pompa",
+      "x": 0.78,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11002A",
+      "label": "P11002A",
+      "kind": "pompa",
+      "x": 0.08,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11002B",
+      "label": "P11002B",
+      "kind": "pompa",
+      "x": 0.22,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "110AIT01",
+      "label": "110AIT01",
+      "kind": "strumento",
+      "x": 0.36,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "110FIT01",
+      "label": "110FIT01",
+      "kind": "strumento",
+      "x": 0.5,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11078",
+      "label": "P11078",
+      "kind": "pompa",
+      "x": 0.1441,
+      "y": 0.8197,
+      "w": 0.0373,
+      "h": 0.0304,
+      "confidence": 62.0,
+      "source": "ocr"
+    },
+    {
+      "id": "S108",
+      "label": "S108",
+      "kind": "serbatoio",
+      "x": 0.7237,
+      "y": 0.2924,
+      "w": 0.0363,
+      "h": 0.0427,
+      "confidence": 54.0,
+      "source": "ocr"
     }
-  ]
+  ],
+  "seedRev": 3
 }

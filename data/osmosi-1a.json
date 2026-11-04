@@ -6,37 +6,333 @@
   "height": 499,
   "cropLeft": 108,
   "area": "wwt",
-  "notes": "Seed automatico. Affina con OCR + Riposiziona.",
+  "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
     {
       "id": "TK-11021",
       "label": "TK-11021",
       "kind": "serbatoio",
       "x": 0.08,
-      "y": 0.25,
-      "w": 0.12,
-      "h": 0.3,
-      "source": "seed"
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
-      "id": "FIL-11009A",
-      "label": "FIL-11009A",
-      "kind": "apparecchio",
-      "x": 0.45,
-      "y": 0.35,
-      "w": 0.2,
-      "h": 0.22,
-      "source": "seed"
+      "id": "TK-11001",
+      "label": "TK-11001 ACIDO SOLF.",
+      "kind": "serbatoio",
+      "x": 0.22,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-11019",
+      "label": "TK-11019 BISOLFITO",
+      "kind": "serbatoio",
+      "x": 0.36,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-11010A",
+      "label": "TK-11010A ANTINCROSTANTE",
+      "kind": "serbatoio",
+      "x": 0.5,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-11000",
+      "label": "TK-11000 SODA",
+      "kind": "serbatoio",
+      "x": 0.64,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "TK-11011A",
       "label": "TK-11011A PERMEATO R.O.",
       "kind": "serbatoio",
-      "x": 0.75,
-      "y": 0.5,
-      "w": 0.12,
-      "h": 0.25,
-      "source": "seed"
+      "x": 0.78,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "FIL-11004A",
+      "label": "FIL-11004A",
+      "kind": "apparecchio",
+      "x": 0.08,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "FIL-11005A",
+      "label": "FIL-11005A",
+      "kind": "apparecchio",
+      "x": 0.22,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "FIL-11009A",
+      "label": "FIL-11009A",
+      "kind": "apparecchio",
+      "x": 0.36,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11020A",
+      "label": "P11020A",
+      "kind": "pompa",
+      "x": 0.5,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11020C",
+      "label": "P11020C",
+      "kind": "pompa",
+      "x": 0.64,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11021A",
+      "label": "P11021A",
+      "kind": "pompa",
+      "x": 0.78,
+      "y": 0.28,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11024A",
+      "label": "P11024A",
+      "kind": "pompa",
+      "x": 0.08,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11024C",
+      "label": "P11024C",
+      "kind": "pompa",
+      "x": 0.22,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11040A",
+      "label": "P11040A",
+      "kind": "pompa",
+      "x": 0.36,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11040B",
+      "label": "P11040B",
+      "kind": "pompa",
+      "x": 0.5,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11040C",
+      "label": "P11040C",
+      "kind": "pompa",
+      "x": 0.64,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11040D",
+      "label": "P11040D",
+      "kind": "pompa",
+      "x": 0.78,
+      "y": 0.4,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11032A",
+      "label": "P11032A",
+      "kind": "pompa",
+      "x": 0.08,
+      "y": 0.52,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11032B",
+      "label": "P11032B",
+      "kind": "pompa",
+      "x": 0.22,
+      "y": 0.52,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "P11032C",
+      "label": "P11032C",
+      "kind": "pompa",
+      "x": 0.36,
+      "y": 0.52,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "110PT03A",
+      "label": "110PT03A",
+      "kind": "strumento",
+      "x": 0.5,
+      "y": 0.52,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "110PDT01A",
+      "label": "110PDT01A",
+      "kind": "strumento",
+      "x": 0.64,
+      "y": 0.52,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "110PT04A",
+      "label": "110PT04A",
+      "kind": "strumento",
+      "x": 0.78,
+      "y": 0.52,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "110AIT08A",
+      "label": "110AIT08A",
+      "kind": "strumento",
+      "x": 0.08,
+      "y": 0.64,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "110AIT09A",
+      "label": "110AIT09A",
+      "kind": "strumento",
+      "x": 0.22,
+      "y": 0.64,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "110PT06A",
+      "label": "110PT06A",
+      "kind": "strumento",
+      "x": 0.36,
+      "y": 0.64,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
+    },
+    {
+      "id": "10LTC",
+      "label": "10LTC",
+      "kind": "strumento",
+      "x": 0.8746,
+      "y": 0.3766,
+      "w": 0.0348,
+      "h": 0.03,
+      "confidence": 46.0,
+      "source": "ocr"
+    },
+    {
+      "id": "110LT20",
+      "label": "110LT20",
+      "kind": "strumento",
+      "x": 0.8746,
+      "y": 0.3766,
+      "w": 0.0348,
+      "h": 0.03,
+      "confidence": 52.0,
+      "source": "ocr"
+    },
+    {
+      "id": "110LT20H",
+      "label": "110LT20H",
+      "kind": "strumento",
+      "x": 0.8746,
+      "y": 0.3766,
+      "w": 0.0348,
+      "h": 0.03,
+      "confidence": 52.0,
+      "source": "ocr"
+    },
+    {
+      "id": "110PT0A",
+      "label": "110PT0A",
+      "kind": "strumento",
+      "x": 0.6498,
+      "y": 0.597,
+      "w": 0.0403,
+      "h": 0.03,
+      "confidence": 51.0,
+      "source": "ocr"
+    },
+    {
+      "id": "P11024",
+      "label": "P11024",
+      "kind": "pompa",
+      "x": 0.6016,
+      "y": 0.2263,
+      "w": 0.0502,
+      "h": 0.0403,
+      "confidence": 55.0,
+      "source": "ocr"
     }
-  ]
+  ],
+  "seedRev": 3
 }
