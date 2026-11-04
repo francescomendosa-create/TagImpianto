@@ -1,4 +1,4 @@
-const CACHE = "tag-impianto-shell-v14";
+const CACHE = "tag-impianto-shell-v15";
 const SHELL = [
   "./",
   "./index.html",
@@ -36,8 +36,6 @@ const SHELL = [
   "./data/ultrafiltrazione.json",
   "./data/uscita-actiflo.json",
   "./data/vasche-api-s851.json",
-  "./assets/maps/_inspect-current-fanghi.png",
-  "./assets/maps/_inspect-wa-fanghi.png",
   "./assets/maps/actiflo.png",
   "./assets/maps/assetto-200.png",
   "./assets/maps/biologico-mbbr-123.png",
@@ -71,7 +69,19 @@ const SHELL = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting())
+    (async () => {
+      const cache = await caches.open(CACHE);
+      await Promise.all(
+        SHELL.map(async (url) => {
+          try {
+            await cache.add(url);
+          } catch (err) {
+            console.warn("SW cache skip", url, err);
+          }
+        })
+      );
+      await self.skipWaiting();
+    })()
   );
 });
 
