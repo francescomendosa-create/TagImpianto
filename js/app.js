@@ -109,17 +109,45 @@ async function selectMap(id, { keepHighlight = false, keepView = false } = {}) {
   }
   const same = currentMap && currentMap.id === map.id;
   currentMap = map;
+  // UI subito (titolo/menu), poi immagine
   syncPlantChrome(map);
-  await viewer.loadMap(map, { keepView: keepView || (keepHighlight && same) });
+  setStatus(`Mappa: <strong>${escapeHtml(map.name)}</strong> · ${(map.tags || []).length} tag`);
   if (!keepHighlight) {
     activeTagId = null;
     viewer.highlight(null);
-  } else if (activeTagId) {
-    viewer.highlight(activeTagId);
   }
-  setStatus(
-    `Mappa: <strong>${escapeHtml(map.name)}</strong> · ${(map.tags || []).length} tag`
-  );
+  try {
+    await viewer.loadMap(map, { keepView: keepView || (keepHighlight && same) });
+  } catch (err) {
+    setStatus(`Errore immagine: ${escapeHtml(err.message || err)}`);
+    return;
+  }
+  if (keepHighlight && activeTagId) viewer.highlight(activeTagId);
+  // Precarica le mappe vicine nel menu
+  preloadNearby(id);
+}
+
+function preloadNearby(mapId) {
+  const ids = maps.map((m) => m.id);
+  const i = ids.indexOf(mapId);
+  const neighbors = [ids[i - 1], ids[i + 1], ids[i + 2]].filter(Boolean);
+  for (const nid of neighbors) {
+    const m = maps.find((x) => x.id === nid);
+    if (m?.image) viewer.preload(m.image);
+  }
+}
+
+function preloadAllMapsIdle() {
+  const run = () => {
+    for (const m of maps) {
+      if (m?.image) viewer.preload(m.image);
+    }
+  };
+  if ("requestIdleCallback" in window) {
+    requestIdleCallback(run, { timeout: 4000 });
+  } else {
+    setTimeout(run, 1200);
+  }
 }
 
 async function refreshMaps() {
@@ -503,17 +531,23 @@ async function boot() {
 
   if ("serviceWorker" in navigator) {
     try {
-      // Togli SW vecchi (precache mappe) che potevano rompere il telefono
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map((r) => r.unregister()));
-      const keys = await caches.keys();
-      await Promise.all(keys.map((k) => caches.delete(k)));
+      // Una sola volta: pulisci SW/cache pre-v21 che scaricavano tutto ogni volta
+      const MIGRATE = "ti-sw-migrate-v21";
+      if (!localStorage.getItem(MIGRATE)) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+        localStorage.setItem(MIGRATE, "1");
+      }
       await navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" });
     } catch (_) {
       /* ignore */
     }
   }
 
+  preloadAllMapsIdle();
+  if (currentMap) preloadNearby(currentMap.id);
   els.searchInput.focus();
 }
 

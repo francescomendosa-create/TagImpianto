@@ -1,4 +1,5 @@
-const CACHE = "tag-impianto-shell-v20";
+const CACHE = "tag-impianto-shell-v21";
+const MAP_CACHE = "tag-impianto-maps-v21";
 const SHELL = [
   "./",
   "./index.html",
@@ -34,12 +35,17 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
+  const keep = new Set([CACHE, MAP_CACHE]);
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((k) => !keep.has(k)).map((k) => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
 });
+
+function isMapAsset(url) {
+  return url.pathname.includes("/assets/maps/") && /\.(png|jpe?g|webp)$/i.test(url.pathname);
+}
 
 self.addEventListener("fetch", (event) => {
   const req = event.request;
@@ -47,12 +53,33 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
+  // Mappe: cache-first (dopo la 1ª volta lo switch e' immediato)
+  if (isMapAsset(url)) {
+    event.respondWith(
+      caches.open(MAP_CACHE).then(async (cache) => {
+        const hit = await cache.match(req);
+        if (hit) return hit;
+        const res = await fetch(req);
+        if (res && res.ok) {
+          try {
+            await cache.put(req, res.clone());
+          } catch (_) {
+            /* quota piena: ignora */
+          }
+        }
+        return res;
+      })
+    );
+    return;
+  }
+
+  // Resto: rete, fallback cache shell
   event.respondWith(
     fetch(req)
       .then((res) => {
         if (res && res.ok && (url.pathname.endsWith(".js") || url.pathname.endsWith(".css") || url.pathname.endsWith(".html") || url.pathname.endsWith("/"))) {
           const copy = res.clone();
-          caches.open(CACHE).then((cache) => cache.put(req, copy)).catch(() => {});
+          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
         }
         return res;
       })

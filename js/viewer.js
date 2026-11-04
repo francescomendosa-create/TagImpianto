@@ -1,3 +1,5 @@
+const MAX_MEM_IMAGES = 8;
+
 export class MapViewer {
   constructor({ viewport, world, imageEl, overlayEl }) {
     this.viewport = viewport;
@@ -13,6 +15,9 @@ export class MapViewer {
     this.annotate = false;
     this._viewInitialized = false;
     this._lastSrc = "";
+    /** @type {Map<string, HTMLImageElement>} */
+    this._mem = new Map();
+    this._loadToken = 0;
 
     this._pointers = new Map();
     this._lastPinch = null;
@@ -51,25 +56,74 @@ export class MapViewer {
     this.renderOverlay();
   }
 
+  _touchMem(src, img) {
+    if (this._mem.has(src)) this._mem.delete(src);
+    this._mem.set(src, img);
+    while (this._mem.size > MAX_MEM_IMAGES) {
+      const oldest = this._mem.keys().next().value;
+      this._mem.delete(oldest);
+    }
+  }
+
+  /** Precache in background (HTTP + memoria). */
+  preload(src) {
+    if (!src || this._mem.has(src)) return;
+    const img = new Image();
+    img.decoding = "async";
+    img.onload = () => this._touchMem(src, img);
+    img.src = src;
+  }
+
+  async _ensureImage(src) {
+    const cached = this._mem.get(src);
+    if (cached?.complete && cached.naturalWidth) {
+      this._touchMem(src, cached);
+      return cached;
+    }
+    const img = new Image();
+    img.decoding = "async";
+    await new Promise((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("Immagine mappa non caricata"));
+      img.src = src;
+    });
+    try {
+      if (img.decode) await img.decode();
+    } catch (_) {
+      /* decode opzionale */
+    }
+    this._touchMem(src, img);
+    return img;
+  }
+
   async loadMap(map, { keepView = false } = {}) {
     this.map = map;
     const src = map.image;
+    const token = ++this._loadToken;
     const sameImage = src === this._lastSrc && this.imageEl.naturalWidth;
+
     if (!sameImage) {
-      await new Promise((resolve, reject) => {
-        this.imageEl.onload = () => resolve();
-        this.imageEl.onerror = () => reject(new Error("Immagine mappa non caricata"));
-        this.imageEl.src = src;
-      });
+      const img = await this._ensureImage(src);
+      if (token !== this._loadToken) return; // cambio mappa più recente
+      // Copia sul nodo visibile (src già in cache browser → quasi istantaneo)
+      if (this.imageEl.src !== img.src) {
+        await new Promise((resolve, reject) => {
+          this.imageEl.onload = () => resolve();
+          this.imageEl.onerror = () => reject(new Error("Immagine mappa non caricata"));
+          this.imageEl.src = img.src || src;
+          if (this.imageEl.complete && this.imageEl.naturalWidth) resolve();
+        });
+      }
+      if (token !== this._loadToken) return;
       this._lastSrc = src;
     }
+
     const w = map.width || this.imageEl.naturalWidth;
     const h = map.height || this.imageEl.naturalHeight;
     this.imageEl.width = w;
     this.imageEl.height = h;
     this.overlayEl.style.width = `${w}px`;
     this.overlayEl.style.height = `${h}px`;
-    // keepView / stessa immagine: non muovere zoom-pan. Nuova mappa: un fit.
     if (keepView && sameImage) {
       /* lascia inquadratura */
     } else if (!this._viewInitialized || !sameImage) {
@@ -213,14 +267,12 @@ export class MapViewer {
       if (this.onTagMoved) this.onTagMoved(wasDrag.id);
     }
 
-    const had = this._pointers.has(e.pointerId);
     this._pointers.delete(e.pointerId);
     if (this._pointers.size < 2) this._lastPinch = null;
 
     if (this._pointers.size === 0) {
       this._panning = false;
       this.viewport.classList.remove("panning");
-      // Riposiziona: nessun tap per creare tag (solo drag del box evidenziato)
       this._panStart = null;
       this._moved = false;
     }
