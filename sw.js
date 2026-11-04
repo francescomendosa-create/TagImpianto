@@ -1,4 +1,4 @@
-const CACHE = "tag-impianto-shell-v19";
+const CACHE = "tag-impianto-shell-v20";
 const SHELL = [
   "./",
   "./index.html",
@@ -11,58 +11,6 @@ const SHELL = [
   "./js/firebase-config.js",
   "./js/version.js",
   "./data/manifest.json",
-  "./data/actiflo.json",
-  "./data/assetto-200.json",
-  "./data/biologico-mbbr-123.json",
-  "./data/chimico-fisico.json",
-  "./data/filtrazione-carboni.json",
-  "./data/holdup-area-nord.json",
-  "./data/holdup-pgs-ovest.json",
-  "./data/interconnecting.json",
-  "./data/osmosi-1a.json",
-  "./data/osmosi-1b.json",
-  "./data/osmosi-1c.json",
-  "./data/osmosi-2a.json",
-  "./data/osmosi-2b.json",
-  "./data/osmosi-2c.json",
-  "./data/reattivi-actiflo.json",
-  "./data/sediflottatore-b.json",
-  "./data/sediflottazione-a.json",
-  "./data/trattamento-fanghi.json",
-  "./data/ultrafiltrazione-a.json",
-  "./data/ultrafiltrazione-b.json",
-  "./data/ultrafiltrazione-c.json",
-  "./data/ultrafiltrazione-mbr-ad.json",
-  "./data/ultrafiltrazione-mbr-eh.json",
-  "./data/ultrafiltrazione.json",
-  "./data/uscita-actiflo.json",
-  "./data/vasche-api-s851.json",
-  "./assets/maps/actiflo.png",
-  "./assets/maps/assetto-200.png",
-  "./assets/maps/biologico-mbbr-123.png",
-  "./assets/maps/chimico-fisico.png",
-  "./assets/maps/filtrazione-carboni.png",
-  "./assets/maps/holdup-area-nord.png",
-  "./assets/maps/holdup-pgs-ovest.png",
-  "./assets/maps/interconnecting.png",
-  "./assets/maps/osmosi-1a.png",
-  "./assets/maps/osmosi-1b.png",
-  "./assets/maps/osmosi-1c.png",
-  "./assets/maps/osmosi-2a.png",
-  "./assets/maps/osmosi-2b.png",
-  "./assets/maps/osmosi-2c.png",
-  "./assets/maps/reattivi-actiflo.png",
-  "./assets/maps/sediflottatore-b.png",
-  "./assets/maps/sediflottazione-a.png",
-  "./assets/maps/trattamento-fanghi.png",
-  "./assets/maps/ultrafiltrazione-a.png",
-  "./assets/maps/ultrafiltrazione-b.png",
-  "./assets/maps/ultrafiltrazione-c.png",
-  "./assets/maps/ultrafiltrazione-mbr-ad.png",
-  "./assets/maps/ultrafiltrazione-mbr-eh.png",
-  "./assets/maps/ultrafiltrazione.png",
-  "./assets/maps/uscita-actiflo.png",
-  "./assets/maps/vasche-api-s851.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
 ];
@@ -99,37 +47,15 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  const path = url.pathname;
-  const isHtml = req.mode === "navigate" || path.endsWith(".html") || path.endsWith("/");
-  const isManifest = path.endsWith("manifest.webmanifest") || path.endsWith("version.js");
-
-  if (isHtml || isManifest) {
-    event.respondWith(
-      fetch(req)
-        .then((res) => {
-          if (res && res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((cache) => cache.put(req, copy));
-          }
-          return res;
-        })
-        .catch(() => caches.match(req))
-    );
-    return;
-  }
-
   event.respondWith(
-    caches.match(req).then((cached) => {
-      const fetchPromise = fetch(req)
-        .then((res) => {
-          if (res && res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((cache) => cache.put(req, copy));
-          }
-          return res;
-        })
-        .catch(() => cached);
-      return cached || fetchPromise;
-    })
+    fetch(req)
+      .then((res) => {
+        if (res && res.ok && (url.pathname.endsWith(".js") || url.pathname.endsWith(".css") || url.pathname.endsWith(".html") || url.pathname.endsWith("/"))) {
+          const copy = res.clone();
+          caches.open(CACHE).then((cache) => cache.put(req, copy)).catch(() => {});
+        }
+        return res;
+      })
+      .catch(() => caches.match(req))
   );
 });

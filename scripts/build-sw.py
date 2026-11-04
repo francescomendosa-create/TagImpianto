@@ -1,15 +1,8 @@
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
-maps = sorted(
-    p
-    for p in (root / "assets" / "maps").glob("*.png")
-    if not p.name.startswith("_")
-)
-datas = sorted(
-    p for p in (root / "data").glob("*.json") if p.name != "manifest.json"
-)
 
+# Solo shell leggera: niente PNG enormi in precache (su telefono riempie la quota e rompe l'app).
 install_block = '''self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
@@ -39,6 +32,7 @@ self.addEventListener("activate", (event) => {
 });
 '''
 
+# Rete prima per tutto ciò che serve all'app; cache solo come fallback offline.
 fetch_block = '''
 self.addEventListener("fetch", (event) => {
   const req = event.request;
@@ -46,44 +40,22 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  const path = url.pathname;
-  const isHtml = req.mode === "navigate" || path.endsWith(".html") || path.endsWith("/");
-  const isManifest = path.endsWith("manifest.webmanifest") || path.endsWith("version.js");
-
-  if (isHtml || isManifest) {
-    event.respondWith(
-      fetch(req)
-        .then((res) => {
-          if (res && res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((cache) => cache.put(req, copy));
-          }
-          return res;
-        })
-        .catch(() => caches.match(req))
-    );
-    return;
-  }
-
   event.respondWith(
-    caches.match(req).then((cached) => {
-      const fetchPromise = fetch(req)
-        .then((res) => {
-          if (res && res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((cache) => cache.put(req, copy));
-          }
-          return res;
-        })
-        .catch(() => cached);
-      return cached || fetchPromise;
-    })
+    fetch(req)
+      .then((res) => {
+        if (res && res.ok && (url.pathname.endsWith(".js") || url.pathname.endsWith(".css") || url.pathname.endsWith(".html") || url.pathname.endsWith("/"))) {
+          const copy = res.clone();
+          caches.open(CACHE).then((cache) => cache.put(req, copy)).catch(() => {});
+        }
+        return res;
+      })
+      .catch(() => caches.match(req))
   );
 });
 '''
 
 lines = [
-    'const CACHE = "tag-impianto-shell-v19";',
+    'const CACHE = "tag-impianto-shell-v20";',
     "const SHELL = [",
     '  "./",',
     '  "./index.html",',
@@ -96,12 +68,6 @@ lines = [
     '  "./js/firebase-config.js",',
     '  "./js/version.js",',
     '  "./data/manifest.json",',
-]
-for p in datas:
-    lines.append(f'  "./data/{p.name}",')
-for p in maps:
-    lines.append(f'  "./assets/maps/{p.name}",')
-lines += [
     '  "./icons/icon-192.png",',
     '  "./icons/icon-512.png",',
     "];",
@@ -112,4 +78,4 @@ lines += [
     "\n".join(lines) + "\n" + install_block + activate_block + fetch_block,
     encoding="utf-8",
 )
-print("ok", len(datas), "json", len(maps), "png")
+print("ok shell-only sw")

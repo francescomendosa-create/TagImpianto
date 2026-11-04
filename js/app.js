@@ -2,6 +2,7 @@ import {
   initCloud,
   isCloudReady,
   loadSeedIfEmpty,
+  resetMapsFromSeed,
   listMaps,
   getMap,
   saveMap,
@@ -11,7 +12,7 @@ import {
 import { MapViewer } from "./viewer.js";
 import { runMapOcr, mergeOcrIntoMap } from "./ocr.js";
 import { renderPlantNav, setPlantNavActive } from "./plant-nav.js";
-import { APP_VERSION, APP_BUILD, INSTALL_URL } from "./version.js";
+import { APP_VERSION, APP_BUILD } from "./version.js";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -38,7 +39,6 @@ const els = {
   toast: $("#toast"),
   cloudBadge: $("#cloudBadge"),
   appVersion: $("#appVersion"),
-  installHint: $("#installHint"),
 };
 
 let maps = [];
@@ -468,8 +468,24 @@ async function boot() {
       if (page?.mapId) selectMap(page.mapId);
     },
   });
-  await loadSeedIfEmpty();
+
+  const params = new URLSearchParams(location.search);
+  const wantReset = params.has("reset") || params.get("ripristina") === "1";
+  if (wantReset) {
+    setStatus("Ripristino mappe e tag dal sito…");
+    await resetMapsFromSeed();
+  } else {
+    await loadSeedIfEmpty();
+  }
+
   await refreshMaps();
+
+  // Se dopo il load non c’è nulla, forza ripristino seed (cache/IndexedDB corrotti)
+  if (!maps.length) {
+    setStatus("Nessuna mappa in locale — ripristino…");
+    await resetMapsFromSeed();
+    await refreshMaps();
+  }
 
   const cloud = await initCloud();
   if (cloud.ok) {
@@ -482,28 +498,20 @@ async function boot() {
       console.warn(err);
     }
   } else {
-    // Normale: Firebase non configurato → dati solo IndexedDB sul dispositivo
     els.cloudBadge.innerHTML = `<span class="muted" title="I tag restano sul dispositivo; sync cloud non configurato">Solo dispositivo</span>`;
   }
 
   if ("serviceWorker" in navigator) {
     try {
-      await navigator.serviceWorker.register("./sw.js?v=1.4.1", { updateViaCache: "none" });
+      // Togli SW vecchi (precache mappe) che potevano rompere il telefono
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+      await navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" });
     } catch (_) {
       /* ignore */
     }
-  }
-
-  // Vecchio URL GitHub Pages: WebAPK fantasma → invita al mirror pulito
-  const onGhostHost =
-    /\/TagImpianto\/?/.test(location.pathname) &&
-    !/TagImpiantoApp/.test(location.pathname);
-  if (onGhostHost && els.installHint) {
-    els.installHint.hidden = false;
-    els.installHint.innerHTML =
-      `Per installare l’icona usa il link pulito: ` +
-      `<a href="${INSTALL_URL}">TagImpiantoApp</a> ` +
-      `(Chrome qui crede che l’app ci sia già)`;
   }
 
   els.searchInput.focus();

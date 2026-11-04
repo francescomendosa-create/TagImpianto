@@ -209,6 +209,18 @@ export async function loadSeedIfEmpty() {
   return idbGetAll();
 }
 
+/** Cancella le mappe locali e ricarica i seed dal sito (ripristino). */
+export async function resetMapsFromSeed() {
+  const db = await openIdb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  return loadSeedIfEmpty();
+}
+
 export async function listMaps() {
   const local = await idbGetAll();
   local.sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id, "it"));

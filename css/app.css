@@ -64,16 +64,6 @@ html, body {
   vertical-align: middle;
 }
 .cloud-badge .muted { color: var(--muted); font-weight: 500; }
-.install-hint {
-  left: 12px;
-  right: 12px;
-  bottom: 52px;
-  max-width: min(92vw, 520px);
-  color: var(--text);
-  line-height: 1.35;
-}
-.install-hint a { color: var(--accent); font-weight: 700; }
-.cloud-badge { bottom: 12px; }
 
 .map-select {
   min-width: 0;
