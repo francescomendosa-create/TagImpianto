@@ -11,6 +11,7 @@ import {
 import { MapViewer } from "./viewer.js";
 import { runMapOcr, mergeOcrIntoMap } from "./ocr.js";
 import { renderPlantNav, setPlantNavActive } from "./plant-nav.js";
+import { APP_VERSION, APP_BUILD } from "./version.js";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -36,6 +37,7 @@ const els = {
   noteClose: $("#noteClose"),
   toast: $("#toast"),
   cloudBadge: $("#cloudBadge"),
+  appVersion: $("#appVersion"),
 };
 
 let maps = [];
@@ -455,6 +457,10 @@ document.addEventListener("click", (e) => {
 // resize: non forzare fit — l’inquadratura resta quella dell’utente
 
 async function boot() {
+  if (els.appVersion) {
+    els.appVersion.textContent = `v${APP_VERSION}`;
+    els.appVersion.title = `Versione ${APP_VERSION} (${APP_BUILD})`;
+  }
   setStatus("Avvio Tag Impianto…");
   renderPlantNav(els.plantNav, {
     onSelect: (page) => {
@@ -475,12 +481,13 @@ async function boot() {
       console.warn(err);
     }
   } else {
-    els.cloudBadge.innerHTML = `<span class="warn">Locale</span>`;
+    // Normale: Firebase non configurato → dati solo IndexedDB sul dispositivo
+    els.cloudBadge.innerHTML = `<span class="muted" title="I tag restano sul dispositivo; sync cloud non configurato">Solo dispositivo</span>`;
   }
 
   if ("serviceWorker" in navigator) {
     try {
-      await navigator.serviceWorker.register("./sw.js");
+      await navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" });
     } catch (_) {
       /* ignore */
     }

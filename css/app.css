@@ -54,6 +54,16 @@ html, body {
   white-space: nowrap;
 }
 .brand span { color: var(--accent); }
+.app-version {
+  margin-left: 6px;
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  font-family: var(--mono);
+  vertical-align: middle;
+}
+.cloud-badge .muted { color: var(--muted); font-weight: 500; }
 
 .map-select {
   min-width: 0;

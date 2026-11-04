@@ -9,11 +9,7 @@ maps = sorted(
 datas = sorted(
     p for p in (root / "data").glob("*.json") if p.name != "manifest.json"
 )
-old = (root / "sw.js").read_text(encoding="utf-8")
-idx = old.find('self.addEventListener("install"')
-rest = old[idx:] if idx >= 0 else ""
 
-# install resiliente: un file mancante non deve far fallire tutta la PWA
 install_block = '''self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
@@ -33,15 +29,61 @@ install_block = '''self.addEventListener("install", (event) => {
 });
 '''
 
-# sostituisci solo dalla install in poi se c'e gia activate
-act = old.find('self.addEventListener("activate"')
-if act >= 0:
-    rest = install_block + "\n" + old[act:]
-else:
-    rest = install_block
+activate_block = '''
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
+    ).then(() => self.clients.claim())
+  );
+});
+'''
+
+fetch_block = '''
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  if (req.method !== "GET") return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+
+  const path = url.pathname;
+  const isHtml = req.mode === "navigate" || path.endsWith(".html") || path.endsWith("/");
+  const isManifest = path.endsWith("manifest.webmanifest") || path.endsWith("version.js");
+
+  if (isHtml || isManifest) {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((cache) => cache.put(req, copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  event.respondWith(
+    caches.match(req).then((cached) => {
+      const fetchPromise = fetch(req)
+        .then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((cache) => cache.put(req, copy));
+          }
+          return res;
+        })
+        .catch(() => cached);
+      return cached || fetchPromise;
+    })
+  );
+});
+'''
 
 lines = [
-    'const CACHE = "tag-impianto-shell-v16";',
+    'const CACHE = "tag-impianto-shell-v17";',
     "const SHELL = [",
     '  "./",',
     '  "./index.html",',
@@ -52,6 +94,7 @@ lines = [
     '  "./js/ocr.js",',
     '  "./js/plant-nav.js",',
     '  "./js/firebase-config.js",',
+    '  "./js/version.js",',
     '  "./data/manifest.json",',
 ]
 for p in datas:
@@ -59,11 +102,14 @@ for p in datas:
 for p in maps:
     lines.append(f'  "./assets/maps/{p.name}",')
 lines += [
-    '  "./manifest.webmanifest",',
     '  "./icons/icon-192.png",',
     '  "./icons/icon-512.png",',
     "];",
     "",
 ]
-(root / "sw.js").write_text("\n".join(lines) + "\n" + rest, encoding="utf-8")
+
+(root / "sw.js").write_text(
+    "\n".join(lines) + "\n" + install_block + activate_block + fetch_block,
+    encoding="utf-8",
+)
 print("ok", len(datas), "json", len(maps), "png")
