@@ -2,9 +2,9 @@
   "id": "actiflo",
   "name": "Actiflo",
   "image": "assets/maps/actiflo.png",
-  "width": 916,
-  "height": 487,
-  "cropLeft": 108,
+  "width": 3569,
+  "height": 1922,
+  "cropLeft": 463,
   "area": "sf3",
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
@@ -169,5 +169,5 @@
       "source": "catalog"
     }
   ],
-  "seedRev": 3
+  "seedRev": 4
 }

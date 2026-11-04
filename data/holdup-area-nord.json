@@ -2,9 +2,9 @@
   "id": "holdup-area-nord",
   "name": "HOLD-UP Area Nord A-10605",
   "image": "assets/maps/holdup-area-nord.png",
-  "width": 916,
-  "height": 510,
-  "cropLeft": 108,
+  "width": 3370,
+  "height": 1898,
+  "cropLeft": 437,
   "area": "holdup",
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
@@ -42,12 +42,12 @@
       "id": "A-10605",
       "label": "A-10605",
       "kind": "apparecchio",
-      "x": 0.42,
-      "y": 0.6332,
-      "w": 0.0428,
+      "x": 0.4172,
+      "y": 0.6357,
+      "w": 0.0372,
       "h": 0.03,
       "source": "ocr",
-      "confidence": 84.0
+      "confidence": 90.0
     },
     {
       "id": "P-13001A",
@@ -88,7 +88,29 @@
       "w": 0.06,
       "h": 0.06,
       "source": "catalog"
+    },
+    {
+      "id": "A-10605I",
+      "label": "A-10605I",
+      "kind": "apparecchio",
+      "x": 0.4167,
+      "y": 0.6357,
+      "w": 0.0376,
+      "h": 0.03,
+      "confidence": 90.0,
+      "source": "ocr"
+    },
+    {
+      "id": "P-13005",
+      "label": "P-13005",
+      "kind": "pompa",
+      "x": 0.8194,
+      "y": 0.8391,
+      "w": 0.0354,
+      "h": 0.0328,
+      "confidence": 81.0,
+      "source": "ocr"
     }
   ],
-  "seedRev": 3
+  "seedRev": 4
 }

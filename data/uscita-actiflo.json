@@ -2,9 +2,9 @@
   "id": "uscita-actiflo",
   "name": "Uscita Actiflo",
   "image": "assets/maps/uscita-actiflo.png",
-  "width": 916,
-  "height": 538,
-  "cropLeft": 108,
+  "width": 3515,
+  "height": 2089,
+  "cropLeft": 456,
   "area": "sf3",
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
@@ -79,5 +79,5 @@
       "source": "catalog"
     }
   ],
-  "seedRev": 3
+  "seedRev": 4
 }

@@ -2,9 +2,9 @@
   "id": "assetto-200",
   "name": "Assetto a 200 m³/h",
   "image": "assets/maps/assetto-200.png",
-  "width": 916,
-  "height": 497,
-  "cropLeft": 108,
+  "width": 3556,
+  "height": 1953,
+  "cropLeft": 461,
   "area": "assetto",
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
@@ -119,5 +119,5 @@
       "source": "catalog"
     }
   ],
-  "seedRev": 3
+  "seedRev": 4
 }

@@ -2,9 +2,9 @@
   "id": "osmosi-2a",
   "name": "Osmosi 2° passo A",
   "image": "assets/maps/osmosi-2a.png",
-  "width": 916,
-  "height": 502,
-  "cropLeft": 108,
+  "width": 3552,
+  "height": 1897,
+  "cropLeft": 461,
   "area": "wwt",
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
@@ -102,11 +102,12 @@
       "id": "P11027A",
       "label": "P11027A",
       "kind": "pompa",
-      "x": 0.5,
-      "y": 0.28,
-      "w": 0.06,
-      "h": 0.06,
-      "source": "catalog"
+      "x": 0.8208,
+      "y": 0.6845,
+      "w": 0.0319,
+      "h": 0.03,
+      "source": "ocr",
+      "confidence": 77.0
     },
     {
       "id": "P11027B",
@@ -169,38 +170,38 @@
       "source": "catalog"
     },
     {
-      "id": "110PT",
-      "label": "110PT",
+      "id": "110PTO",
+      "label": "110PTO",
       "kind": "strumento",
-      "x": 0.3128,
-      "y": 0.2557,
-      "w": 0.0259,
+      "x": 0.7084,
+      "y": 0.2487,
+      "w": 0.0338,
       "h": 0.03,
-      "confidence": 81.0,
+      "confidence": 79.0,
+      "source": "ocr"
+    },
+    {
+      "id": "P11025A",
+      "label": "P11025A",
+      "kind": "pompa",
+      "x": 0.1994,
+      "y": 0.2186,
+      "w": 0.0326,
+      "h": 0.03,
+      "confidence": 91.0,
       "source": "ocr"
     },
     {
       "id": "P11027",
       "label": "P11027",
       "kind": "pompa",
-      "x": 0.7535,
-      "y": 0.7591,
-      "w": 0.02,
+      "x": 0.8189,
+      "y": 0.7602,
+      "w": 0.0319,
       "h": 0.03,
-      "confidence": 66.0,
-      "source": "ocr"
-    },
-    {
-      "id": "S209",
-      "label": "S209",
-      "kind": "serbatoio",
-      "x": 0.7083,
-      "y": 0.0873,
-      "w": 0.02,
-      "h": 0.03,
-      "confidence": 67.0,
+      "confidence": 83.0,
       "source": "ocr"
     }
   ],
-  "seedRev": 3
+  "seedRev": 4
 }

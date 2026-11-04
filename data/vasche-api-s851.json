@@ -2,9 +2,9 @@
   "id": "vasche-api-s851",
   "name": "S-851 Vasche API",
   "image": "assets/maps/vasche-api-s851.png",
-  "width": 916,
-  "height": 499,
-  "cropLeft": 108,
+  "width": 3565,
+  "height": 1968,
+  "cropLeft": 463,
   "area": "vasche-api",
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
@@ -22,21 +22,23 @@
       "id": "P-13007A",
       "label": "P-13007A",
       "kind": "pompa",
-      "x": 0.22,
-      "y": 0.16,
-      "w": 0.06,
-      "h": 0.06,
-      "source": "catalog"
+      "x": 0.1016,
+      "y": 0.8789,
+      "w": 0.0353,
+      "h": 0.03,
+      "source": "ocr",
+      "confidence": 76.0
     },
     {
       "id": "P-13007B",
       "label": "P-13007B",
       "kind": "pompa",
-      "x": 0.36,
-      "y": 0.16,
-      "w": 0.06,
-      "h": 0.06,
-      "source": "catalog"
+      "x": 0.3094,
+      "y": 0.8819,
+      "w": 0.0339,
+      "h": 0.03,
+      "source": "ocr",
+      "confidence": 89.0
     },
     {
       "id": "AI_001",
@@ -99,16 +101,27 @@
       "source": "catalog"
     },
     {
-      "id": "S818",
-      "label": "S818",
-      "kind": "serbatoio",
-      "x": 0.8994,
-      "y": 0.2509,
-      "w": 0.0329,
+      "id": "110AIT14",
+      "label": "110AIT14",
+      "kind": "strumento",
+      "x": 0.7262,
+      "y": 0.4535,
+      "w": 0.0322,
       "h": 0.03,
-      "confidence": 82.0,
+      "confidence": 68.0,
+      "source": "ocr"
+    },
+    {
+      "id": "LCV-107",
+      "label": "LCV-107",
+      "kind": "valvola",
+      "x": 0.8058,
+      "y": 0.3975,
+      "w": 0.0522,
+      "h": 0.03,
+      "confidence": 89.0,
       "source": "ocr"
     }
   ],
-  "seedRev": 3
+  "seedRev": 4
 }

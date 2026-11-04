@@ -2,9 +2,9 @@
   "id": "osmosi-1b",
   "name": "Osmosi 1° passo B",
   "image": "assets/maps/osmosi-1b.png",
-  "width": 916,
-  "height": 504,
-  "cropLeft": 108,
+  "width": 3525,
+  "height": 1946,
+  "cropLeft": 458,
   "area": "wwt",
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
@@ -12,11 +12,12 @@
       "id": "TK-11021",
       "label": "TK-11021",
       "kind": "serbatoio",
-      "x": 0.08,
-      "y": 0.16,
-      "w": 0.06,
-      "h": 0.06,
-      "source": "catalog"
+      "x": 0.0115,
+      "y": 0.7754,
+      "w": 0.033,
+      "h": 0.03,
+      "source": "ocr",
+      "confidence": 56.0
     },
     {
       "id": "TK-11001",
@@ -142,11 +143,12 @@
       "id": "P11040D",
       "label": "P11040D",
       "kind": "pompa",
-      "x": 0.22,
-      "y": 0.4,
-      "w": 0.06,
-      "h": 0.06,
-      "source": "catalog"
+      "x": 0.1109,
+      "y": 0.5272,
+      "w": 0.0328,
+      "h": 0.03,
+      "source": "ocr",
+      "confidence": 87.0
     },
     {
       "id": "P11032A",
@@ -177,7 +179,95 @@
       "w": 0.06,
       "h": 0.06,
       "source": "catalog"
+    },
+    {
+      "id": "10AIT200",
+      "label": "10AIT200",
+      "kind": "strumento",
+      "x": 0.9112,
+      "y": 0.7579,
+      "w": 0.0328,
+      "h": 0.03,
+      "confidence": 70.0,
+      "source": "ocr"
+    },
+    {
+      "id": "10FIT2Z",
+      "label": "10FIT2Z",
+      "kind": "strumento",
+      "x": 0.6481,
+      "y": 0.1884,
+      "w": 0.033,
+      "h": 0.03,
+      "confidence": 46.0,
+      "source": "ocr"
+    },
+    {
+      "id": "10PDT01",
+      "label": "10PDT01",
+      "kind": "altro",
+      "x": 0.4459,
+      "y": 0.6003,
+      "w": 0.0299,
+      "h": 0.03,
+      "confidence": 65.0,
+      "source": "ocr"
+    },
+    {
+      "id": "110FIT07B",
+      "label": "110FIT07B",
+      "kind": "strumento",
+      "x": 0.8017,
+      "y": 0.5713,
+      "w": 0.0368,
+      "h": 0.032,
+      "confidence": 52.0,
+      "source": "ocr"
+    },
+    {
+      "id": "110PT03B",
+      "label": "110PT03B",
+      "kind": "strumento",
+      "x": 0.2702,
+      "y": 0.5999,
+      "w": 0.0353,
+      "h": 0.03,
+      "confidence": 65.0,
+      "source": "ocr"
+    },
+    {
+      "id": "FCV-11002",
+      "label": "FCV-11002",
+      "kind": "valvola",
+      "x": 0.7449,
+      "y": 0.665,
+      "w": 0.0456,
+      "h": 0.03,
+      "confidence": 67.0,
+      "source": "ocr"
+    },
+    {
+      "id": "P11020C",
+      "label": "P11020C",
+      "kind": "pompa",
+      "x": 0.1059,
+      "y": 0.2973,
+      "w": 0.0332,
+      "h": 0.03,
+      "confidence": 75.0,
+      "source": "ocr"
+    },
+    {
+      "id": "P11023B",
+      "label": "P11023B",
+      "kind": "pompa",
+      "x": 0.6966,
+      "y": 0.9135,
+      "w": 0.0334,
+      "h": 0.03,
+      "confidence": 46.0,
+      "source": "ocr"
     }
   ],
-  "seedRev": 3
+  "seedRev": 4
 }

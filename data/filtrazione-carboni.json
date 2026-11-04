@@ -2,9 +2,9 @@
   "id": "filtrazione-carboni",
   "name": "Filtrazione a carboni",
   "image": "assets/maps/filtrazione-carboni.png",
-  "width": 916,
-  "height": 494,
-  "cropLeft": 108,
+  "width": 3502,
+  "height": 2032,
+  "cropLeft": 454,
   "area": "wwt",
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
@@ -32,11 +32,12 @@
       "id": "TK-11018",
       "label": "TK-11018 BIOCIDA",
       "kind": "serbatoio",
-      "x": 0.36,
-      "y": 0.16,
-      "w": 0.06,
-      "h": 0.06,
-      "source": "catalog"
+      "x": 0.7473,
+      "y": 0.5202,
+      "w": 0.0368,
+      "h": 0.03,
+      "source": "ocr",
+      "confidence": 91.0
     },
     {
       "id": "FIL-11002A",
@@ -72,21 +73,23 @@
       "id": "FIL-11003B",
       "label": "FIL-11003B",
       "kind": "apparecchio",
-      "x": 0.08,
-      "y": 0.28,
-      "w": 0.06,
-      "h": 0.06,
-      "source": "catalog"
+      "x": 0.4801,
+      "y": 0.9449,
+      "w": 0.0408,
+      "h": 0.03,
+      "source": "ocr",
+      "confidence": 45.0
     },
     {
       "id": "P11019A",
       "label": "P11019A",
       "kind": "pompa",
-      "x": 0.22,
-      "y": 0.28,
-      "w": 0.06,
-      "h": 0.06,
-      "source": "catalog"
+      "x": 0.1366,
+      "y": 0.5205,
+      "w": 0.0353,
+      "h": 0.03,
+      "source": "ocr",
+      "confidence": 84.0
     },
     {
       "id": "P11019B",
@@ -147,7 +150,40 @@
       "w": 0.06,
       "h": 0.06,
       "source": "catalog"
+    },
+    {
+      "id": "FIL-1100",
+      "label": "FIL-1100",
+      "kind": "apparecchio",
+      "x": 0.308,
+      "y": 0.5439,
+      "w": 0.0324,
+      "h": 0.03,
+      "confidence": 49.0,
+      "source": "ocr"
+    },
+    {
+      "id": "XV11074",
+      "label": "XV11074",
+      "kind": "valvola",
+      "x": 0.0053,
+      "y": 0.2993,
+      "w": 0.0394,
+      "h": 0.03,
+      "confidence": 76.0,
+      "source": "ocr"
+    },
+    {
+      "id": "XV11074E",
+      "label": "XV11074E",
+      "kind": "valvola",
+      "x": 0.0053,
+      "y": 0.2993,
+      "w": 0.0394,
+      "h": 0.03,
+      "confidence": 76.0,
+      "source": "ocr"
     }
   ],
-  "seedRev": 3
+  "seedRev": 4
 }

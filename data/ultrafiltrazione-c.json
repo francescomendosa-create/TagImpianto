@@ -2,9 +2,9 @@
   "id": "ultrafiltrazione-c",
   "name": "Ultrafiltrazione C",
   "image": "assets/maps/ultrafiltrazione-c.png",
-  "width": 916,
-  "height": 488,
-  "cropLeft": 108,
+  "width": 3522,
+  "height": 1899,
+  "cropLeft": 457,
   "area": "wwt",
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
@@ -42,12 +42,11 @@
       "id": "TK-11018",
       "label": "TK-11018 BIOCIDA",
       "kind": "serbatoio",
-      "x": 0.3277,
-      "y": 0.93,
-      "w": 0.0358,
-      "h": 0.03,
-      "source": "ocr",
-      "confidence": 71.0
+      "x": 0.5,
+      "y": 0.16,
+      "w": 0.06,
+      "h": 0.06,
+      "source": "catalog"
     },
     {
       "id": "TK-11039",
@@ -63,11 +62,12 @@
       "id": "TK-11038",
       "label": "TK-11038 SODA",
       "kind": "serbatoio",
-      "x": 0.78,
-      "y": 0.16,
-      "w": 0.06,
-      "h": 0.06,
-      "source": "catalog"
+      "x": 0.5228,
+      "y": 0.9264,
+      "w": 0.0324,
+      "h": 0.03,
+      "source": "ocr",
+      "confidence": 87.0
     },
     {
       "id": "TK-11037",
@@ -83,11 +83,12 @@
       "id": "TK-11019",
       "label": "TK-11019 BISOLFITO",
       "kind": "serbatoio",
-      "x": 0.22,
-      "y": 0.28,
-      "w": 0.06,
-      "h": 0.06,
-      "source": "catalog"
+      "x": 0.5228,
+      "y": 0.9264,
+      "w": 0.0324,
+      "h": 0.03,
+      "source": "ocr",
+      "confidence": 87.0
     },
     {
       "id": "P11033A",
@@ -100,16 +101,104 @@
       "source": "catalog"
     },
     {
-      "id": "TK-11018T",
-      "label": "TK-11018T",
-      "kind": "serbatoio",
-      "x": 0.3277,
-      "y": 0.93,
-      "w": 0.0358,
+      "id": "FIL-11014C",
+      "label": "FIL-11014C",
+      "kind": "apparecchio",
+      "x": 0.2759,
+      "y": 0.1673,
+      "w": 0.0404,
       "h": 0.03,
-      "confidence": 71.0,
+      "confidence": 58.0,
+      "source": "ocr"
+    },
+    {
+      "id": "K11004B",
+      "label": "K11004B",
+      "kind": "compressor",
+      "x": 0.0402,
+      "y": 0.7005,
+      "w": 0.0339,
+      "h": 0.03,
+      "confidence": 61.0,
+      "source": "ocr"
+    },
+    {
+      "id": "P11037B",
+      "label": "P11037B",
+      "kind": "pompa",
+      "x": 0.6568,
+      "y": 0.8597,
+      "w": 0.0316,
+      "h": 0.03,
+      "confidence": 88.0,
+      "source": "ocr"
+    },
+    {
+      "id": "P11038B",
+      "label": "P11038B",
+      "kind": "pompa",
+      "x": 0.5876,
+      "y": 0.8585,
+      "w": 0.0314,
+      "h": 0.03,
+      "confidence": 82.0,
+      "source": "ocr"
+    },
+    {
+      "id": "P11040D",
+      "label": "P11040D",
+      "kind": "pompa",
+      "x": 0.8772,
+      "y": 0.5137,
+      "w": 0.0324,
+      "h": 0.03,
+      "confidence": 61.0,
+      "source": "ocr"
+    },
+    {
+      "id": "TK-11038T",
+      "label": "TK-11038T",
+      "kind": "serbatoio",
+      "x": 0.5228,
+      "y": 0.9264,
+      "w": 0.0324,
+      "h": 0.03,
+      "confidence": 87.0,
+      "source": "ocr"
+    },
+    {
+      "id": "XV-06201",
+      "label": "XV-06201",
+      "kind": "valvola",
+      "x": 0.8448,
+      "y": 0.3327,
+      "w": 0.0335,
+      "h": 0.03,
+      "confidence": 80.0,
+      "source": "ocr"
+    },
+    {
+      "id": "XV-0720",
+      "label": "XV-0720",
+      "kind": "valvola",
+      "x": 0.2231,
+      "y": 0.589,
+      "w": 0.029,
+      "h": 0.03,
+      "confidence": 73.0,
+      "source": "ocr"
+    },
+    {
+      "id": "XV-08200",
+      "label": "XV-08200",
+      "kind": "valvola",
+      "x": 0.5691,
+      "y": 0.5348,
+      "w": 0.02,
+      "h": 0.03,
+      "confidence": 68.0,
       "source": "ocr"
     }
   ],
-  "seedRev": 3
+  "seedRev": 4
 }

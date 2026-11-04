@@ -2,9 +2,9 @@
   "id": "osmosi-2c",
   "name": "Osmosi 2° passo C",
   "image": "assets/maps/osmosi-2c.png",
-  "width": 916,
-  "height": 471,
-  "cropLeft": 108,
+  "width": 3552,
+  "height": 1850,
+  "cropLeft": 461,
   "area": "wwt",
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
@@ -22,12 +22,12 @@
       "id": "TK-11012C",
       "label": "TK-11012C ANTINCROSTANTE",
       "kind": "serbatoio",
-      "x": 0.0865,
-      "y": 0.4327,
-      "w": 0.02,
+      "x": 0.1464,
+      "y": 0.4372,
+      "w": 0.0392,
       "h": 0.03,
       "source": "ocr",
-      "confidence": 86.0
+      "confidence": 83.0
     },
     {
       "id": "TK-11011C",
@@ -103,12 +103,90 @@
       "id": "XV13200",
       "label": "XV13200",
       "kind": "valvola",
-      "x": 0.5,
-      "y": 0.28,
-      "w": 0.06,
-      "h": 0.06,
-      "source": "catalog"
+      "x": 0.2855,
+      "y": 0.6102,
+      "w": 0.0301,
+      "h": 0.03,
+      "source": "ocr",
+      "confidence": 79.0
+    },
+    {
+      "id": "110LTO",
+      "label": "110LTO",
+      "kind": "strumento",
+      "x": 0.5872,
+      "y": 0.7111,
+      "w": 0.02,
+      "h": 0.03,
+      "confidence": 55.0,
+      "source": "ocr"
+    },
+    {
+      "id": "MX11005C",
+      "label": "MX11005C",
+      "kind": "mixer",
+      "x": 0.1005,
+      "y": 0.4837,
+      "w": 0.039,
+      "h": 0.03,
+      "confidence": 90.0,
+      "source": "ocr"
+    },
+    {
+      "id": "P11025C",
+      "label": "P11025C",
+      "kind": "pompa",
+      "x": 0.1931,
+      "y": 0.219,
+      "w": 0.0334,
+      "h": 0.03,
+      "confidence": 90.0,
+      "source": "ocr"
+    },
+    {
+      "id": "P11027A",
+      "label": "P11027A",
+      "kind": "pompa",
+      "x": 0.8135,
+      "y": 0.7091,
+      "w": 0.0313,
+      "h": 0.03,
+      "confidence": 85.0,
+      "source": "ocr"
+    },
+    {
+      "id": "P11027B",
+      "label": "P11027B",
+      "kind": "pompa",
+      "x": 0.8108,
+      "y": 0.7848,
+      "w": 0.0315,
+      "h": 0.03,
+      "confidence": 63.0,
+      "source": "ocr"
+    },
+    {
+      "id": "P11027C",
+      "label": "P11027C",
+      "kind": "pompa",
+      "x": 0.8081,
+      "y": 0.8528,
+      "w": 0.0313,
+      "h": 0.03,
+      "confidence": 81.0,
+      "source": "ocr"
+    },
+    {
+      "id": "P11041B",
+      "label": "P11041B",
+      "kind": "pompa",
+      "x": 0.5545,
+      "y": 0.8656,
+      "w": 0.0311,
+      "h": 0.03,
+      "confidence": 79.0,
+      "source": "ocr"
     }
   ],
-  "seedRev": 3
+  "seedRev": 4
 }

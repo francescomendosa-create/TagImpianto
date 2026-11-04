@@ -2,9 +2,9 @@
   "id": "interconnecting",
   "name": "Interconnecting",
   "image": "assets/maps/interconnecting.png",
-  "width": 916,
-  "height": 470,
-  "cropLeft": 108,
+  "width": 3515,
+  "height": 1825,
+  "cropLeft": 456,
   "area": "interconnecting",
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
@@ -47,7 +47,18 @@
       "w": 0.06,
       "h": 0.06,
       "source": "catalog"
+    },
+    {
+      "id": "AIT108B",
+      "label": "AIT108B",
+      "kind": "strumento",
+      "x": 0.7852,
+      "y": 0.2029,
+      "w": 0.0314,
+      "h": 0.03,
+      "confidence": 67.0,
+      "source": "ocr"
     }
   ],
-  "seedRev": 3
+  "seedRev": 4
 }

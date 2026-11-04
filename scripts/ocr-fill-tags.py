@@ -17,7 +17,7 @@ TESS = Path(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
 if TESS.exists():
     pytesseract.pytesseract.tesseract_cmd = str(TESS)
 
-SEED_REV = 3
+SEED_REV = 4
 
 # Pattern rigorosi impianto SASOL / WWT
 STRICT = re.compile(
@@ -548,7 +548,10 @@ def prepare_image(path: Path, scale: float = 2.2) -> Image.Image:
 
 
 def ocr_image(path: Path) -> list[dict]:
-    scale = 2.2
+    # HQ ~3500px: upscale leggero; vecchie ~900px: upscale piu forte
+    with Image.open(path) as probe:
+        base_w = probe.size[0]
+    scale = 1.35 if base_w >= 2000 else 2.2
     im = prepare_image(path, scale=scale)
     iw, ih = Image.open(path).size
     by_id: dict[str, dict] = {}

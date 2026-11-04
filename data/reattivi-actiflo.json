@@ -2,9 +2,9 @@
   "id": "reattivi-actiflo",
   "name": "Reattivi Actiflo",
   "image": "assets/maps/reattivi-actiflo.png",
-  "width": 916,
-  "height": 544,
-  "cropLeft": 108,
+  "width": 3453,
+  "height": 2074,
+  "cropLeft": 448,
   "area": "sf3",
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
@@ -197,7 +197,40 @@
       "w": 0.06,
       "h": 0.06,
       "source": "catalog"
+    },
+    {
+      "id": "FIT106",
+      "label": "FIT106",
+      "kind": "strumento",
+      "x": 0.3992,
+      "y": 0.3329,
+      "w": 0.0232,
+      "h": 0.03,
+      "confidence": 91.0,
+      "source": "ocr"
+    },
+    {
+      "id": "P1028T",
+      "label": "P1028T",
+      "kind": "pompa",
+      "x": 0.8216,
+      "y": 0.4989,
+      "w": 0.026,
+      "h": 0.0308,
+      "confidence": 61.0,
+      "source": "ocr"
+    },
+    {
+      "id": "TK-114",
+      "label": "TK-114",
+      "kind": "serbatoio",
+      "x": 0.6599,
+      "y": 0.8286,
+      "w": 0.0305,
+      "h": 0.03,
+      "confidence": 67.0,
+      "source": "ocr"
     }
   ],
-  "seedRev": 3
+  "seedRev": 4
 }

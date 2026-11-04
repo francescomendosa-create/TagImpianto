@@ -2,9 +2,9 @@
   "id": "osmosi-1c",
   "name": "Osmosi 1° passo C",
   "image": "assets/maps/osmosi-1c.png",
-  "width": 916,
-  "height": 483,
-  "cropLeft": 108,
+  "width": 3569,
+  "height": 1988,
+  "cropLeft": 463,
   "area": "wwt",
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
@@ -92,11 +92,12 @@
       "id": "P11020C",
       "label": "P11020C",
       "kind": "pompa",
-      "x": 0.36,
-      "y": 0.28,
-      "w": 0.06,
-      "h": 0.06,
-      "source": "catalog"
+      "x": 0.1069,
+      "y": 0.2969,
+      "w": 0.0326,
+      "h": 0.03,
+      "source": "ocr",
+      "confidence": 70.0
     },
     {
       "id": "P11040A",
@@ -122,11 +123,12 @@
       "id": "P11040C",
       "label": "P11040C",
       "kind": "pompa",
-      "x": 0.78,
-      "y": 0.28,
-      "w": 0.06,
-      "h": 0.06,
-      "source": "catalog"
+      "x": 0.1129,
+      "y": 0.5853,
+      "w": 0.0326,
+      "h": 0.03,
+      "source": "ocr",
+      "confidence": 87.0
     },
     {
       "id": "P11040D",
@@ -169,16 +171,104 @@
       "source": "catalog"
     },
     {
-      "id": "TK-11040",
-      "label": "TK-11040",
-      "kind": "serbatoio",
-      "x": 0.4915,
-      "y": 0.9161,
-      "w": 0.0358,
+      "id": "11AIT20",
+      "label": "11AIT20",
+      "kind": "strumento",
+      "x": 0.4089,
+      "y": 0.5116,
+      "w": 0.0268,
       "h": 0.03,
-      "confidence": 76.0,
+      "confidence": 48.0,
+      "source": "ocr"
+    },
+    {
+      "id": "11LT200",
+      "label": "11LT200",
+      "kind": "strumento",
+      "x": 0.7324,
+      "y": 0.7806,
+      "w": 0.0282,
+      "h": 0.03,
+      "confidence": 90.0,
+      "source": "ocr"
+    },
+    {
+      "id": "11PIT203",
+      "label": "11PIT203",
+      "kind": "altro",
+      "x": 0.4402,
+      "y": 0.5965,
+      "w": 0.0303,
+      "h": 0.03,
+      "confidence": 87.0,
+      "source": "ocr"
+    },
+    {
+      "id": "AIT204",
+      "label": "AIT204",
+      "kind": "strumento",
+      "x": 0.879,
+      "y": 0.7802,
+      "w": 0.0237,
+      "h": 0.03,
+      "confidence": 87.0,
+      "source": "ocr"
+    },
+    {
+      "id": "P11020D",
+      "label": "P11020D",
+      "kind": "pompa",
+      "x": 0.1152,
+      "y": 0.2358,
+      "w": 0.0328,
+      "h": 0.03,
+      "confidence": 84.0,
+      "source": "ocr"
+    },
+    {
+      "id": "P11023C",
+      "label": "P11023C",
+      "kind": "pompa",
+      "x": 0.6814,
+      "y": 0.8995,
+      "w": 0.0318,
+      "h": 0.03,
+      "confidence": 75.0,
+      "source": "ocr"
+    },
+    {
+      "id": "P11024",
+      "label": "P11024",
+      "kind": "pompa",
+      "x": 0.9306,
+      "y": 0.2396,
+      "w": 0.0282,
+      "h": 0.03,
+      "confidence": 77.0,
+      "source": "ocr"
+    },
+    {
+      "id": "P11024C",
+      "label": "P11024C",
+      "kind": "pompa",
+      "x": 0.9155,
+      "y": 0.3025,
+      "w": 0.0347,
+      "h": 0.03,
+      "confidence": 47.0,
+      "source": "ocr"
+    },
+    {
+      "id": "TK-11024",
+      "label": "TK-11024",
+      "kind": "serbatoio",
+      "x": 0.0137,
+      "y": 0.7627,
+      "w": 0.0318,
+      "h": 0.03,
+      "confidence": 83.0,
       "source": "ocr"
     }
   ],
-  "seedRev": 3
+  "seedRev": 4
 }

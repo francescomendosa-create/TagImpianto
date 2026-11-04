@@ -2,9 +2,9 @@
   "id": "osmosi-2b",
   "name": "Osmosi 2° passo B",
   "image": "assets/maps/osmosi-2b.png",
-  "width": 916,
-  "height": 504,
-  "cropLeft": 108,
+  "width": 3569,
+  "height": 1979,
+  "cropLeft": 463,
   "area": "wwt",
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
@@ -149,27 +149,38 @@
       "source": "catalog"
     },
     {
-      "id": "P11020",
-      "label": "P11020",
-      "kind": "pompa",
-      "x": 0.1223,
-      "y": 0.2321,
-      "w": 0.0373,
+      "id": "110FITO",
+      "label": "110FITO",
+      "kind": "strumento",
+      "x": 0.7374,
+      "y": 0.539,
+      "w": 0.037,
       "h": 0.03,
-      "confidence": 47.0,
+      "confidence": 61.0,
       "source": "ocr"
     },
     {
-      "id": "TK-11018",
-      "label": "TK-11018",
-      "kind": "serbatoio",
-      "x": 0.4121,
-      "y": 0.4423,
-      "w": 0.0348,
+      "id": "110LTO",
+      "label": "110LTO",
+      "kind": "strumento",
+      "x": 0.0409,
+      "y": 0.4768,
+      "w": 0.02,
       "h": 0.03,
-      "confidence": 49.0,
+      "confidence": 96.0,
+      "source": "ocr"
+    },
+    {
+      "id": "MX11005B",
+      "label": "MX11005B",
+      "kind": "mixer",
+      "x": 0.0936,
+      "y": 0.4731,
+      "w": 0.0392,
+      "h": 0.03,
+      "confidence": 83.0,
       "source": "ocr"
     }
   ],
-  "seedRev": 3
+  "seedRev": 4
 }

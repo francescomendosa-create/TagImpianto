@@ -2,9 +2,9 @@
   "id": "holdup-pgs-ovest",
   "name": "HOLD-UP PGS Ovest",
   "image": "assets/maps/holdup-pgs-ovest.png",
-  "width": 916,
-  "height": 480,
-  "cropLeft": 108,
+  "width": 3569,
+  "height": 1892,
+  "cropLeft": 463,
   "area": "holdup",
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
@@ -69,16 +69,27 @@
       "source": "catalog"
     },
     {
-      "id": "S200",
-      "label": "S200",
-      "kind": "serbatoio",
-      "x": 0.0563,
-      "y": 0.6131,
-      "w": 0.0204,
-      "h": 0.058,
-      "confidence": 47.0,
+      "id": "P-13000",
+      "label": "P-13000",
+      "kind": "pompa",
+      "x": 0.271,
+      "y": 0.5258,
+      "w": 0.0291,
+      "h": 0.03,
+      "confidence": 79.0,
+      "source": "ocr"
+    },
+    {
+      "id": "XV8066",
+      "label": "XV8066",
+      "kind": "valvola",
+      "x": 0.3989,
+      "y": 0.4232,
+      "w": 0.0465,
+      "h": 0.03,
+      "confidence": 91.0,
       "source": "ocr"
     }
   ],
-  "seedRev": 3
+  "seedRev": 4
 }
