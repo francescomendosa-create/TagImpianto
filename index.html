@@ -6,16 +6,42 @@
   <meta name="theme-color" content="#0f1419" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <title>Tag Impianto</title>
-  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="manifest" href="./manifest.webmanifest?v=1.4.0" />
   <link rel="icon" href="./icons/icon-192.png" />
   <link rel="apple-touch-icon" href="./icons/icon-192.png" />
-  <link rel="stylesheet" href="./css/app.css" />
+  <link rel="stylesheet" href="./css/app.css?v=1.4.0" />
+  <script>
+    /* Sblocca telefoni bloccati su SW/cache vecchi (una volta per versione). */
+    (function () {
+      var V = "1.4.0";
+      var flag = "ti-sw-purge-" + V;
+      if (sessionStorage.getItem(flag)) return;
+      if (!("serviceWorker" in navigator)) return;
+      sessionStorage.setItem(flag, "1");
+      navigator.serviceWorker.getRegistrations()
+        .then(function (regs) {
+          return Promise.all(regs.map(function (r) { return r.unregister(); }));
+        })
+        .then(function () { return caches.keys(); })
+        .then(function (keys) {
+          return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+        })
+        .then(function () {
+          var u = new URL(location.href);
+          u.searchParams.set("v", V);
+          u.searchParams.set("t", String(Date.now()));
+          location.replace(u.toString());
+        })
+        .catch(function () { /* ignore */ });
+    })();
+  </script>
 </head>
 <body>
   <div id="app">
     <header class="topbar">
-      <div class="brand">TAG <span>IMPIANTO</span> <small id="appVersion" class="app-version" title="Versione app"></small></div>
+      <div class="brand">TAG <span>IMPIANTO</span> <small id="appVersion" class="app-version" title="Versione app">v1.4.0</small></div>
       <select id="mapSelect" class="map-select visually-hidden" aria-label="Parte di impianto" tabindex="-1"></select>
       <div class="map-title" id="mapTitle" aria-live="polite"></div>
       <div class="top-actions">
@@ -92,6 +118,6 @@
   </div>
 
   <div id="toast" class="toast" role="status"></div>
-  <script type="module" src="./js/app.js"></script>
+  <script type="module" src="./js/app.js?v=1.4.0"></script>
 </body>
 </html>

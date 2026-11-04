@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Aggiorna Tag Impianto</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f1419; color: #e8eef5; padding: 24px; }
+    a { color: #22d3a6; }
+  </style>
+</head>
+<body>
+  <p>Aggiornamento cache in corso…</p>
+  <p id="msg"></p>
+  <script>
+    (async function () {
+      var msg = document.getElementById("msg");
+      try {
+        if ("serviceWorker" in navigator) {
+          var regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(function (r) { return r.unregister(); }));
+        }
+        if (window.caches) {
+          var keys = await caches.keys();
+          await Promise.all(keys.map(function (k) { return caches.delete(k); }));
+        }
+        msg.textContent = "Ok. Apro l’app aggiornata…";
+      } catch (e) {
+        msg.textContent = "Pulizia parziale, apro comunque…";
+      }
+      setTimeout(function () {
+        location.replace("./index.html?v=1.4.0&t=" + Date.now());
+      }, 400);
+    })();
+  </script>
+</body>
+</html>

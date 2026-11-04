@@ -1,4 +1,4 @@
-const CACHE = "tag-impianto-shell-v17";
+const CACHE = "tag-impianto-shell-v18";
 const SHELL = [
   "./",
   "./index.html",

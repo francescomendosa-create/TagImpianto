@@ -487,7 +487,7 @@ async function boot() {
 
   if ("serviceWorker" in navigator) {
     try {
-      await navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" });
+      await navigator.serviceWorker.register("./sw.js?v=1.4.0", { updateViaCache: "none" });
     } catch (_) {
       /* ignore */
     }

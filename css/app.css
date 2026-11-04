@@ -55,11 +55,11 @@ html, body {
 }
 .brand span { color: var(--accent); }
 .app-version {
-  margin-left: 6px;
-  font-weight: 600;
-  font-size: 0.72rem;
+  margin-left: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
   letter-spacing: 0.02em;
-  color: var(--muted);
+  color: var(--accent);
   font-family: var(--mono);
   vertical-align: middle;
 }
