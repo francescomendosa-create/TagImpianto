@@ -8,12 +8,12 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <title>Aggiorna Tag Impianto</title>
   <style>
-    body { font-family: system-ui, sans-serif; background: #0f1419; color: #e8eef5; padding: 24px; }
+    body { font-family: system-ui, sans-serif; background: #0f1419; color: #e8eef5; padding: 24px; line-height: 1.45; }
     a { color: #22d3a6; font-weight: 700; }
   </style>
 </head>
 <body>
-  <p>Pulizia cache e Service Worker…</p>
+  <p>Aggiornamento dell?app <strong>già installata</strong> (non serve reinstallare)?</p>
   <p id="msg"></p>
   <script>
     (async function () {
@@ -26,6 +26,8 @@
         if (m) target = m[1];
       } catch (e) {}
       try {
+        try { localStorage.setItem("ti-force-seed", "1"); } catch (e) {}
+        // Non cancella le PNG in IndexedDB: restano sul dispositivo
         if ("serviceWorker" in navigator) {
           var regs = await navigator.serviceWorker.getRegistrations();
           await Promise.all(regs.map(function (r) { return r.unregister(); }));
@@ -34,14 +36,13 @@
           var keys = await caches.keys();
           await Promise.all(keys.map(function (k) { return caches.delete(k); }));
         }
-        try { localStorage.removeItem("ti-img-sync-" + target); } catch (e) {}
-        msg.textContent = "Ok. Apro l’app v" + target + "…";
+        msg.textContent = "Ok. Ricarico l?app v" + target + "?";
       } catch (e) {
-        msg.textContent = "Pulizia parziale, apro comunque v" + target + "…";
+        msg.textContent = "Pulizia parziale, apro comunque v" + target + "?";
       }
       setTimeout(function () {
         location.replace("./index.html?_ver=" + encodeURIComponent(target) + "&_ts=" + Date.now());
-      }, 400);
+      }, 350);
     })();
   </script>
 </body>

@@ -9,17 +9,17 @@ import {
   saveMap,
   searchAllTags,
   syncAllWithCloud,
-} from "./db.js?v=1.8.20";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.20";
-import { MapViewer } from "./viewer.js?v=1.8.20";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.20";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.20";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.20";
+} from "./db.js?v=1.8.21";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.21";
+import { MapViewer } from "./viewer.js?v=1.8.21";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.21";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.21";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.21";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.20";
+} from "./image-cache.js?v=1.8.21";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -27,6 +27,9 @@ const els = {
   mapSelect: $("#mapSelect"),
   mapTitle: $("#mapTitle"),
   plantNav: $("#plantNav"),
+  updateBanner: $("#updateBanner"),
+  updateBannerText: $("#updateBannerText"),
+  btnUpdateNow: $("#btnUpdateNow"),
   searchInput: $("#searchInput"),
   clearBtn: $("#clearBtn"),
   suggestions: $("#suggestions"),
@@ -112,6 +115,122 @@ function toast(msg) {
 
 function setStatus(html) {
   els.status.innerHTML = html;
+}
+
+/** Confronta semver semplici a.b.c */
+function versionNewer(remote, local) {
+  const parse = (v) =>
+    String(v || "")
+      .replace(/^v/i, "")
+      .split(/[^\d]+/)
+      .filter(Boolean)
+      .map((n) => Number(n) || 0);
+  const a = parse(remote);
+  const b = parse(local);
+  const n = Math.max(a.length, b.length);
+  for (let i = 0; i < n; i++) {
+    const x = a[i] || 0;
+    const y = b[i] || 0;
+    if (x > y) return true;
+    if (x < y) return false;
+  }
+  return false;
+}
+
+let liveVersionCache = null;
+
+/** Legge la versione pubblicata sul sito (bypass cache). Non tocca Firebase. */
+async function fetchLiveAppVersion() {
+  const res = await fetch(`./js/version.js?_=${Date.now()}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const text = await res.text();
+  const m = /APP_VERSION\s*=\s*"([^"]+)"/.exec(text);
+  if (!m) throw new Error("version.js senza APP_VERSION");
+  liveVersionCache = m[1];
+  return m[1];
+}
+
+function showUpdateBanner(liveVer) {
+  if (!els.updateBanner) return;
+  if (els.updateBannerText) {
+    els.updateBannerText.textContent = `Nuova versione online: v${liveVer} (tu hai v${APP_VERSION})`;
+  }
+  els.updateBanner.hidden = false;
+  document.body.classList.add("has-update-banner");
+  els.btnRefresh?.classList.add("has-update");
+}
+
+function hideUpdateBanner() {
+  if (!els.updateBanner) return;
+  els.updateBanner.hidden = true;
+  document.body.classList.remove("has-update-banner");
+  els.btnRefresh?.classList.remove("has-update");
+}
+
+/**
+ * Aggiorna l’app installata SENZA reinstallare:
+ * pulisce solo SW/cache shell, tiene le PNG locali, ricarica stessa origine.
+ */
+async function applyAppUpdate({ wipeImages = false } = {}) {
+  setStatus("Aggiornamento in corso (app resta installata)…");
+  toast("Aggiorno senza reinstallare…");
+  try {
+    localStorage.setItem("ti-force-seed", "1");
+  } catch (_) {
+    /* ignore */
+  }
+  try {
+    if (wipeImages) await clearAllLocalImages();
+  } catch (_) {
+    /* ignore */
+  }
+  try {
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const reg of regs) {
+        try {
+          reg.waiting?.postMessage({ type: "SKIP_WAITING" });
+        } catch (_) {
+          /* ignore */
+        }
+        await reg.unregister();
+      }
+    }
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+  } catch (err) {
+    console.warn("Pulizia cache app:", err);
+  }
+  const url = new URL(location.href);
+  url.searchParams.set("_app", String(Date.now()));
+  if (liveVersionCache) url.searchParams.set("_ver", liveVersionCache);
+  location.replace(url.pathname + url.search + url.hash);
+}
+
+async function checkForAppUpdate({ silent = true } = {}) {
+  if (!navigator.onLine) return null;
+  try {
+    const live = await fetchLiveAppVersion();
+    if (versionNewer(live, APP_VERSION)) {
+      showUpdateBanner(live);
+      if (!silent) toast(`Disponibile v${live}`);
+      // Prova anche a far scaricare il nuovo SW in background
+      try {
+        const reg = await navigator.serviceWorker?.getRegistration();
+        await reg?.update();
+      } catch (_) {
+        /* ignore */
+      }
+      return live;
+    }
+    hideUpdateBanner();
+    return null;
+  } catch (err) {
+    if (!silent) console.warn("check update", err);
+    return null;
+  }
 }
 
 function fillMapSelect() {
@@ -585,31 +704,14 @@ els.btnFit.addEventListener("click", () => viewer.fit());
 
 els.btnRefresh?.addEventListener("click", async () => {
   els.btnRefresh.disabled = true;
-  setStatus("Aggiornamento app + mappe dal sito…");
-  toast("Aggiorno app e immagini (solo con Aggiorna)…");
   try {
-    // Solo qui si aggiornano seed/immagini dal sito — non all’avvio
-    try {
-      localStorage.setItem("ti-force-seed", "1");
-    } catch (_) {
-      /* ignore */
-    }
-    await clearAllLocalImages();
-    if ("serviceWorker" in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map((r) => r.unregister()));
-    }
-    if ("caches" in window) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map((k) => caches.delete(k)));
-    }
-  } catch (err) {
-    console.warn("Pulizia cache app:", err);
+    // Non cancella le PNG locali: l’app installata resta, si aggiorna solo il codice
+    await applyAppUpdate({ wipeImages: false });
+  } finally {
+    els.btnRefresh.disabled = false;
   }
-  const url = new URL(location.href);
-  url.searchParams.set("_app", String(Date.now()));
-  location.replace(url.toString());
 });
+els.btnUpdateNow?.addEventListener("click", () => applyAppUpdate({ wipeImages: false }));
 
 els.btnAnnotate.addEventListener("click", () => {
   if (!annotateMode && !activeTagId) {
@@ -765,19 +867,35 @@ async function boot() {
       `<span class="muted" title="Riposizionamenti solo su questo dispositivo">Solo dispositivo</span>`;
   }
 
-  // Service worker silenzioso: niente reload automatici (causavano lampeggio)
+  // Service worker: aggiorna in background; se c’è waiting, banner senza reload forzato
   if ("serviceWorker" in navigator) {
     try {
-      await navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" });
+      const reg = await navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" });
+      const offerSwUpdate = () => {
+        if (reg.waiting && navigator.serviceWorker.controller) {
+          showUpdateBanner(liveVersionCache || APP_VERSION);
+        }
+      };
+      offerSwUpdate();
+      reg.addEventListener("updatefound", () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener("statechange", () => {
+          if (nw.state === "installed") offerSwUpdate();
+        });
+      });
+      // Controlla subito un nuovo SW (Pages)
+      reg.update().catch(() => {});
     } catch (_) {
       /* ignore */
     }
   }
 
-  // Offline-first: niente download di massa. Solo dopo Aggiorna si riallineano le PNG.
+  // Offline-first: niente download di massa. Solo dopo Aggiorna si riallineano le PNG mancanti.
   if (currentMap) preloadNearby(currentMap.id);
   if (forceSeed) {
-    syncImagesLocal({ force: true }).catch((err) => console.warn(err));
+    // force:false = scarica solo chiavi nuove; tiene le PNG già sul dispositivo
+    syncImagesLocal({ force: false }).catch((err) => console.warn(err));
   } else {
     try {
       const n = await countLocalImages();
@@ -793,6 +911,20 @@ async function boot() {
       setMapsLocalBadge(0);
     }
   }
+
+  // Controlla subito (e poi in background) se online c’è una versione più nuova
+  checkForAppUpdate({ silent: true }).catch(() => {});
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      checkForAppUpdate({ silent: true }).catch(() => {});
+    }
+  });
+  window.addEventListener("online", () => {
+    checkForAppUpdate({ silent: true }).catch(() => {});
+  });
+  setInterval(() => {
+    checkForAppUpdate({ silent: true }).catch(() => {});
+  }, 5 * 60 * 1000);
 
   // Mai autofocus ricerca su telefono/tablet (apre la tastiera a caso)
   const coarse = window.matchMedia("(pointer: coarse)").matches;
