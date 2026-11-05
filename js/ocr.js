@@ -35,6 +35,7 @@ function guessKind(id) {
   if (/^(XV|FCV|LCV)/.test(u)) return "valvola";
   if (/^TK/.test(u)) return "serbatoio";
   if (/^(A-|66-)/.test(u) || /^A\d/.test(u)) return "apparecchio";
+  if (/^FIL/.test(u)) return "filtro";
   if (/^(FIT|AIT|TIT|LT|TT|\d{3}(FIT|AIT|LT|TIT))/.test(u) || /TT\d+_B/.test(u))
     return "strumento";
   if (/^MX/.test(u)) return "mixer";

@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.6.8";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.6.9";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
