@@ -1,9 +1,9 @@
 {
   "id": "sediflottazione-a",
   "name": "Sediflottazione A",
-  "image": "assets/maps/sediflottazione-a.png?v=7-h449",
-  "width": 1024,
-  "height": 449,
+  "image": "assets/maps/sediflottazione-a.png?v=6-ct296-h1577",
+  "width": 3525,
+  "height": 1577,
   "cropLeft": 458,
   "area": "wwt",
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
@@ -539,6 +539,6 @@
       "source": "ocr"
     }
   ],
-  "seedRev": 7,
+  "seedRev": 6,
   "cropTop": 296
 }
