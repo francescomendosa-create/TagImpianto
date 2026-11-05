@@ -1,4 +1,4 @@
-import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.9";
+import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.10";
 
 const MAX_MEM_IMAGES = 10;
 
@@ -23,7 +23,7 @@ export class MapViewer {
     this._loadToken = 0;
 
     this._pointers = new Map();
-    this._lastPinch = null;
+    this._pinch = null;
     this._panning = false;
     this._dragTag = null;
 
@@ -248,15 +248,63 @@ export class MapViewer {
     this.world.style.transform = `translate3d(${this.tx}px, ${this.ty}px, 0) scale(${this.scale})`;
   }
 
+  /** Zoom ancorato al punto (cx,cy) in coordinate viewport: quel pixel resta fermo. */
   zoomAt(cx, cy, factor) {
     const before = this.scale;
     const next = Math.min(8, Math.max(0.2, before * factor));
+    if (next === before) return;
     const wx = (cx - this.tx) / before;
     const wy = (cy - this.ty) / before;
     this.scale = next;
     this.tx = cx - wx * next;
     this.ty = cy - wy * next;
     this.applyTransform();
+  }
+
+  _viewportPoint(clientX, clientY) {
+    const rect = this.viewport.getBoundingClientRect();
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  }
+
+  _beginPinch() {
+    const pts = [...this._pointers.values()];
+    if (pts.length < 2) return;
+    const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+    if (dist < 1) return;
+    const mid = this._viewportPoint(
+      (pts[0].x + pts[1].x) / 2,
+      (pts[0].y + pts[1].y) / 2
+    );
+    // Punto mondo sotto il centro dita: resta inchiodato al pinch per tutta la gesture
+    this._pinch = {
+      startDist: dist,
+      startScale: this.scale,
+      wx: (mid.x - this.tx) / this.scale,
+      wy: (mid.y - this.ty) / this.scale,
+    };
+    this._panning = false;
+    this.viewport.classList.remove("panning");
+    this._panStart = null;
+  }
+
+  _applyPinch() {
+    if (!this._pinch || this._pointers.size < 2) return;
+    const pts = [...this._pointers.values()];
+    const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+    if (dist < 1) return;
+    const mid = this._viewportPoint(
+      (pts[0].x + pts[1].x) / 2,
+      (pts[0].y + pts[1].y) / 2
+    );
+    const next = Math.min(
+      8,
+      Math.max(0.2, this._pinch.startScale * (dist / this._pinch.startDist))
+    );
+    this.scale = next;
+    this.tx = mid.x - this._pinch.wx * next;
+    this.ty = mid.y - this._pinch.wy * next;
+    this.applyTransform();
+    this._moved = true;
   }
 
   highlight(tagId) {
@@ -304,12 +352,7 @@ export class MapViewer {
     this.viewport.setPointerCapture(e.pointerId);
     this._pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (this._pointers.size === 2) {
-      const pts = [...this._pointers.values()];
-      this._lastPinch = {
-        dist: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y),
-        cx: (pts[0].x + pts[1].x) / 2,
-        cy: (pts[0].y + pts[1].y) / 2,
-      };
+      this._beginPinch();
     } else if (this._pointers.size === 1 && !this._dragTag) {
       this._panning = true;
       this.viewport.classList.add("panning");
@@ -334,16 +377,8 @@ export class MapViewer {
     if (!this._pointers.has(e.pointerId)) return;
     this._pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-    if (this._pointers.size === 2 && this._lastPinch) {
-      const pts = [...this._pointers.values()];
-      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-      const rect = this.viewport.getBoundingClientRect();
-      const cx = (pts[0].x + pts[1].x) / 2 - rect.left;
-      const cy = (pts[0].y + pts[1].y) / 2 - rect.top;
-      const factor = dist / this._lastPinch.dist;
-      this.zoomAt(cx, cy, factor);
-      this._lastPinch = { dist, cx, cy };
-      this._moved = true;
+    if (this._pointers.size === 2 && this._pinch) {
+      this._applyPinch();
       return;
     }
 
@@ -366,7 +401,22 @@ export class MapViewer {
     }
 
     this._pointers.delete(e.pointerId);
-    if (this._pointers.size < 2) this._lastPinch = null;
+
+    // Fine pinch → se resta un dito, riparti il pan da qui (niente salto)
+    if (this._pointers.size < 2) {
+      this._pinch = null;
+      if (this._pointers.size === 1 && !this._dragTag) {
+        const remaining = [...this._pointers.values()][0];
+        this._panning = true;
+        this.viewport.classList.add("panning");
+        this._panStart = {
+          x: remaining.x,
+          y: remaining.y,
+          tx: this.tx,
+          ty: this.ty,
+        };
+      }
+    }
 
     if (this._pointers.size === 0) {
       // Doppio tap (soprattutto touch): due tocchi fermi entro 400ms → tag in ricerca

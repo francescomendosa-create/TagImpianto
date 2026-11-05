@@ -375,6 +375,7 @@ html, body {
   inset: 0;
   overflow: hidden;
   cursor: grab;
+  touch-action: none; /* pinch/pan gestiti da noi, niente zoom browser */
   /* Evita “buchi” neri sotto l’immagine su tablet (layer GPU non ridisegnato) */
   background: #c5ccd4;
   -webkit-transform: translateZ(0);
