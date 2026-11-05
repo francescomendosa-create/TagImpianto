@@ -1,16 +1,14 @@
 /**
- * Firebase — progetto dedicato Tag Impianto
- * Crea un progetto su https://console.firebase.google.com
- * (Hosting + Firestore + Storage) e incolla qui i valori.
- * Finché restano placeholder l’app lavora solo in locale (IndexedDB).
+ * Firebase — progetto tag-impianto
+ * Finché restano placeholder YOUR_* l’app lavora solo in locale (IndexedDB).
  */
 export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyBwJpwQwbB-DMttlSOpj857dkGTk3cSWyg",
+  authDomain: "tag-impianto.firebaseapp.com",
+  projectId: "tag-impianto",
+  storageBucket: "tag-impianto.firebasestorage.app",
+  messagingSenderId: "644994436298",
+  appId: "1:644994436298:web:083df769fb5d6d92027833",
 };
 
 export function isFirebaseConfigured() {
