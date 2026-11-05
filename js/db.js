@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.6.0";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.6.2";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -211,6 +211,68 @@ export async function loadSeedIfEmpty() {
   }
 
   return idbGetAll();
+}
+
+/**
+ * Forza merge dei seed dal sito (tiene i tag manual/locked).
+ * Usato dal pulsante Aggiorna.
+ */
+export async function forceReloadSeeds() {
+  const existing = await idbGetAll();
+  const byId = new Map(existing.map((m) => [m.id, m]));
+  const paths = await resolveSeedPaths();
+  let updated = 0;
+
+  for (const path of paths) {
+    try {
+      const res = await fetch(path, { cache: "no-store" });
+      if (!res.ok) continue;
+      const seed = await res.json();
+      if (!seed?.id) continue;
+      const local = byId.get(seed.id);
+      if (!local) {
+        seed.updatedAt = Date.now();
+        await idbPut(seed);
+        byId.set(seed.id, seed);
+        updated += 1;
+        continue;
+      }
+      const locked = new Map(
+        (local.tags || [])
+          .filter((t) => t.locked || t.source === "manual")
+          .map((t) => [String(t.id).toUpperCase(), t])
+      );
+      const bySeed = new Map(
+        (seed.tags || []).map((t) => [String(t.id).toUpperCase(), { ...t }])
+      );
+      const merged = [];
+      const seen = new Set();
+      for (const [key, t] of bySeed) {
+        const keep = locked.get(key);
+        merged.push(keep ? { ...t, ...keep, id: keep.id } : t);
+        seen.add(key);
+      }
+      for (const [key, t] of locked) {
+        if (!seen.has(key)) merged.push(t);
+      }
+      local.image = seed.image || local.image;
+      local.width = seed.width || local.width;
+      local.height = seed.height || local.height;
+      local.cropLeft = seed.cropLeft ?? local.cropLeft ?? 0;
+      local.name = seed.name || local.name;
+      local.area = seed.area || local.area;
+      local.notes = seed.notes || local.notes;
+      local.seedRev = Math.max(Number(seed.seedRev) || 0, Number(local.seedRev) || 0, 1);
+      local.tags = merged;
+      local.updatedAt = Date.now();
+      await idbPut(local);
+      byId.set(seed.id, local);
+      updated += 1;
+    } catch (err) {
+      console.warn("forceReloadSeeds", path, err);
+    }
+  }
+  return { updated, maps: await idbGetAll() };
 }
 
 /** Cancella le mappe locali e ricarica i seed dal sito (ripristino). */
