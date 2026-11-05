@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.7.2";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.7.3";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -87,6 +87,26 @@ function remapTagsAfterCrop(tags, cropLeft, oldW, newW) {
   });
 }
 
+/** Dopo ritaglio barra superiore (SF3 / HOLD-UP / …). */
+function remapTagsAfterCropTop(tags, cropTop, oldH, newH) {
+  return (tags || [])
+    .map((t) => {
+      const y = Number(t.y) * oldH;
+      const hh = Number(t.h) * oldH;
+      let y2 = y - cropTop;
+      let h2 = hh;
+      if (y2 + h2 <= 2) return null;
+      if (y2 < 0) {
+        h2 += y2;
+        y2 = 0;
+      }
+      const ny = Math.max(0, Math.min(1, y2 / newH));
+      const nh = Math.max(0.012, Math.min(1 - ny, h2 / newH));
+      return { ...t, y: ny, h: nh };
+    })
+    .filter(Boolean);
+}
+
 async function resolveSeedPaths() {
   try {
     const res = await fetch("./data/manifest.json", { cache: "no-store" });
@@ -132,8 +152,20 @@ export async function loadSeedIfEmpty() {
       const localTagN = (local.tags || []).length;
       // Aggiorna se revision più nuova OPPURE il seed ha molti più tag (fix catalogo/OCR)
       if (seedRev > localRev || seedTagN > localTagN + 3) {
+        let localTags = local.tags || [];
+        const seedCropTop = Number(seed.cropTop) || 0;
+        const localCropTop = Number(local.cropTop) || 0;
+        if (
+          seedCropTop > localCropTop &&
+          local.height &&
+          seed.height &&
+          local.height > seed.height
+        ) {
+          const dy = seedCropTop - localCropTop;
+          localTags = remapTagsAfterCropTop(localTags, dy, local.height, seed.height);
+        }
         const locked = new Map(
-          (local.tags || [])
+          localTags
             .filter(tagHasUserData)
             .map((t) => [String(t.id).toUpperCase(), t])
         );
@@ -155,6 +187,7 @@ export async function loadSeedIfEmpty() {
         local.width = seed.width || local.width;
         local.height = seed.height || local.height;
         local.cropLeft = seed.cropLeft ?? local.cropLeft ?? 0;
+        local.cropTop = seed.cropTop ?? local.cropTop ?? 0;
         local.name = seed.name || local.name;
         local.area = seed.area || local.area;
         local.notes = seed.notes || local.notes;
@@ -178,6 +211,27 @@ export async function loadSeedIfEmpty() {
         local.width = seed.width;
         local.height = seed.height;
         local.cropLeft = cropLeft;
+        changed = true;
+      }
+
+      const cropTop = Number(seed.cropTop) || 0;
+      const localCropTop = Number(local.cropTop) || 0;
+      if (
+        cropTop > localCropTop &&
+        local.height &&
+        seed.height &&
+        local.height > seed.height
+      ) {
+        local.tags = remapTagsAfterCropTop(
+          local.tags,
+          cropTop - localCropTop,
+          local.height,
+          seed.height
+        );
+        local.width = seed.width || local.width;
+        local.height = seed.height;
+        local.cropTop = cropTop;
+        if (seed.image) local.image = seed.image;
         changed = true;
       }
 
@@ -237,8 +291,24 @@ export async function forceReloadSeeds() {
         updated += 1;
         continue;
       }
+      let localTags = local.tags || [];
+      const seedCropTop = Number(seed.cropTop) || 0;
+      const localCropTop = Number(local.cropTop) || 0;
+      if (
+        seedCropTop > localCropTop &&
+        local.height &&
+        seed.height &&
+        local.height > seed.height
+      ) {
+        localTags = remapTagsAfterCropTop(
+          localTags,
+          seedCropTop - localCropTop,
+          local.height,
+          seed.height
+        );
+      }
       const locked = new Map(
-        (local.tags || [])
+        localTags
           .filter(tagHasUserData)
           .map((t) => [String(t.id).toUpperCase(), t])
       );
@@ -259,6 +329,7 @@ export async function forceReloadSeeds() {
       local.width = seed.width || local.width;
       local.height = seed.height || local.height;
       local.cropLeft = seed.cropLeft ?? local.cropLeft ?? 0;
+      local.cropTop = seed.cropTop ?? local.cropTop ?? 0;
       local.name = seed.name || local.name;
       local.area = seed.area || local.area;
       local.notes = seed.notes || local.notes;

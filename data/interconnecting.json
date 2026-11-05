@@ -3,7 +3,7 @@
   "name": "Interconnecting",
   "image": "assets/maps/interconnecting.png",
   "width": 3515,
-  "height": 1825,
+  "height": 1537,
   "cropLeft": 456,
   "area": "interconnecting",
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
@@ -13,9 +13,9 @@
       "label": "S-829",
       "kind": "serbatoio",
       "x": 0.08,
-      "y": 0.16,
+      "y": 0.002602472348731295,
       "w": 0.06,
-      "h": 0.06,
+      "h": 0.0712426805465192,
       "source": "catalog"
     },
     {
@@ -23,9 +23,9 @@
       "label": "AIT107A",
       "kind": "strumento",
       "x": 0.22,
-      "y": 0.16,
+      "y": 0.002602472348731295,
       "w": 0.06,
-      "h": 0.06,
+      "h": 0.0712426805465192,
       "source": "catalog"
     },
     {
@@ -33,9 +33,9 @@
       "label": "AIT107C",
       "kind": "strumento",
       "x": 0.36,
-      "y": 0.16,
+      "y": 0.002602472348731295,
       "w": 0.06,
-      "h": 0.06,
+      "h": 0.0712426805465192,
       "source": "catalog"
     },
     {
@@ -43,9 +43,9 @@
       "label": "FCV_1000",
       "kind": "valvola",
       "x": 0.5,
-      "y": 0.16,
+      "y": 0.002602472348731295,
       "w": 0.06,
-      "h": 0.06,
+      "h": 0.0712426805465192,
       "source": "catalog"
     },
     {
@@ -53,12 +53,13 @@
       "label": "AIT108B",
       "kind": "strumento",
       "x": 0.7852,
-      "y": 0.2029,
+      "y": 0.05354098893949253,
       "w": 0.0314,
-      "h": 0.03,
+      "h": 0.0356213402732596,
       "confidence": 67.0,
       "source": "ocr"
     }
   ],
-  "seedRev": 4
+  "seedRev": 5,
+  "cropTop": 288
 }

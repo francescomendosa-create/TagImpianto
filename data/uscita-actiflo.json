@@ -3,7 +3,7 @@
   "name": "Uscita Actiflo",
   "image": "assets/maps/uscita-actiflo.png",
   "width": 3515,
-  "height": 2089,
+  "height": 1759,
   "cropLeft": 456,
   "area": "sf3",
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
@@ -13,9 +13,9 @@
       "label": "TK110",
       "kind": "serbatoio",
       "x": 0.08,
-      "y": 0.16,
+      "y": 0.002410460488914161,
       "w": 0.06,
-      "h": 0.06,
+      "h": 0.07125639567936327,
       "source": "catalog"
     },
     {
@@ -23,9 +23,9 @@
       "label": "TK109",
       "kind": "serbatoio",
       "x": 0.22,
-      "y": 0.16,
+      "y": 0.002410460488914161,
       "w": 0.06,
-      "h": 0.06,
+      "h": 0.07125639567936327,
       "source": "catalog"
     },
     {
@@ -33,9 +33,9 @@
       "label": "MX109",
       "kind": "mixer",
       "x": 0.36,
-      "y": 0.16,
+      "y": 0.002410460488914161,
       "w": 0.06,
-      "h": 0.06,
+      "h": 0.07125639567936327,
       "source": "catalog"
     },
     {
@@ -43,9 +43,9 @@
       "label": "P110A",
       "kind": "pompa",
       "x": 0.5,
-      "y": 0.16,
+      "y": 0.002410460488914161,
       "w": 0.06,
-      "h": 0.06,
+      "h": 0.07125639567936327,
       "source": "catalog"
     },
     {
@@ -53,9 +53,9 @@
       "label": "P110B",
       "kind": "pompa",
       "x": 0.64,
-      "y": 0.16,
+      "y": 0.002410460488914161,
       "w": 0.06,
-      "h": 0.06,
+      "h": 0.07125639567936327,
       "source": "catalog"
     },
     {
@@ -63,9 +63,9 @@
       "label": "LIT110B",
       "kind": "strumento",
       "x": 0.78,
-      "y": 0.16,
+      "y": 0.002410460488914161,
       "w": 0.06,
-      "h": 0.06,
+      "h": 0.07125639567936327,
       "source": "catalog"
     },
     {
@@ -73,11 +73,12 @@
       "label": "LIT109",
       "kind": "strumento",
       "x": 0.08,
-      "y": 0.28,
+      "y": 0.14492325184764074,
       "w": 0.06,
-      "h": 0.06,
+      "h": 0.07125639567936327,
       "source": "catalog"
     }
   ],
-  "seedRev": 4
+  "seedRev": 5,
+  "cropTop": 330
 }
