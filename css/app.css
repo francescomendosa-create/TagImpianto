@@ -375,6 +375,10 @@ html, body {
   inset: 0;
   overflow: hidden;
   cursor: grab;
+  /* Evita “buchi” neri sotto l’immagine su tablet (layer GPU non ridisegnato) */
+  background: #c5ccd4;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 .cloud-badge {
@@ -395,7 +399,7 @@ html, body {
   left: 0;
   top: 0;
   transform-origin: 0 0;
-  will-change: transform;
+  /* niente will-change fisso: su Android lascia rettangoli neri finché non si muove */
 }
 
 .world img {
@@ -403,7 +407,8 @@ html, body {
   max-width: none;
   user-select: none;
   -webkit-user-drag: none;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  background: #d0d5db;
+  box-shadow: none;
 }
 
 .overlay {

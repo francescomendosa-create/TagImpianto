@@ -10,16 +10,16 @@ import {
   pullMapsFromCloud,
   syncAllWithCloud,
   pushLocalChangesToCloud,
-} from "./db.js?v=1.8.0";
-import { MapViewer } from "./viewer.js?v=1.8.0";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.0";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.0";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.0";
+} from "./db.js?v=1.8.1";
+import { MapViewer } from "./viewer.js?v=1.8.1";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.1";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.1";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.1";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.0";
+} from "./image-cache.js?v=1.8.1";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -179,23 +179,55 @@ function setMapsLocalBadge(n) {
     `${cloud}<span class="ok" title="PNG salvate su questo dispositivo">Mappe in locale (${n})</span>`;
 }
 
-async function syncImagesLocal() {
-  const already = await countLocalImages().catch(() => 0);
+async function syncImagesLocal({ force = false } = {}) {
   const total = maps.filter((m) => m?.image).length;
-  if (total && already >= total) {
-    setMapsLocalBadge(already);
-    return;
+  const syncKey = `ti-img-sync-${APP_VERSION}`;
+  let needForce = force;
+  try {
+    if (!needForce && !localStorage.getItem(syncKey)) needForce = true;
+  } catch (_) {
+    needForce = true;
   }
-  setStatus(`Salvo le mappe sul dispositivo… 0/${total}`);
-  await warmAllMapImages(maps, (done, tot, name) => {
-    setStatus(
-      `Salvo le mappe sul dispositivo… <strong>${done}/${tot}</strong>` +
-        (name ? ` · ${escapeHtml(name)}` : "")
-    );
-  });
+  setStatus(
+    needForce
+      ? `Aggiorno le mappe sul dispositivo… 0/${total}`
+      : `Salvo le mappe sul dispositivo… 0/${total}`
+  );
+  await warmAllMapImages(
+    maps,
+    (done, tot, name) => {
+      setStatus(
+        `${needForce ? "Aggiorno" : "Salvo"} le mappe… <strong>${done}/${tot}</strong>` +
+          (name ? ` · ${escapeHtml(name)}` : "")
+      );
+    },
+    { force: needForce }
+  );
+  try {
+    localStorage.setItem(syncKey, "1");
+  } catch (_) {
+    /* ignore */
+  }
+  // Pulisci anche cache SW delle mappe vecchie
+  try {
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys.filter((k) => k.includes("maps")).map((k) => caches.delete(k))
+      );
+    }
+  } catch (_) {
+    /* ignore */
+  }
   const n = await countLocalImages().catch(() => total);
   setMapsLocalBadge(n);
   if (currentMap) {
+    // Ricarica la mappa corrente dalla cache nuova (niente PNG vecchia a schermo)
+    try {
+      await selectMap(currentMap.id, { keepHighlight: true });
+    } catch (_) {
+      /* ignore */
+    }
     setStatus(
       `Mappa: <strong>${escapeHtml(currentMap.name)}</strong> · ${(currentMap.tags || []).length} tag`
     );

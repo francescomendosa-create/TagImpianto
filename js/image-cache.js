@@ -153,28 +153,89 @@ export async function resolveLocalImageUrl(src) {
   return u;
 }
 
+/** Rimuove PNG obsolete (path senza ?v= o revisioni vecchie). */
+export async function pruneStaleMapImages(maps) {
+  const keep = new Set(
+    (maps || [])
+      .map((m) => m?.image)
+      .filter(Boolean)
+      .map((src) => absUrl(src))
+  );
+  const stems = new Set(
+    [...keep].map((u) => {
+      try {
+        const x = new URL(u);
+        x.search = "";
+        return x.href;
+      } catch (_) {
+        return u.split("?")[0];
+      }
+    })
+  );
+  const db = await openDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    const store = tx.objectStore(STORE);
+    const req = store.getAllKeys();
+    req.onsuccess = () => {
+      for (const key of req.result || []) {
+        const k = String(key);
+        if (keep.has(k)) continue;
+        // tieni solo URL esatte della revisione corrente
+        let stem;
+        try {
+          const x = new URL(k);
+          x.search = "";
+          stem = x.href;
+        } catch (_) {
+          stem = k.split("?")[0];
+        }
+        if (stems.has(stem) || k.includes("/assets/maps/")) {
+          store.delete(key);
+          revokeBlob(k);
+        }
+      }
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 /**
- * Scarica in locale tutte le mappe (riscarica se manca la chiave versione).
+ * Allinea la cache locale alle mappe attuali: cancella vecchie e scarica quelle nuove.
  * @param {{ image?: string, name?: string, id?: string }[]} maps
  * @param {(done: number, total: number, name: string) => void} [onProgress]
+ * @param {{ force?: boolean }} [opts]
  */
-export async function warmAllMapImages(maps, onProgress) {
+export async function warmAllMapImages(maps, onProgress, opts = {}) {
   const list = (maps || []).filter((m) => m?.image);
+  const force = !!opts.force;
+  try {
+    await pruneStaleMapImages(list);
+  } catch (err) {
+    console.warn("prune images", err);
+  }
   const total = list.length;
   let done = 0;
   for (const m of list) {
     const name = m.name || m.id || "";
     try {
       const key = absUrl(m.image);
-      const have = await getRecord(key);
+      const have = force ? null : await getRecord(key);
       if (!have?.blob) {
+        if (force) await deleteLocalImage(m.image);
         const res = await fetch(m.image, { cache: "no-store" });
         if (res.ok) {
           const blob = await res.blob();
-          try {
-            await putRecord(key, blob);
-          } catch (err) {
-            console.warn("Quota IndexedDB:", err);
+          // scarta blob sospetti troppo piccoli (download interrotto)
+          if (blob.size < 8000) {
+            console.warn("PNG troppo piccola, skip", m.id, blob.size);
+          } else {
+            try {
+              await putRecord(key, blob);
+            } catch (err) {
+              console.warn("Quota IndexedDB:", err);
+            }
           }
         }
       }

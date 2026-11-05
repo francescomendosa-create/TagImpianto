@@ -1,5 +1,5 @@
-const CACHE = "tag-impianto-shell-v39";
-const MAP_CACHE = "tag-impianto-maps-v39";
+const CACHE = "tag-impianto-shell-v40";
+const MAP_CACHE = "tag-impianto-maps-v40";
 const SHELL = [
   "./",
   "./index.html",
@@ -61,21 +61,28 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  // Mappe: cache-first (dopo la 1ª volta lo switch e' immediato)
+  // Mappe: rete fresca se online (evita PNG vecchie), fallback cache offline
   if (isMapAsset(url)) {
     event.respondWith(
       caches.open(MAP_CACHE).then(async (cache) => {
+        try {
+          const res = await fetch(req, { cache: "no-store" });
+          if (res && res.ok) {
+            try {
+              await cache.put(req, res.clone());
+            } catch (_) {
+              /* quota */
+            }
+            return res;
+          }
+        } catch (_) {
+          /* offline */
+        }
         const hit = await cache.match(req);
         if (hit) return hit;
-        const res = await fetch(req);
-        if (res && res.ok) {
-          try {
-            await cache.put(req, res.clone());
-          } catch (_) {
-            /* quota piena: ignora */
-          }
-        }
-        return res;
+        // fallback: stessa PNG senza querystring (revisioni)
+        const bare = new Request(url.pathname + url.hash, { method: "GET" });
+        return (await cache.match(bare)) || Response.error();
       })
     );
     return;

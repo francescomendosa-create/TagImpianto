@@ -1,4 +1,4 @@
-import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.0";
+import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.1";
 
 const MAX_MEM_IMAGES = 10;
 
@@ -159,6 +159,13 @@ export class MapViewer {
         this.imageEl.src = display;
       });
       if (token !== this._loadToken) return;
+      // Attendi decode completo (evita pezzi neri su tablet finché non si pan-na)
+      try {
+        if (this.imageEl.decode) await this.imageEl.decode();
+      } catch (_) {
+        /* alcuni WebView non supportano decode */
+      }
+      if (token !== this._loadToken) return;
       this._lastRemote = remote;
     }
 
@@ -176,6 +183,22 @@ export class MapViewer {
       this._viewInitialized = true;
     }
     this.renderOverlay();
+    this._forcePaint();
+  }
+
+  /** Forza ridisegno layer su mobile (il riquadro nero sparisce solo dopo un pan). */
+  _forcePaint() {
+    const w = this.world;
+    if (!w) return;
+    // micro-nudge + reflow
+    const tx = this.tx;
+    const ty = this.ty;
+    const s = this.scale;
+    w.style.transform = `translate3d(${tx}px, ${ty + 0.01}px, 0) scale(${s})`;
+    void w.offsetHeight;
+    requestAnimationFrame(() => {
+      this.applyTransform();
+    });
   }
 
   /**
@@ -204,7 +227,7 @@ export class MapViewer {
   }
 
   applyTransform() {
-    this.world.style.transform = `translate(${this.tx}px, ${this.ty}px) scale(${this.scale})`;
+    this.world.style.transform = `translate3d(${this.tx}px, ${this.ty}px, 0) scale(${this.scale})`;
   }
 
   zoomAt(cx, cy, factor) {
