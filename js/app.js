@@ -10,16 +10,16 @@ import {
   pullMapsFromCloud,
   syncAllWithCloud,
   pushLocalChangesToCloud,
-} from "./db.js?v=1.8.10";
-import { MapViewer } from "./viewer.js?v=1.8.10";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.10";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.10";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.10";
+} from "./db.js?v=1.8.11";
+import { MapViewer } from "./viewer.js?v=1.8.11";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.11";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.11";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.11";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.10";
+} from "./image-cache.js?v=1.8.11";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -158,7 +158,10 @@ async function selectMap(id, { keepHighlight = false, keepView = false } = {}) {
     setStatus(`Errore immagine: ${escapeHtml(err.message || err)}`);
     return;
   }
-  if (keepHighlight && activeTagId) viewer.highlight(activeTagId);
+  if (keepHighlight && activeTagId) {
+    viewer.map = currentMap;
+    viewer.highlight(activeTagId);
+  }
   // Precarica le mappe vicine nel menu
   preloadNearby(id);
 }
@@ -355,6 +358,8 @@ async function pickHit(hit) {
   closeSuggestions();
   els.searchInput.value = hit.tag.label || hit.tag.id;
   els.clearBtn.classList.add("visible");
+  // Imposta subito l’id così keepHighlight / overlay non restano vuoti
+  activeTagId = hit.tag.id;
   if (!currentMap || currentMap.id !== hit.mapId) {
     // nuova mappa: un solo fit iniziale; sulla stessa mappa non si tocca lo zoom
     await selectMap(hit.mapId, { keepHighlight: true });
@@ -362,7 +367,7 @@ async function pickHit(hit) {
     currentMap = await getMap(hit.mapId);
     viewer.map = currentMap;
   }
-  activeTagId = hit.tag.id;
+  viewer.map = currentMap;
   viewer.highlight(hit.tag.id);
   const note = hit.tag.note ? ` · nota: ${escapeHtml(hit.tag.note)}` : "";
   const why = hit.match?.reason ? ` · ${escapeHtml(hit.match.reason)}` : "";

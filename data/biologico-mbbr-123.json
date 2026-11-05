@@ -1,7 +1,7 @@
 {
   "id": "biologico-mbbr-123",
   "name": "Biologico MBBR 1 2 3",
-  "image": "assets/maps/biologico-mbbr-123.png?v=11-ct110-h415",
+  "image": "assets/maps/biologico-mbbr-123.png?v=12-ct110-h415-fix",
   "width": 916,
   "height": 415,
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
@@ -13,7 +13,7 @@
       "x": 0.08,
       "y": 0.0,
       "w": 0.06,
-      "h": 0.01325301204819278,
+      "h": 0.035,
       "source": "catalog"
     },
     {
@@ -23,7 +23,7 @@
       "x": 0.22,
       "y": 0.0,
       "w": 0.06,
-      "h": 0.01325301204819278,
+      "h": 0.035,
       "source": "catalog"
     },
     {
@@ -33,7 +33,7 @@
       "x": 0.36,
       "y": 0.0,
       "w": 0.06,
-      "h": 0.01325301204819278,
+      "h": 0.035,
       "source": "catalog"
     },
     {
@@ -43,7 +43,7 @@
       "x": 0.5,
       "y": 0.0,
       "w": 0.06,
-      "h": 0.01325301204819278,
+      "h": 0.035,
       "source": "catalog"
     },
     {
@@ -53,7 +53,7 @@
       "x": 0.64,
       "y": 0.0,
       "w": 0.06,
-      "h": 0.01325301204819278,
+      "h": 0.035,
       "source": "catalog"
     },
     {
@@ -63,7 +63,7 @@
       "x": 0.78,
       "y": 0.0,
       "w": 0.06,
-      "h": 0.01325301204819278,
+      "h": 0.035,
       "source": "catalog"
     },
     {
@@ -433,7 +433,7 @@
       "x": 0.08,
       "y": 1.0,
       "w": 0.06,
-      "h": 0.012,
+      "h": 0.035,
       "source": "catalog"
     },
     {
@@ -471,6 +471,6 @@
     }
   ],
   "cropLeft": 480,
-  "seedRev": 11,
+  "seedRev": 12,
   "cropTop": 110
 }

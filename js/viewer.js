@@ -1,4 +1,4 @@
-import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.10";
+import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.11";
 
 const MAX_MEM_IMAGES = 10;
 
@@ -316,17 +316,36 @@ export class MapViewer {
     const overlay = this.overlayEl;
     overlay.innerHTML = "";
     if (!this.map || !this.highlightId) return;
-    const tag = (this.map.tags || []).find((t) => t.id === this.highlightId);
+    const want = String(this.highlightId);
+    const tag = (this.map.tags || []).find(
+      (t) => String(t.id) === want || String(t.id).toUpperCase() === want.toUpperCase()
+    );
     if (!tag) return;
-    const iw = this.imageEl.width;
-    const ih = this.imageEl.height;
+    const iw =
+      this.imageEl.naturalWidth ||
+      this.imageEl.width ||
+      this.map.width ||
+      1;
+    const ih =
+      this.imageEl.naturalHeight ||
+      this.imageEl.height ||
+      this.map.height ||
+      1;
+    // riquadro sempre visibile (anche se il tag era finito troppo piccolo dopo un crop)
+    const minPx = 28;
+    let left = (Number(tag.x) || 0) * iw;
+    let top = (Number(tag.y) || 0) * ih;
+    let width = Math.max((Number(tag.w) || 0.04) * iw, minPx);
+    let height = Math.max((Number(tag.h) || 0.04) * ih, minPx);
+    if (left + width > iw) left = Math.max(0, iw - width);
+    if (top + height > ih) top = Math.max(0, ih - height);
     const el = document.createElement("div");
     el.className = "tag-box hit";
     if (this.annotate) el.classList.add("edit");
-    el.style.left = `${tag.x * iw}px`;
-    el.style.top = `${tag.y * ih}px`;
-    el.style.width = `${tag.w * iw}px`;
-    el.style.height = `${tag.h * ih}px`;
+    el.style.left = `${left}px`;
+    el.style.top = `${top}px`;
+    el.style.width = `${width}px`;
+    el.style.height = `${height}px`;
     el.dataset.tagId = tag.id;
     const lab = document.createElement("div");
     lab.className = "label";

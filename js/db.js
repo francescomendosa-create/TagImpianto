@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.10";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.11";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -164,28 +164,10 @@ export async function loadSeedIfEmpty() {
           const dy = seedCropTop - localCropTop;
           localTags = remapTagsAfterCropTop(localTags, dy, local.height, seed.height);
         }
-        const locked = new Map(
-          localTags
-            .filter(tagHasUserData)
-            .map((t) => [String(t.id).toUpperCase(), t])
-        );
-        const bySeed = new Map(
-          (seed.tags || []).map((t) => [String(t.id).toUpperCase(), { ...t }])
-        );
-        // parti dal seed, poi aggiungi manuali/note mancanti; se coincidono tieni utente
-        const merged = [];
-        const seen = new Set();
-        for (const [key, t] of bySeed) {
-          const keep = locked.get(key);
-          merged.push(keep ? { ...t, ...keep, id: keep.id } : t);
-          seen.add(key);
-        }
-        for (const [key, t] of locked) {
-          if (!seen.has(key)) merged.push(t);
-        }
+        const merged = mergeSeedTags(seed.tags || [], localTags);
         if (seed.image && seed.image !== local.image) {
           try {
-            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.10");
+            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.11");
             await deleteLocalImage(local.image);
             await deleteLocalImage(seed.image);
           } catch (_) {
@@ -246,7 +228,7 @@ export async function loadSeedIfEmpty() {
 
       if (seed.image && local.image !== seed.image) {
         try {
-          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.10");
+          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.11");
           await deleteLocalImage(local.image);
           await deleteLocalImage(seed.image);
         } catch (_) {
@@ -326,24 +308,7 @@ export async function forceReloadSeeds() {
           seed.height
         );
       }
-      const locked = new Map(
-        localTags
-          .filter(tagHasUserData)
-          .map((t) => [String(t.id).toUpperCase(), t])
-      );
-      const bySeed = new Map(
-        (seed.tags || []).map((t) => [String(t.id).toUpperCase(), { ...t }])
-      );
-      const merged = [];
-      const seen = new Set();
-      for (const [key, t] of bySeed) {
-        const keep = locked.get(key);
-        merged.push(keep ? { ...t, ...keep, id: keep.id } : t);
-        seen.add(key);
-      }
-      for (const [key, t] of locked) {
-        if (!seen.has(key)) merged.push(t);
-      }
+      const merged = mergeSeedTags(seed.tags || [], localTags);
       local.image = seed.image || local.image;
       local.width = seed.width || local.width;
       local.height = seed.height || local.height;
@@ -397,8 +362,54 @@ function tagHasUserData(t) {
   return !!(
     t?.locked ||
     t?.source === "manual" ||
-    String(t?.note || "").trim()
+    String(t?.note || "").trim() ||
+    // Riposizionato almeno una volta (anche senza flag locked vecchio)
+    Number(t?.updatedAt) > 0
   );
+}
+
+/**
+ * Unisce tag seed + locali: le coordinate locali NON si perdono mai se il tag esiste già.
+ * Il seed può aggiornare label/kind/image meta, non cancellare il lavoro di riposizionamento.
+ */
+function mergeSeedTags(seedTags, localTags) {
+  const localById = new Map(
+    (localTags || [])
+      .filter((t) => t?.id)
+      .map((t) => [String(t.id).toUpperCase(), t])
+  );
+  const merged = [];
+  const seen = new Set();
+  for (const st of seedTags || []) {
+    if (!st?.id) continue;
+    const key = String(st.id).toUpperCase();
+    const loc = localById.get(key);
+    seen.add(key);
+    if (!loc) {
+      merged.push({ ...st });
+      continue;
+    }
+    // Geometria e note utente vincono sempre
+    merged.push({
+      ...st,
+      ...loc,
+      id: loc.id || st.id,
+      label: loc.label || st.label,
+      kind: loc.kind || st.kind,
+      x: loc.x != null ? loc.x : st.x,
+      y: loc.y != null ? loc.y : st.y,
+      w: loc.w != null ? loc.w : st.w,
+      h: loc.h != null ? loc.h : st.h,
+      note: String(loc.note || "").trim() ? loc.note : st.note,
+      locked: !!(loc.locked || st.locked),
+      source: loc.source || st.source,
+      updatedAt: Math.max(Number(loc.updatedAt) || 0, Number(st.updatedAt) || 0) || undefined,
+    });
+  }
+  for (const [key, loc] of localById) {
+    if (!seen.has(key)) merged.push({ ...loc });
+  }
+  return merged;
 }
 
 export async function saveMap(map, { sync = true } = {}) {
@@ -729,12 +740,18 @@ function mergeTagCloudLocal(localTag, cloudTag) {
   if (!cloudTag) return { ...localTag };
   const lt = Number(localTag.updatedAt) || 0;
   const ct = Number(cloudTag.updatedAt) || 0;
-  // Più recente vince; a parità preferisci note/manuali locali
+  const localUser = tagHasUserData(localTag);
+  const cloudUser = tagHasUserData(cloudTag);
+  // Note / riposizionamenti locali non devono sparire per un seed cloud più fresco
+  if (localUser && !cloudUser) return { ...localTag };
+  if (cloudUser && !localUser) return { ...cloudTag };
+  if (localUser && cloudUser) {
+    // Entrambi “utente”: più recente, ma tieni geometria del più recente
+    return ct > lt ? { ...cloudTag } : { ...localTag };
+  }
   if (ct > lt) return { ...cloudTag };
   if (lt > ct) return { ...localTag };
-  if (tagHasUserData(localTag)) return { ...localTag };
-  if (tagHasUserData(cloudTag)) return { ...cloudTag };
-  return { ...cloudTag };
+  return { ...localTag };
 }
 
 async function pushMapToCloud(map) {
