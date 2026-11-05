@@ -1,5 +1,5 @@
-const CACHE = "tag-impianto-shell-v45";
-const MAP_CACHE = "tag-impianto-maps-v45";
+const CACHE = "tag-impianto-shell-v46";
+const MAP_CACHE = "tag-impianto-maps-v46";
 const SHELL = [
   "./",
   "./index.html",
