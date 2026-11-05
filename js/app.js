@@ -10,16 +10,16 @@ import {
   pullMapsFromCloud,
   syncAllWithCloud,
   pushLocalChangesToCloud,
-} from "./db.js?v=1.8.11";
-import { MapViewer } from "./viewer.js?v=1.8.11";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.11";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.11";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.11";
+} from "./db.js?v=1.8.12";
+import { MapViewer } from "./viewer.js?v=1.8.12";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.12";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.12";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.12";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.11";
+} from "./image-cache.js?v=1.8.12";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -267,10 +267,10 @@ function escapeHtml(s) {
     .replaceAll('"', "&quot;");
 }
 
-/** Lista suggerimenti: scroll ≠ tap; 1° tap chiude tastiera, 2° conferma. */
+/** Lista suggerimenti: tap = vai subito al tag; scroll = solo chiudi tastiera. */
 let sugHits = [];
-let sugKeyboardDismissed = false;
 let sugPointer = null;
+let sugTouchHandled = false;
 
 function closeSuggestions() {
   els.suggestions.classList.remove("open");
@@ -278,6 +278,7 @@ function closeSuggestions() {
   sugIndex = -1;
   sugHits = [];
   sugPointer = null;
+  sugTouchHandled = false;
 }
 
 function dismissSearchKeyboard() {
@@ -286,7 +287,6 @@ function dismissSearchKeyboard() {
   } catch (_) {
     /* ignore */
   }
-  sugKeyboardDismissed = true;
 }
 
 async function runSearch(query, { autoPick = false } = {}) {
@@ -332,8 +332,7 @@ async function runSearch(query, { autoPick = false } = {}) {
   els.suggestions.classList.add("open");
   sugIndex = 0;
   sugHits = hits.slice(0, 40);
-  // Nuova ricerca: al prossimo tocco prima chiudi tastiera, poi conferma
-  sugKeyboardDismissed = document.activeElement !== els.searchInput;
+  sugTouchHandled = false;
 
   if (exactN && nearN) {
     setStatus(
@@ -461,7 +460,6 @@ els.mapSelect.addEventListener("change", () => selectMap(els.mapSelect.value));
 els.searchInput.addEventListener("input", async () => {
   const q = els.searchInput.value;
   els.clearBtn.classList.toggle("visible", !!q);
-  sugKeyboardDismissed = false;
   if (!q.trim()) {
     closeSuggestions();
     viewer.highlight(null);
@@ -470,20 +468,16 @@ els.searchInput.addEventListener("input", async () => {
   await runSearch(q);
 });
 
-els.searchInput.addEventListener("focus", () => {
-  sugKeyboardDismissed = false;
-});
-
-// Suggerimenti touch: distingue scorrimento da tap; 1° tap = chiudi tastiera
+// Suggerimenti: tap → vai subito al tag; scroll → chiudi solo la tastiera
 els.suggestions.addEventListener("pointerdown", (e) => {
   const item = e.target.closest?.(".sug-item");
-  if (!item || !els.suggestions.contains(item)) return;
+  sugTouchHandled = false;
   sugPointer = {
     id: e.pointerId,
     x: e.clientX,
     y: e.clientY,
     moved: false,
-    index: Number(item.dataset.i),
+    index: item ? Number(item.dataset.i) : -1,
   };
 });
 
@@ -491,9 +485,21 @@ els.suggestions.addEventListener(
   "pointermove",
   (e) => {
     if (!sugPointer || e.pointerId !== sugPointer.id) return;
-    if (Math.hypot(e.clientX - sugPointer.x, e.clientY - sugPointer.y) > 12) {
-      sugPointer.moved = true;
+    if (Math.hypot(e.clientX - sugPointer.x, e.clientY - sugPointer.y) > 10) {
+      if (!sugPointer.moved) {
+        sugPointer.moved = true;
+        dismissSearchKeyboard(); // scroll → tastiera via, resto a guardare la lista
+      }
     }
+  },
+  { passive: true }
+);
+
+els.suggestions.addEventListener(
+  "scroll",
+  () => {
+    dismissSearchKeyboard();
+    if (sugPointer) sugPointer.moved = true;
   },
   { passive: true }
 );
@@ -502,19 +508,19 @@ function endSugPointer(e) {
   if (!sugPointer || e.pointerId !== sugPointer.id) return;
   const { moved, index } = sugPointer;
   sugPointer = null;
-  if (moved) return; // stava scorrendo la lista
-  const hit = sugHits[index];
-  if (!hit) return;
-  if (!sugKeyboardDismissed || document.activeElement === els.searchInput) {
-    dismissSearchKeyboard();
-    // evidenzia riga senza confermare
-    els.suggestions.querySelectorAll(".sug-item").forEach((el, i) => {
-      el.classList.toggle("active", i === index);
-    });
-    sugIndex = index;
+  if (moved) {
+    // Stava scorrendo: niente selezione
     return;
   }
-  pickHit(hit);
+  const hit = index >= 0 ? sugHits[index] : null;
+  if (!hit) return;
+  dismissSearchKeyboard();
+  sugTouchHandled = true;
+  sugIndex = index;
+  els.suggestions.querySelectorAll(".sug-item").forEach((el, i) => {
+    el.classList.toggle("active", i === index);
+  });
+  pickHit(hit); // tap → entra subito (niente secondo colpo)
 }
 
 els.suggestions.addEventListener("pointerup", endSugPointer);
@@ -522,9 +528,13 @@ els.suggestions.addEventListener("pointercancel", () => {
   sugPointer = null;
 });
 
-// Desktop: click classico conferma subito (dopo blur tastiera non serve)
+// Desktop / click residuo: conferma subito; su touch evita doppio dopo pointerup
 els.suggestions.addEventListener("click", (e) => {
-  // Su touch il click arriva dopo pointerup: se abbiamo già gestito, evita doppio
+  if (sugTouchHandled) {
+    e.preventDefault();
+    sugTouchHandled = false;
+    return;
+  }
   if (window.matchMedia("(pointer: coarse)").matches) {
     e.preventDefault();
     return;
@@ -532,7 +542,10 @@ els.suggestions.addEventListener("click", (e) => {
   const item = e.target.closest?.(".sug-item");
   if (!item) return;
   const hit = sugHits[Number(item.dataset.i)];
-  if (hit) pickHit(hit);
+  if (hit) {
+    dismissSearchKeyboard();
+    pickHit(hit);
+  }
 });
 
 els.searchInput.addEventListener("keydown", async (e) => {
