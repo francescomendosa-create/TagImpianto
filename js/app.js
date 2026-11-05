@@ -3,7 +3,6 @@ import {
   isCloudReady,
   loadSeedIfEmpty,
   resetMapsFromSeed,
-  forceReloadSeeds,
   listMaps,
   getMap,
   saveMap,
@@ -11,12 +10,12 @@ import {
   pullMapsFromCloud,
   syncAllWithCloud,
   pushLocalChangesToCloud,
-} from "./db.js?v=1.6.7";
-import { MapViewer } from "./viewer.js?v=1.6.7";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.6.7";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.6.7";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.6.7";
-import { warmAllMapImages, countLocalImages } from "./image-cache.js?v=1.6.7";
+} from "./db.js?v=1.6.8";
+import { MapViewer } from "./viewer.js?v=1.6.8";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.6.8";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.6.8";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.6.8";
+import { warmAllMapImages, countLocalImages } from "./image-cache.js?v=1.6.8";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -458,20 +457,24 @@ els.btnFit.addEventListener("click", () => viewer.fit());
 
 els.btnRefresh?.addEventListener("click", async () => {
   els.btnRefresh.disabled = true;
-  setStatus("Aggiornamento dal sito…");
+  setStatus("Aggiornamento app…");
+  toast("Scarico l’ultima versione…");
   try {
-    const { updated } = await forceReloadSeeds();
-    await refreshMaps();
-    if (currentMap) {
-      await selectMap(currentMap.id, { keepHighlight: true, keepView: true });
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
     }
-    toast(`Aggiornato (${updated} mappe)`);
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
   } catch (err) {
-    toast(`Aggiorna fallito: ${err.message || err}`);
-    setStatus(`Errore aggiornamento: ${escapeHtml(err.message || err)}`);
-  } finally {
-    els.btnRefresh.disabled = false;
+    console.warn("Pulizia cache app:", err);
   }
+  // Ricarica forzata senza cache del browser
+  const url = new URL(location.href);
+  url.searchParams.set("_app", String(Date.now()));
+  location.replace(url.toString());
 });
 
 els.btnAnnotate.addEventListener("click", () => {
