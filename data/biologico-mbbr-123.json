@@ -1,9 +1,9 @@
 {
   "id": "biologico-mbbr-123",
   "name": "Biologico MBBR 1 2 3",
-  "image": "assets/maps/biologico-mbbr-123.png?v=9-h1652-edsr",
-  "width": 3200,
-  "height": 1652,
+  "image": "assets/maps/biologico-mbbr-123.png?v=10-h473-orig",
+  "width": 916,
+  "height": 473,
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
     {
@@ -471,6 +471,6 @@
     }
   ],
   "cropLeft": 480,
-  "seedRev": 9,
+  "seedRev": 10,
   "cropTop": 52
 }
