@@ -9,17 +9,17 @@ import {
   saveMap,
   searchAllTags,
   syncAllWithCloud,
-} from "./db.js?v=1.8.21";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.21";
-import { MapViewer } from "./viewer.js?v=1.8.21";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.21";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.21";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.21";
+} from "./db.js?v=1.8.22";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.22";
+import { MapViewer } from "./viewer.js?v=1.8.22";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.22";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.22";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.22";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.21";
+} from "./image-cache.js?v=1.8.22";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -176,6 +176,8 @@ async function applyAppUpdate({ wipeImages = false } = {}) {
   toast("Aggiorno senza reinstallare…");
   try {
     localStorage.setItem("ti-force-seed", "1");
+    // Dopo Aggiorna: riscarica le PNG dal sito (revisioni nuove), senza buttare tutto a caso
+    localStorage.setItem("ti-force-images", "1");
   } catch (_) {
     /* ignore */
   }
@@ -830,9 +832,12 @@ async function boot() {
   const params = new URLSearchParams(location.search);
   const wantReset = params.has("reset") || params.get("ripristina") === "1";
   let forceSeed = false;
+  let forceImages = false;
   try {
     forceSeed = localStorage.getItem("ti-force-seed") === "1";
     if (forceSeed) localStorage.removeItem("ti-force-seed");
+    forceImages = localStorage.getItem("ti-force-images") === "1";
+    if (forceImages) localStorage.removeItem("ti-force-images");
   } catch (_) {
     /* ignore */
   }
@@ -891,11 +896,10 @@ async function boot() {
     }
   }
 
-  // Offline-first: niente download di massa. Solo dopo Aggiorna si riallineano le PNG mancanti.
+  // Offline-first: niente download di massa. Dopo Aggiorna riscarica le PNG (revisioni nuove).
   if (currentMap) preloadNearby(currentMap.id);
-  if (forceSeed) {
-    // force:false = scarica solo chiavi nuove; tiene le PNG già sul dispositivo
-    syncImagesLocal({ force: false }).catch((err) => console.warn(err));
+  if (forceSeed || forceImages) {
+    syncImagesLocal({ force: true }).catch((err) => console.warn(err));
   } else {
     try {
       const n = await countLocalImages();

@@ -179,8 +179,10 @@ async function findBlobByStem(src) {
 }
 
 /**
- * Restituisce URL per <img>: prima IndexedDB (anche stessa PNG con ?v= diverso),
- * solo se manca del tutto prova il download di rete.
+ * Restituisce URL per <img>.
+ * - Se c’è già la revisione esatta (?v=) in IndexedDB → locale.
+ * - Se online e la revisione è nuova → scarica dal sito (non riusa PNG vecchie).
+ * - Se offline → riusa la stessa mappa (anche con ?v= diverso).
  */
 export async function resolveLocalImageUrl(src) {
   if (!src) throw new Error("URL immagine mancante");
@@ -189,13 +191,39 @@ export async function resolveLocalImageUrl(src) {
   if (blobUrls.has(key)) return blobUrls.get(key);
 
   let existing = await getRecord(key);
-  if (!(existing?.blob && existing.blob.size >= 2000)) {
-    // Offline-first: riusa la stessa mappa già sul dispositivo anche se è cambiato ?v=
+  if (existing?.blob && existing.blob.size >= 2000) {
+    const u = URL.createObjectURL(existing.blob);
+    blobUrls.set(key, u);
+    return u;
+  }
+
+  // Revisione nuova online: scarica subito (Aggiorna / seedRev / ?v=)
+  if (typeof navigator !== "undefined" && navigator.onLine) {
     try {
-      existing = await findBlobByStem(src);
-    } catch (_) {
-      existing = null;
+      const blob = await fetchMapBlob(src);
+      try {
+        await deleteLocalImage(src);
+      } catch (_) {
+        /* ignore */
+      }
+      try {
+        await putRecord(key, blob);
+      } catch (err) {
+        console.warn("Quota IndexedDB immagini:", err);
+      }
+      const u = URL.createObjectURL(blob);
+      blobUrls.set(key, u);
+      return u;
+    } catch (err) {
+      console.warn("Download mappa (online) fallito, provo cache stem:", err);
     }
+  }
+
+  // Offline (o rete ko): riusa qualunque revisione dello stesso file
+  try {
+    existing = await findBlobByStem(src);
+  } catch (_) {
+    existing = null;
   }
   if (existing?.blob && existing.blob.size >= 2000) {
     try {
@@ -208,7 +236,6 @@ export async function resolveLocalImageUrl(src) {
     return u;
   }
 
-  // Solo se non c’è nulla in locale (es. prima apertura di una mappa nuova)
   const blob = await fetchMapBlob(src);
   try {
     await putRecord(key, blob);
