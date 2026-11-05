@@ -17,7 +17,7 @@ TESS = Path(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
 if TESS.exists():
     pytesseract.pytesseract.tesseract_cmd = str(TESS)
 
-SEED_REV = 4
+SEED_REV = 5
 
 # Pattern rigorosi impianto SASOL / WWT
 STRICT = re.compile(
@@ -27,6 +27,8 @@ STRICT = re.compile(
     r"|P-?\d{4,5}[A-Z]"
     r"|P-?\d{5}"
     r"|XV-?\d{4,5}[A-Z]?"
+    r"|HV-?\d{4,5}[A-Z]?"
+    r"|V206X\d{2}"
     r"|FCV-?\d{3,5}"
     r"|LCV-?\d{3,5}"
     r"|MX-?\d{4,5}[A-Z]?"
@@ -36,7 +38,7 @@ STRICT = re.compile(
     r"|S-?\d{3,4}"
     r"|66-ST\d+[A-Z]?"
     r"|(?:PG|VP|TT)\d+_B"
-    r"|\d{2,3}(?:AIT|FIT|LIT|LT|TT|PT|PDT|PIT)\d{0,3}[A-Z]?"
+    r"|\d{1,3}(?:AIT|FIT|LIT|LT|TT|PT|PDT|PIT)\d{2,3}[A-Z]?"
     r"|(?:AIT|FIT|LIT|LT|TT|PT|PDT|PIT)\d{2,5}[A-Z]?"
     r")$",
     re.I,
@@ -48,6 +50,8 @@ TAG_FIND = re.compile(
     r"|FIL[- ]?\d{4,5}[A-Z]?"
     r"|P[- ]?\d{4,5}[A-Z]?"
     r"|XV[- ]?\d{4,5}[A-Z]?"
+    r"|HV[- ]?\d{4,5}[A-Z]?"
+    r"|V206X\d{2}"
     r"|FCV[- ]?\d{3,5}"
     r"|LCV[- ]?\d{3,5}"
     r"|MX[- ]?\d{4,5}[A-Z]?"
@@ -57,8 +61,25 @@ TAG_FIND = re.compile(
     r"|S[- ]?\d{3,4}"
     r"|66-ST\d+[A-Z]?"
     r"|(?:PG|VP|TT)\d+_B"
-    r"|\d{2,3}(?:AIT|FIT|LIT|LT|TT|PT|PDT|PIT)\d{0,3}[A-Z]?"
+    r"|\d{1,3}(?:AIT|FIT|LIT|LT|TT|PT|PDT|PIT)\d{2,3}[A-Z]?"
     r")",
+    re.I,
+)
+
+# OCR spazzatura tipica da scartare
+OCR_NOISE = re.compile(
+    r"^(?:"
+    r"FIL-?1100$"
+    r"|FIL-?11002$"
+    r"|FIL-?11003$"
+    r"|TK-?\d{5}[A-Z]$"  # TK-11018K / TK-11021P da testo attaccato
+    r"|XV\d+[A-Z]$"  # XV11074E spezzati
+    r"|P1101I.*"
+    r"|10AITO.*"
+    r"|110FITO$"
+    r"|AIT200$"
+    r"|7AIT200$"
+    r")$",
     re.I,
 )
 
@@ -263,21 +284,63 @@ CATALOGS: dict[str, list[tuple[str, str, str]]] = {
         ("P11012H", "P11012H", "pompa"),
         ("110LT07", "110LT07", "strumento"),
     ],
+    # Filtri a carboni: catalogo completo (OCR fallisce sulle XV piccole).
+    # Tuple: id, label, kind[, x, y]
     "filtrazione-carboni": [
-        ("TK-11007", "TK-11007 PERMEATI MBR", "serbatoio"),
-        ("TK-11021", "TK-11021 PERMEATO UF", "serbatoio"),
-        ("TK-11018", "TK-11018 BIOCIDA", "serbatoio"),
-        ("FIL-11002A", "FIL-11002A", "apparecchio"),
-        ("FIL-11003A", "FIL-11003A", "apparecchio"),
-        ("FIL-11002B", "FIL-11002B", "apparecchio"),
-        ("FIL-11003B", "FIL-11003B", "apparecchio"),
-        ("P11019A", "P11019A", "pompa"),
-        ("P11019B", "P11019B", "pompa"),
-        ("P11019C", "P11019C", "pompa"),
-        ("P11035A", "P11035A", "pompa"),
-        ("P11035B", "P11035B", "pompa"),
-        ("XV11040", "XV11040", "valvola"),
-        ("XV11063", "XV11063", "valvola"),
+        ("TK-11007", "TK-11007 PERMEATI MBR", "serbatoio", 0.06, 0.28),
+        ("110LT07", "110LT07", "strumento", 0.10, 0.42),
+        ("TK-11021", "TK-11021 PERMEATO UF", "serbatoio", 0.82, 0.72),
+        ("TK-11018", "TK-11018 BIOCIDA", "serbatoio", 0.74, 0.48),
+        ("FIL-11002A", "FIL-11002A", "apparecchio", 0.28, 0.30),
+        ("FIL-11003A", "FIL-11003A", "apparecchio", 0.48, 0.30),
+        ("FIL-11002B", "FIL-11002B", "apparecchio", 0.28, 0.68),
+        ("FIL-11003B", "FIL-11003B", "apparecchio", 0.48, 0.68),
+        ("P11019A", "P11019A", "pompa", 0.10, 0.55),
+        ("P11019B", "P11019B", "pompa", 0.16, 0.55),
+        ("P11019C", "P11019C", "pompa", 0.22, 0.55),
+        ("P11035A", "P11035A", "pompa", 0.72, 0.62),
+        ("P11035B", "P11035B", "pompa", 0.78, 0.62),
+        # Linea A — FIL-11002A
+        ("XV11040", "XV11040", "valvola", 0.24, 0.22),
+        ("XV11041", "XV11041", "valvola", 0.30, 0.20),
+        ("XV11042", "XV11042", "valvola", 0.36, 0.22),
+        ("XV11043", "XV11043", "valvola", 0.24, 0.40),
+        ("XV11044", "XV11044", "valvola", 0.30, 0.42),
+        ("XV11045", "XV11045", "valvola", 0.36, 0.40),
+        # Linea A — FIL-11003A
+        ("XV11046", "XV11046", "valvola", 0.44, 0.22),
+        ("XV11047", "XV11047", "valvola", 0.50, 0.20),
+        ("XV11048", "XV11048", "valvola", 0.56, 0.22),
+        ("XV11049", "XV11049", "valvola", 0.44, 0.40),
+        ("XV11050", "XV11050", "valvola", 0.50, 0.42),
+        ("XV11051", "XV11051", "valvola", 0.56, 0.40),
+        # Linea B — FIL-11002B
+        ("XV11052", "XV11052", "valvola", 0.24, 0.60),
+        ("XV11053", "XV11053", "valvola", 0.30, 0.58),
+        ("XV11054", "XV11054", "valvola", 0.36, 0.60),
+        ("XV11055", "XV11055", "valvola", 0.24, 0.78),
+        ("XV11056", "XV11056", "valvola", 0.30, 0.80),
+        ("XV11057", "XV11057", "valvola", 0.36, 0.78),
+        # Linea B — FIL-11003B
+        ("XV11058", "XV11058", "valvola", 0.44, 0.60),
+        ("XV11059", "XV11059", "valvola", 0.50, 0.58),
+        ("XV11060", "XV11060", "valvola", 0.56, 0.60),
+        ("XV11061", "XV11061", "valvola", 0.44, 0.78),
+        ("XV11062", "XV11062", "valvola", 0.50, 0.80),
+        ("XV11063", "XV11063", "valvola", 0.56, 0.78),
+        # Strumenti / altri
+        ("110FIT04", "110FIT04", "strumento", 0.18, 0.38),
+        ("110FIT05", "110FIT05", "strumento", 0.18, 0.72),
+        ("110AIT06", "110AIT06", "strumento", 0.62, 0.18),
+        ("110AIT07", "110AIT07", "strumento", 0.62, 0.24),
+        ("07AIT200", "07AIT200", "strumento", 0.90, 0.42),
+        ("HV11006", "HV11006 SCARICO I.A.S.", "valvola", 0.40, 0.88),
+        ("V206X00", "V206X00", "valvola", 0.60, 0.50),
+        ("V206X01", "V206X01", "valvola", 0.66, 0.50),
+        ("V206X02", "V206X02", "valvola", 0.66, 0.24),
+        ("XV11074", "XV11074", "valvola", 0.02, 0.28),
+        ("XV11085", "XV11085", "valvola", 0.04, 0.22),
+        ("XV11095", "XV11095", "valvola", 0.12, 0.18),
     ],
     "biologico-mbbr-123": [
         ("TK-11005", "TK-11005 UREA", "serbatoio"),
@@ -479,7 +542,7 @@ def guess_kind(tid: str) -> str:
     u = tid.upper().replace("-", "")
     if re.match(r"^(P|PG|VP)\d", u):
         return "pompa"
-    if re.match(r"^(XV|FCV|LCV)", u):
+    if re.match(r"^(XV|HV|FCV|LCV|V206X)", u):
         return "valvola"
     if u.startswith("TK") or re.match(r"^S\d", u):
         return "serbatoio"
@@ -501,10 +564,16 @@ def normalize_tag(raw: str) -> str | None:
     s = re.sub(r"[^A-Z0-9_-]", "", s)
     if not s:
         return None
+    # O confuso con 0 nei numeri strumentazione
+    s = re.sub(r"^O(?=\d*(?:AIT|FIT|LIT|LT))", "0", s)
+    s = re.sub(r"^O7AIT", "07AIT", s)
     # Canonizza prefissi comuni
     s = s.replace("TK", "TK-") if s.startswith("TK") and not s.startswith("TK-") and s[2:3].isdigit() else s
     s = re.sub(r"^TK-+", "TK-", s)
     s = re.sub(r"^FIL(?=\d)", "FIL-", s)
+    s = re.sub(r"^HV(?=\d)", "HV", s)
+    if OCR_NOISE.match(s):
+        return None
     if not STRICT.match(s):
         return None
     # Scarta rumore corto numerico
@@ -516,19 +585,26 @@ def normalize_tag(raw: str) -> str | None:
 def catalog_tags(map_id: str) -> list[dict]:
     rows = CATALOGS.get(map_id, [])
     out = []
-    # distribuisci in griglia grezza cosi non sono tutti sovrapposti
     cols = 6
-    for i, (tid, label, kind) in enumerate(rows):
-        r, c = divmod(i, cols)
+    for i, row in enumerate(rows):
+        if len(row) >= 5:
+            tid, label, kind, x, y = row[0], row[1], row[2], float(row[3]), float(row[4])
+            w, h = 0.045, 0.04
+        else:
+            tid, label, kind = row[0], row[1], row[2]
+            r, c = divmod(i, cols)
+            x = round(0.08 + c * 0.14, 4)
+            y = round(0.16 + r * 0.12, 4)
+            w, h = 0.06, 0.06
         out.append(
             {
                 "id": tid,
                 "label": label,
                 "kind": kind,
-                "x": round(0.08 + c * 0.14, 4),
-                "y": round(0.16 + r * 0.12, 4),
-                "w": 0.06,
-                "h": 0.06,
+                "x": round(x, 4),
+                "y": round(y, 4),
+                "w": w,
+                "h": h,
                 "source": "catalog",
             }
         )
@@ -611,6 +687,8 @@ def ocr_image(path: Path) -> list[dict]:
                 "h": round(max(0.03, (y1 - y0) / ih), 4),
             }
             for tid in cands:
+                if OCR_NOISE.match(tid):
+                    continue
                 prev = by_id.get(tid)
                 if not prev or conf > prev["confidence"]:
                     by_id[tid] = {
@@ -688,12 +766,67 @@ def process_one(json_path: Path) -> tuple[str, int, int]:
     ]
     cat = catalog_tags(map_id)
     ocr = ocr_image(img_path)
-    # sediflottatore-b: conserva i molti seed gia buoni
+    # Preferisci coordinate OCR quando confidenza alta; catalogo per i tag che OCR non vede
     if map_id == "sediflottatore-b" and before > 40:
         base = data.get("tags") or []
         data["tags"] = merge_tags(base, ocr, cat)
+    elif map_id == "filtrazione-carboni":
+        # Catalogo ha coordinate curate; OCR aggiunge solo tag fuori catalogo
+        data["tags"] = merge_tags(kept, ocr, cat)
+        cat_pos = {str(t["id"]).upper(): t for t in cat}
+        fixed = []
+        for t in data["tags"]:
+            if t.get("locked") or t.get("source") == "manual":
+                fixed.append(t)
+                continue
+            c = cat_pos.get(str(t["id"]).upper())
+            if c:
+                fixed.append(
+                    {
+                        **t,
+                        "x": c["x"],
+                        "y": c["y"],
+                        "w": c["w"],
+                        "h": c["h"],
+                        "label": c.get("label") or t.get("label"),
+                        "kind": c.get("kind") or t.get("kind"),
+                        "source": "catalog",
+                    }
+                )
+            else:
+                fixed.append(t)
+        data["tags"] = fixed
     else:
         data["tags"] = merge_tags(kept, cat, ocr)
+
+    # Pulisci rumore OCR residuo
+    data["tags"] = [
+        t
+        for t in data["tags"]
+        if t.get("id") and not OCR_NOISE.match(str(t["id"]))
+    ]
+    # Dedup per id (case-insensitive), preferisci OCR posizionato / catalogo con label
+    dedup: dict[str, dict] = {}
+    for t in data["tags"]:
+        key = str(t["id"]).upper()
+        prev = dedup.get(key)
+        if not prev:
+            dedup[key] = t
+            continue
+        score = (2 if t.get("source") == "ocr" and t.get("confidence", 0) >= 60 else 0) + (
+            1 if t.get("source") == "catalog" else 0
+        )
+        prev_score = (
+            2 if prev.get("source") == "ocr" and prev.get("confidence", 0) >= 60 else 0
+        ) + (1 if prev.get("source") == "catalog" else 0)
+        if score > prev_score or (
+            score == prev_score and len(str(t.get("label") or "")) > len(str(prev.get("label") or ""))
+        ):
+            # tieni label migliore
+            if prev.get("label") and len(str(prev["label"])) > len(str(t.get("label") or "")):
+                t = {**t, "label": prev["label"], "kind": t.get("kind") or prev.get("kind")}
+            dedup[key] = t
+    data["tags"] = sorted(dedup.values(), key=lambda t: str(t["id"]))
 
     data["seedRev"] = SEED_REV
     data["notes"] = "Tag catalogo + OCR. Usa Riposiziona per affinare i box."
