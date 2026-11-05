@@ -12,7 +12,7 @@
   </style>
 </head>
 <body>
-  <p>Pulizia cache app e mappe salvate sul dispositivo…</p>
+  <p>Pulizia cache app e immagini mappe…</p>
   <p id="msg"></p>
   <script>
     (async function () {
@@ -30,10 +30,22 @@
           var keys = await caches.keys();
           await Promise.all(keys.map(function (k) { return caches.delete(k); }));
         }
-        // Cancella anche le PNG in IndexedDB (altrimenti restano le mappe vecchie)
+        // Solo store immagini: lascia mappe/note in IndexedDB
         await new Promise(function (resolve) {
-          var req = indexedDB.deleteDatabase("tag-impianto");
-          req.onsuccess = req.onerror = req.onblocked = function () { resolve(); };
+          var open = indexedDB.open("tag-impianto");
+          open.onerror = function () { resolve(); };
+          open.onsuccess = function () {
+            var db = open.result;
+            if (!db.objectStoreNames.contains("images")) {
+              db.close();
+              resolve();
+              return;
+            }
+            var tx = db.transaction("images", "readwrite");
+            tx.objectStore("images").clear();
+            tx.oncomplete = function () { db.close(); resolve(); };
+            tx.onerror = function () { db.close(); resolve(); };
+          };
         });
         msg.textContent = "Ok. Apro l’ultima versione…";
       } catch (e) {

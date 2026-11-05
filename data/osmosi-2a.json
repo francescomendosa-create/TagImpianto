@@ -1,7 +1,7 @@
 {
   "id": "osmosi-2a",
   "name": "Osmosi 2° passo A",
-  "image": "assets/maps/osmosi-2a.png?v=5-ct300-h1597",
+  "image": "assets/maps/osmosi-2a.png?v=6-ct300-h1597",
   "width": 3552,
   "height": 1597,
   "cropLeft": 461,
@@ -203,6 +203,6 @@
       "source": "ocr"
     }
   ],
-  "seedRev": 5,
+  "seedRev": 6,
   "cropTop": 300
 }

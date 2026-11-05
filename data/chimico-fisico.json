@@ -1,7 +1,7 @@
 {
   "id": "chimico-fisico",
   "name": "Chimico fisico",
-  "image": "assets/maps/chimico-fisico.png?v=5-ct298-h1587",
+  "image": "assets/maps/chimico-fisico.png?v=6-ct298-h1587",
   "width": 3542,
   "height": 1587,
   "cropLeft": 460,
@@ -325,6 +325,6 @@
       "source": "ocr"
     }
   ],
-  "seedRev": 5,
+  "seedRev": 6,
   "cropTop": 298
 }

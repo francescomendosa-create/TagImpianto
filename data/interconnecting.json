@@ -1,7 +1,7 @@
 {
   "id": "interconnecting",
   "name": "Interconnecting",
-  "image": "assets/maps/interconnecting.png?v=5-ct288-h1537",
+  "image": "assets/maps/interconnecting.png?v=6-ct288-h1537",
   "width": 3515,
   "height": 1537,
   "cropLeft": 456,
@@ -60,6 +60,6 @@
       "source": "ocr"
     }
   ],
-  "seedRev": 5,
+  "seedRev": 6,
   "cropTop": 288
 }

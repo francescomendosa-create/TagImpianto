@@ -1,7 +1,7 @@
 {
   "id": "uscita-actiflo",
   "name": "Uscita Actiflo",
-  "image": "assets/maps/uscita-actiflo.png?v=5-ct330-h1759",
+  "image": "assets/maps/uscita-actiflo.png?v=6-ct330-h1759",
   "width": 3515,
   "height": 1759,
   "cropLeft": 456,
@@ -79,6 +79,6 @@
       "source": "catalog"
     }
   ],
-  "seedRev": 5,
+  "seedRev": 6,
   "cropTop": 330
 }

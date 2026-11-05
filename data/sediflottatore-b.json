@@ -1,7 +1,7 @@
 {
   "id": "sediflottatore-b",
   "name": "Sediflottazione B",
-  "image": "assets/maps/sediflottatore-b.png?v=5-ct45-h403",
+  "image": "assets/maps/sediflottatore-b.png?v=6-ct45-h403",
   "width": 916,
   "height": 403,
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
@@ -752,6 +752,6 @@
     }
   ],
   "cropLeft": 108,
-  "seedRev": 5,
+  "seedRev": 6,
   "cropTop": 45
 }

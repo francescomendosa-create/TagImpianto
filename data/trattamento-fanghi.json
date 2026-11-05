@@ -1,11 +1,11 @@
 {
   "id": "trattamento-fanghi",
   "name": "Trattamento fanghi",
-  "image": "assets/maps/trattamento-fanghi.png?v=5-ct257-h1371",
+  "image": "assets/maps/trattamento-fanghi.png?v=6-ct257-h1371",
   "width": 3050,
   "height": 1371,
   "cropLeft": 396,
-  "seedRev": 5,
+  "seedRev": 6,
   "area": "wwt",
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [

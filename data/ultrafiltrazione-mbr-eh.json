@@ -1,7 +1,7 @@
 {
   "id": "ultrafiltrazione-mbr-eh",
   "name": "Ultrafiltrazione MBR E-H",
-  "image": "assets/maps/ultrafiltrazione-mbr-eh.png?v=5-ct328-h1747",
+  "image": "assets/maps/ultrafiltrazione-mbr-eh.png?v=6-ct328-h1747",
   "width": 3525,
   "height": 1747,
   "cropLeft": 458,
@@ -351,6 +351,6 @@
       "source": "ocr"
     }
   ],
-  "seedRev": 5,
+  "seedRev": 6,
   "cropTop": 328
 }

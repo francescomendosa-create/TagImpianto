@@ -1,7 +1,7 @@
 {
   "id": "actiflo",
   "name": "Actiflo",
-  "image": "assets/maps/actiflo.png?v=5-ct304-h1618",
+  "image": "assets/maps/actiflo.png?v=6-ct304-h1618",
   "width": 3569,
   "height": 1618,
   "cropLeft": 463,
@@ -169,6 +169,6 @@
       "source": "catalog"
     }
   ],
-  "seedRev": 5,
+  "seedRev": 6,
   "cropTop": 304
 }

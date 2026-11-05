@@ -1,7 +1,7 @@
 {
   "id": "reattivi-actiflo",
   "name": "Reattivi Actiflo",
-  "image": "assets/maps/reattivi-actiflo.png?v=5-ct328-h1746",
+  "image": "assets/maps/reattivi-actiflo.png?v=6-ct328-h1746",
   "width": 3453,
   "height": 1746,
   "cropLeft": 448,
@@ -232,6 +232,6 @@
       "source": "ocr"
     }
   ],
-  "seedRev": 5,
+  "seedRev": 6,
   "cropTop": 328
 }

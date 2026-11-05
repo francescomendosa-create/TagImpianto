@@ -1,7 +1,7 @@
 {
   "id": "ultrafiltrazione-b",
   "name": "Ultrafiltrazione B",
-  "image": "assets/maps/ultrafiltrazione-b.png?v=5-ct295-h1570",
+  "image": "assets/maps/ultrafiltrazione-b.png?v=6-ct295-h1570",
   "width": 3502,
   "height": 1570,
   "cropLeft": 454,
@@ -310,6 +310,6 @@
       "source": "ocr"
     }
   ],
-  "seedRev": 5,
+  "seedRev": 6,
   "cropTop": 295
 }

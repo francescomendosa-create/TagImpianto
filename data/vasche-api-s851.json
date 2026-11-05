@@ -1,7 +1,7 @@
 {
   "id": "vasche-api-s851",
   "name": "S-851 Vasche API",
-  "image": "assets/maps/vasche-api-s851.png?v=5-ct311-h1657",
+  "image": "assets/maps/vasche-api-s851.png?v=6-ct311-h1657",
   "width": 3565,
   "height": 1657,
   "cropLeft": 463,
@@ -123,6 +123,6 @@
       "source": "ocr"
     }
   ],
-  "seedRev": 5,
+  "seedRev": 6,
   "cropTop": 311
 }

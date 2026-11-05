@@ -1,7 +1,7 @@
 {
   "id": "ultrafiltrazione-mbr-ad",
   "name": "Ultrafiltrazione MBR A-D",
-  "image": "assets/maps/ultrafiltrazione-mbr-ad.png?v=5-ct300-h1601",
+  "image": "assets/maps/ultrafiltrazione-mbr-ad.png?v=6-ct300-h1601",
   "width": 3471,
   "height": 1601,
   "cropLeft": 450,
@@ -446,6 +446,6 @@
       "source": "ocr"
     }
   ],
-  "seedRev": 5,
+  "seedRev": 6,
   "cropTop": 300
 }

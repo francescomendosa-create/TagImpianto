@@ -1,7 +1,7 @@
 {
   "id": "osmosi-1c",
   "name": "Osmosi 1° passo C",
-  "image": "assets/maps/osmosi-1c.png?v=5-ct314-h1674",
+  "image": "assets/maps/osmosi-1c.png?v=6-ct314-h1674",
   "width": 3569,
   "height": 1674,
   "cropLeft": 463,
@@ -270,6 +270,6 @@
       "source": "ocr"
     }
   ],
-  "seedRev": 5,
+  "seedRev": 6,
   "cropTop": 314
 }
