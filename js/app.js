@@ -10,12 +10,16 @@ import {
   pullMapsFromCloud,
   syncAllWithCloud,
   pushLocalChangesToCloud,
-} from "./db.js?v=1.7.3";
-import { MapViewer } from "./viewer.js?v=1.7.3";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.7.3";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.7.3";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.7.3";
-import { warmAllMapImages, countLocalImages } from "./image-cache.js?v=1.7.3";
+} from "./db.js?v=1.7.4";
+import { MapViewer } from "./viewer.js?v=1.7.4";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.7.4";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.7.4";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.7.4";
+import {
+  warmAllMapImages,
+  countLocalImages,
+  clearAllLocalImages,
+} from "./image-cache.js?v=1.7.4";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -457,9 +461,10 @@ els.btnFit.addEventListener("click", () => viewer.fit());
 
 els.btnRefresh?.addEventListener("click", async () => {
   els.btnRefresh.disabled = true;
-  setStatus("Aggiornamento app…");
-  toast("Scarico l’ultima versione…");
+  setStatus("Aggiornamento app + mappe…");
+  toast("Scarico l’ultima versione (anche immagini)…");
   try {
+    await clearAllLocalImages();
     if ("serviceWorker" in navigator) {
       const regs = await navigator.serviceWorker.getRegistrations();
       await Promise.all(regs.map((r) => r.unregister()));

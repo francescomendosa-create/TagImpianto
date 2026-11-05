@@ -1,6 +1,7 @@
 /**
  * Cache locale delle PNG mappa in IndexedDB (Blob).
  * Dopo il primo download su un dispositivo, i cambi pagina usano i file locali.
+ * Se l’immagine sul sito cambia (stesso path), va invalidata con clear / nuovo ?v=.
  */
 
 const DB_NAME = "tag-impianto";
@@ -35,6 +36,18 @@ function absUrl(src) {
   return new URL(src, location.href).href;
 }
 
+/** Path senza query, per cancellare anche chiavi vecchie. */
+function urlStem(src) {
+  try {
+    const u = new URL(src, location.href);
+    u.search = "";
+    u.hash = "";
+    return u.href;
+  } catch (_) {
+    return String(src || "").split("?")[0];
+  }
+}
+
 async function getRecord(url) {
   const db = await openDb();
   return new Promise((resolve, reject) => {
@@ -61,6 +74,52 @@ async function putRecord(url, blob) {
   });
 }
 
+function revokeBlob(key) {
+  const u = blobUrls.get(key);
+  if (u) {
+    try {
+      URL.revokeObjectURL(u);
+    } catch (_) {
+      /* ignore */
+    }
+    blobUrls.delete(key);
+  }
+}
+
+/** Cancella una mappa (tutte le varianti ?v= dello stesso file). */
+export async function deleteLocalImage(src) {
+  if (!src) return;
+  const stem = urlStem(src);
+  const db = await openDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    const store = tx.objectStore(STORE);
+    const req = store.getAllKeys();
+    req.onsuccess = () => {
+      for (const key of req.result || []) {
+        if (String(key) === stem || String(key).startsWith(stem + "?") || String(key) === absUrl(src)) {
+          store.delete(key);
+          revokeBlob(String(key));
+        }
+      }
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+/** Svuota tutta la cache immagini locale (IndexedDB + blob URL). */
+export async function clearAllLocalImages() {
+  for (const key of [...blobUrls.keys()]) revokeBlob(key);
+  const db = await openDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 export async function hasLocalImage(src) {
   const rec = await getRecord(absUrl(src));
   return !!(rec && rec.blob);
@@ -80,7 +139,8 @@ export async function resolveLocalImageUrl(src) {
     return u;
   }
 
-  const res = await fetch(src, { cache: "force-cache" });
+  // Sempre rete fresca: le PNG sul sito possono cambiare a path uguale
+  const res = await fetch(src, { cache: "no-store" });
   if (!res.ok) throw new Error(`Download mappa fallito (${res.status})`);
   const blob = await res.blob();
   try {
@@ -94,7 +154,7 @@ export async function resolveLocalImageUrl(src) {
 }
 
 /**
- * Scarica in locale tutte le mappe mancanti.
+ * Scarica in locale tutte le mappe (riscarica se manca la chiave versione).
  * @param {{ image?: string, name?: string, id?: string }[]} maps
  * @param {(done: number, total: number, name: string) => void} [onProgress]
  */
@@ -108,7 +168,7 @@ export async function warmAllMapImages(maps, onProgress) {
       const key = absUrl(m.image);
       const have = await getRecord(key);
       if (!have?.blob) {
-        const res = await fetch(m.image);
+        const res = await fetch(m.image, { cache: "no-store" });
         if (res.ok) {
           const blob = await res.blob();
           try {

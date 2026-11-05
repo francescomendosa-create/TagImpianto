@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.7.3";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.7.4";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -183,6 +183,15 @@ export async function loadSeedIfEmpty() {
         for (const [key, t] of locked) {
           if (!seen.has(key)) merged.push(t);
         }
+        if (seed.image && seed.image !== local.image) {
+          try {
+            const { deleteLocalImage } = await import("./image-cache.js?v=1.7.4");
+            await deleteLocalImage(local.image);
+            await deleteLocalImage(seed.image);
+          } catch (_) {
+            /* ignore */
+          }
+        }
         local.image = seed.image || local.image;
         local.width = seed.width || local.width;
         local.height = seed.height || local.height;
@@ -236,7 +245,17 @@ export async function loadSeedIfEmpty() {
       }
 
       if (seed.image && local.image !== seed.image) {
+        try {
+          const { deleteLocalImage } = await import("./image-cache.js?v=1.7.4");
+          await deleteLocalImage(local.image);
+          await deleteLocalImage(seed.image);
+        } catch (_) {
+          /* ignore */
+        }
         local.image = seed.image;
+        if (seed.width) local.width = seed.width;
+        if (seed.height) local.height = seed.height;
+        if (seed.cropTop != null) local.cropTop = seed.cropTop;
         changed = true;
       }
       if (seed.width && local.width !== seed.width && !changed) {

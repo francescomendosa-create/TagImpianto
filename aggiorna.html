@@ -12,13 +12,16 @@
   </style>
 </head>
 <body>
-  <p>Pulizia cache e aggiornamento app…</p>
+  <p>Pulizia cache app e mappe salvate sul dispositivo…</p>
   <p id="msg"></p>
   <script>
     (async function () {
       var msg = document.getElementById("msg");
       try {
-        try { localStorage.removeItem("ti-boot-clean-1.7.2"); } catch (_) {}
+        try {
+          localStorage.removeItem("ti-boot-clean-1.7.3");
+          localStorage.removeItem("ti-boot-clean-1.7.4");
+        } catch (_) {}
         if ("serviceWorker" in navigator) {
           var regs = await navigator.serviceWorker.getRegistrations();
           await Promise.all(regs.map(function (r) { return r.unregister(); }));
@@ -27,13 +30,18 @@
           var keys = await caches.keys();
           await Promise.all(keys.map(function (k) { return caches.delete(k); }));
         }
+        // Cancella anche le PNG in IndexedDB (altrimenti restano le mappe vecchie)
+        await new Promise(function (resolve) {
+          var req = indexedDB.deleteDatabase("tag-impianto");
+          req.onsuccess = req.onerror = req.onblocked = function () { resolve(); };
+        });
         msg.textContent = "Ok. Apro l’ultima versione…";
       } catch (e) {
         msg.textContent = "Pulizia parziale, apro comunque…";
       }
       setTimeout(function () {
         location.replace("./index.html?_app=" + Date.now());
-      }, 350);
+      }, 400);
     })();
   </script>
 </body>
