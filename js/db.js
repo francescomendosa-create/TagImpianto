@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.19";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.20";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -124,8 +124,21 @@ async function resolveSeedPaths() {
   ];
 }
 
-/** Carica seed mancanti e allinea immagini ritagliate (colonna menu rimossa). */
+/**
+ * All’avvio: se IndexedDB ha già le mappe, NON tocca la rete (offline-first).
+ * Solo DB vuoto (primo avvio) scarica i seed dal sito.
+ * Per aggiornare catalogo/immagini dal sito: forceReloadSeeds / Aggiorna.
+ */
 export async function loadSeedIfEmpty() {
+  const existing = await idbGetAll();
+  if (existing.length > 0) {
+    return existing;
+  }
+  return mergeSeedsFromSite();
+}
+
+/** Scarica/merge seed dal sito (usato da Aggiorna / ripristino / primo avvio). */
+export async function mergeSeedsFromSite() {
   const existing = await idbGetAll();
   const byId = new Map(existing.map((m) => [m.id, m]));
   const paths = await resolveSeedPaths();
@@ -167,7 +180,7 @@ export async function loadSeedIfEmpty() {
         const merged = mergeSeedTags(seed.tags || [], localTags);
         if (seed.image && seed.image !== local.image) {
           try {
-            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.19");
+            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.20");
             await deleteLocalImage(local.image);
             await deleteLocalImage(seed.image);
           } catch (_) {
@@ -228,7 +241,7 @@ export async function loadSeedIfEmpty() {
 
       if (seed.image && local.image !== seed.image) {
         try {
-          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.19");
+          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.20");
           await deleteLocalImage(local.image);
           await deleteLocalImage(seed.image);
         } catch (_) {

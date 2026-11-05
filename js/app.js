@@ -2,24 +2,24 @@ import {
   initCloud,
   isCloudReady,
   loadSeedIfEmpty,
+  forceReloadSeeds,
   resetMapsFromSeed,
   listMaps,
   getMap,
   saveMap,
   searchAllTags,
-  pullMapsFromCloud,
   syncAllWithCloud,
-  pushLocalChangesToCloud,
-} from "./db.js?v=1.8.19";
-import { MapViewer } from "./viewer.js?v=1.8.19";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.19";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.19";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.19";
+} from "./db.js?v=1.8.20";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.20";
+import { MapViewer } from "./viewer.js?v=1.8.20";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.20";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.20";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.20";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.19";
+} from "./image-cache.js?v=1.8.20";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -585,9 +585,15 @@ els.btnFit.addEventListener("click", () => viewer.fit());
 
 els.btnRefresh?.addEventListener("click", async () => {
   els.btnRefresh.disabled = true;
-  setStatus("Aggiornamento app + mappe…");
-  toast("Scarico l’ultima versione (anche immagini)…");
+  setStatus("Aggiornamento app + mappe dal sito…");
+  toast("Aggiorno app e immagini (solo con Aggiorna)…");
   try {
+    // Solo qui si aggiornano seed/immagini dal sito — non all’avvio
+    try {
+      localStorage.setItem("ti-force-seed", "1");
+    } catch (_) {
+      /* ignore */
+    }
     await clearAllLocalImages();
     if ("serviceWorker" in navigator) {
       const regs = await navigator.serviceWorker.getRegistrations();
@@ -600,7 +606,6 @@ els.btnRefresh?.addEventListener("click", async () => {
   } catch (err) {
     console.warn("Pulizia cache app:", err);
   }
-  // Ricarica forzata senza cache del browser
   const url = new URL(location.href);
   url.searchParams.set("_app", String(Date.now()));
   location.replace(url.toString());
@@ -666,13 +671,20 @@ els.btnNotes.addEventListener("click", () => {
 });
 
 els.btnSync.addEventListener("click", async () => {
-  if (!isCloudReady()) {
+  if (!isFirebaseConfigured()) {
     toast("Cloud non attivo: serve Firebase (vedi firebase-config)");
     return;
   }
   els.btnSync.disabled = true;
-  setStatus("Sincronizzazione cloud…");
+  setStatus("Connessione cloud…");
   try {
+    const cloud = await initCloud();
+    if (!cloud.ok || !isCloudReady()) {
+      toast("Cloud non raggiungibile");
+      els.cloudBadge.innerHTML = `<span class="warn">Cloud errore</span>`;
+      return;
+    }
+    setStatus("Sincronizzazione cloud…");
     const n = await syncAllWithCloud();
     await refreshMaps();
     if (currentMap) await selectMap(currentMap.id, { keepHighlight: true, keepView: true });
@@ -715,10 +727,23 @@ async function boot() {
 
   const params = new URLSearchParams(location.search);
   const wantReset = params.has("reset") || params.get("ripristina") === "1";
+  let forceSeed = false;
+  try {
+    forceSeed = localStorage.getItem("ti-force-seed") === "1";
+    if (forceSeed) localStorage.removeItem("ti-force-seed");
+  } catch (_) {
+    /* ignore */
+  }
+
   if (wantReset) {
     setStatus("Ripristino mappe e tag dal sito…");
     await resetMapsFromSeed();
+  } else if (forceSeed) {
+    // Solo dopo pulsante Aggiorna: merge seed + poi le PNG si scaricano al bisogno
+    setStatus("Aggiorno catalogo mappe dal sito…");
+    await forceReloadSeeds();
   } else {
+    // Offline-first: se le mappe ci sono già in locale, zero rete
     await loadSeedIfEmpty();
   }
 
@@ -731,29 +756,14 @@ async function boot() {
     await refreshMaps();
   }
 
-  const cloud = await initCloud();
-  if (cloud.ok) {
-    els.cloudBadge.innerHTML = `<span class="ok">Cloud…</span>`;
-    try {
-      setStatus("Allineo dati dal cloud…");
-      await pullMapsFromCloud();
-      // Porta subito online note e modifiche già presenti sul dispositivo
-      await pushLocalChangesToCloud();
-      await refreshMaps();
-      if (currentMap) await selectMap(currentMap.id);
-      els.cloudBadge.innerHTML = `<span class="ok">Cloud attivo</span>`;
-    } catch (err) {
-      console.warn(err);
-      els.cloudBadge.innerHTML = `<span class="warn">Cloud errore</span>`;
-    }
+  // Cloud: NESSUN pull/push all’avvio. Solo badge; Sync è manuale.
+  if (isFirebaseConfigured()) {
+    els.cloudBadge.innerHTML =
+      `<span class="muted" title="Premi Sync per allineare note/posizioni">Cloud: Sync manuale</span>`;
   } else {
-    els.cloudBadge.innerHTML = `<span class="muted" title="Riposizionamenti solo su questo dispositivo">Solo dispositivo</span>`;
+    els.cloudBadge.innerHTML =
+      `<span class="muted" title="Riposizionamenti solo su questo dispositivo">Solo dispositivo</span>`;
   }
-
-  window.addEventListener("online", () => {
-    if (!isCloudReady()) return;
-    pushLocalChangesToCloud().catch((err) => console.warn(err));
-  });
 
   // Service worker silenzioso: niente reload automatici (causavano lampeggio)
   if ("serviceWorker" in navigator) {
@@ -764,9 +774,25 @@ async function boot() {
     }
   }
 
-  // Prima mappa subito usabile; in background scarica TUTTE le PNG in IndexedDB
+  // Offline-first: niente download di massa. Solo dopo Aggiorna si riallineano le PNG.
   if (currentMap) preloadNearby(currentMap.id);
-  syncImagesLocal().catch((err) => console.warn(err));
+  if (forceSeed) {
+    syncImagesLocal({ force: true }).catch((err) => console.warn(err));
+  } else {
+    try {
+      const n = await countLocalImages();
+      setMapsLocalBadge(n);
+      if (currentMap) {
+        setStatus(
+          `Mappa: <strong>${escapeHtml(currentMap.name)}</strong> · ${(currentMap.tags || []).length} tag`
+        );
+      } else {
+        setStatus("Pronto (offline)");
+      }
+    } catch (_) {
+      setMapsLocalBadge(0);
+    }
+  }
 
   // Mai autofocus ricerca su telefono/tablet (apre la tastiera a caso)
   const coarse = window.matchMedia("(pointer: coarse)").matches;

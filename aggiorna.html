@@ -1,4 +1,4 @@
-ï»¿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
@@ -13,7 +13,7 @@
   </style>
 </head>
 <body>
-  <p>Pulizia cache e Service Workerâ€¦</p>
+  <p>Pulizia cache e Service Worker…</p>
   <p id="msg"></p>
   <script>
     (async function () {
@@ -35,9 +35,9 @@
           await Promise.all(keys.map(function (k) { return caches.delete(k); }));
         }
         try { localStorage.removeItem("ti-img-sync-" + target); } catch (e) {}
-        msg.textContent = "Ok. Apro lâ€™app v" + target + "â€¦";
+        msg.textContent = "Ok. Apro l’app v" + target + "…";
       } catch (e) {
-        msg.textContent = "Pulizia parziale, apro comunque v" + target + "â€¦";
+        msg.textContent = "Pulizia parziale, apro comunque v" + target + "…";
       }
       setTimeout(function () {
         location.replace("./index.html?_ver=" + encodeURIComponent(target) + "&_ts=" + Date.now());

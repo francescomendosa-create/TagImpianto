@@ -155,20 +155,60 @@ export async function hasLocalImage(src) {
   return !!(rec && rec.blob);
 }
 
-/** Scarica (se serve) e restituisce un URL utilizzabile in <img> (blob: o remoto). */
+/** Cerca in IndexedDB una PNG dello stesso path (anche con ?v= diverso). */
+async function findBlobByStem(src) {
+  const stem = urlStem(src);
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readonly");
+    const req = tx.objectStore(STORE).getAll();
+    req.onsuccess = () => {
+      const rows = req.result || [];
+      let best = null;
+      for (const rec of rows) {
+        if (!rec?.blob || rec.blob.size < 2000) continue;
+        const k = String(rec.url || "");
+        if (k === stem || k.startsWith(stem + "?") || urlStem(k) === stem) {
+          if (!best || (rec.savedAt || 0) > (best.savedAt || 0)) best = rec;
+        }
+      }
+      resolve(best);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/**
+ * Restituisce URL per <img>: prima IndexedDB (anche stessa PNG con ?v= diverso),
+ * solo se manca del tutto prova il download di rete.
+ */
 export async function resolveLocalImageUrl(src) {
   if (!src) throw new Error("URL immagine mancante");
   const key = absUrl(src);
 
   if (blobUrls.has(key)) return blobUrls.get(key);
 
-  const existing = await getRecord(key);
+  let existing = await getRecord(key);
+  if (!(existing?.blob && existing.blob.size >= 2000)) {
+    // Offline-first: riusa la stessa mappa già sul dispositivo anche se è cambiato ?v=
+    try {
+      existing = await findBlobByStem(src);
+    } catch (_) {
+      existing = null;
+    }
+  }
   if (existing?.blob && existing.blob.size >= 2000) {
+    try {
+      if (String(existing.url) !== key) await putRecord(key, existing.blob);
+    } catch (_) {
+      /* ignore */
+    }
     const u = URL.createObjectURL(existing.blob);
     blobUrls.set(key, u);
     return u;
   }
 
+  // Solo se non c’è nulla in locale (es. prima apertura di una mappa nuova)
   const blob = await fetchMapBlob(src);
   try {
     await putRecord(key, blob);
