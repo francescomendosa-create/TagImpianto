@@ -1,7 +1,7 @@
 {
   "id": "biologico-mbbr-123",
   "name": "Biologico MBBR 1 2 3",
-  "image": "assets/maps/biologico-mbbr-123.png?v=15-h362-hq",
+  "image": "assets/maps/biologico-mbbr-123.png?v=16-ocr49-h362",
   "width": 834,
   "height": 362,
   "notes": "PNG HQ ritagliata (no chrome). Usa Riposiziona per affinare i box.",
@@ -199,6 +199,17 @@
       "source": "catalog"
     },
     {
+      "id": "P110078",
+      "label": "P110078",
+      "kind": "pompa",
+      "x": 0.0017985611510791368,
+      "y": 0.14917127071823205,
+      "w": 0.052158273381294966,
+      "h": 0.055248618784530384,
+      "confidence": 57.0,
+      "source": "ocr"
+    },
+    {
       "id": "P11007A",
       "label": "P11007A",
       "kind": "pompa",
@@ -238,6 +249,17 @@
       "w": 0.06,
       "h": 0.07590361445783134,
       "source": "catalog"
+    },
+    {
+      "id": "P110100",
+      "label": "P110100",
+      "kind": "pompa",
+      "x": 0.09461521691737519,
+      "y": 0.1577096936212958,
+      "w": 0.05166775670372793,
+      "h": 0.05499748869914615,
+      "confidence": 56.0,
+      "source": "ocr"
     },
     {
       "id": "P11010A",
@@ -401,6 +423,17 @@
       "source": "catalog"
     },
     {
+      "id": "XV11008",
+      "label": "XV11008",
+      "kind": "valvola",
+      "x": 0.04136690647482014,
+      "y": 0.7044198895027625,
+      "w": 0.053357314148681056,
+      "h": 0.055248618784530384,
+      "confidence": 50.0,
+      "source": "ocr"
+    },
+    {
       "id": "XV11030",
       "label": "XV11030",
       "kind": "valvola",
@@ -462,9 +495,20 @@
       "w": 0.06,
       "h": 0.07590361445783134,
       "source": "catalog"
+    },
+    {
+      "id": "XV19031",
+      "label": "XV19031",
+      "kind": "valvola",
+      "x": 0.1145083932853717,
+      "y": 0.5524861878453039,
+      "w": 0.049760191846522785,
+      "h": 0.052486187845303865,
+      "confidence": 41.0,
+      "source": "ocr"
     }
   ],
   "cropLeft": 670,
-  "seedRev": 15,
+  "seedRev": 16,
   "cropTop": 226
 }

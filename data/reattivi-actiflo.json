@@ -1,7 +1,7 @@
 {
   "id": "reattivi-actiflo",
   "name": "Reattivi Actiflo",
-  "image": "assets/maps/reattivi-actiflo.png?v=6-ct328-h1746",
+  "image": "assets/maps/reattivi-actiflo.png?v=8-ocr21-h1746",
   "width": 3453,
   "height": 1746,
   "cropLeft": 448,
@@ -9,81 +9,105 @@
   "notes": "Tag catalogo + OCR. Usa Riposiziona per affinare i box.",
   "tags": [
     {
-      "id": "TK104",
-      "label": "TK104 COAGULANTE",
-      "kind": "serbatoio",
-      "x": 0.08,
-      "y": 0.0021993127147766503,
-      "w": 0.06,
-      "h": 0.07127147766323023,
-      "source": "catalog"
+      "id": "FIT106",
+      "label": "FIT106",
+      "kind": "strumento",
+      "x": 0.3992,
+      "y": 0.20757995418098507,
+      "w": 0.0232,
+      "h": 0.03563573883161512,
+      "confidence": 91.0,
+      "source": "ocr"
     },
     {
-      "id": "TK101",
-      "label": "TK101 SODA",
-      "kind": "serbatoio",
-      "x": 0.22,
-      "y": 0.0021993127147766503,
-      "w": 0.06,
-      "h": 0.07127147766323023,
-      "source": "catalog"
-    },
-    {
-      "id": "TK102",
-      "label": "TK102 CLORURO DI CALCIO",
-      "kind": "serbatoio",
-      "x": 0.36,
-      "y": 0.0021993127147766503,
-      "w": 0.06,
-      "h": 0.07127147766323023,
-      "source": "catalog"
-    },
-    {
-      "id": "TK103",
-      "label": "TK103 ACIDO",
-      "kind": "serbatoio",
-      "x": 0.5,
-      "y": 0.0021993127147766503,
-      "w": 0.06,
-      "h": 0.07127147766323023,
-      "source": "catalog"
-    },
-    {
-      "id": "TK111",
-      "label": "TK111 ANTISCHIUMA",
-      "kind": "serbatoio",
-      "x": 0.64,
-      "y": 0.0021993127147766503,
-      "w": 0.06,
-      "h": 0.07127147766323023,
-      "source": "catalog"
-    },
-    {
-      "id": "PK106",
-      "label": "PK106 POLIPREPARATORE",
-      "kind": "apparecchio",
+      "id": "P101A",
+      "label": "P101A",
+      "kind": "pompa",
       "x": 0.78,
-      "y": 0.0021993127147766503,
+      "y": 0.14474226804123713,
       "w": 0.06,
       "h": 0.07127147766323023,
       "source": "catalog"
     },
     {
-      "id": "P106A",
-      "label": "P106A",
+      "id": "P101B",
+      "label": "P101B",
       "kind": "pompa",
       "x": 0.08,
-      "y": 0.14474226804123713,
+      "y": 0.28728522336769763,
       "w": 0.06,
       "h": 0.07127147766323023,
       "source": "catalog"
     },
     {
-      "id": "P106B",
-      "label": "P106B",
+      "id": "P1028",
+      "label": "P1028",
+      "kind": "pompa",
+      "x": 0.8205907906168549,
+      "y": 0.39805269186712483,
+      "w": 0.02693310165073849,
+      "h": 0.04266895761741123,
+      "confidence": 85.0,
+      "source": "ocr"
+    },
+    {
+      "id": "P1028T",
+      "label": "P1028T",
+      "kind": "pompa",
+      "x": 0.8216,
+      "y": 0.40476437571592205,
+      "w": 0.026,
+      "h": 0.03658602520045819,
+      "confidence": 61.0,
+      "source": "ocr"
+    },
+    {
+      "id": "P102A",
+      "label": "P102A",
       "kind": "pompa",
       "x": 0.22,
-      "y": 0.14474226804123713,
+      "y": 0.28728522336769763,
+      "w": 0.06,
+      "h": 0.07127147766323023,
+      "source": "catalog"
+    },
+    {
+      "id": "P102B",
+      "label": "P102B",
+      "kind": "pompa",
+      "x": 0.36,
+      "y": 0.28728522336769763,
+      "w": 0.06,
+      "h": 0.07127147766323023,
+      "source": "catalog"
+    },
+    {
+      "id": "P1038",
+      "label": "P1038",
+      "kind": "pompa",
+      "x": 0.8135125466346399,
+      "y": 0.623846102014689,
+      "w": 0.027733769441747158,
+      "h": 0.038339734519237244,
+      "confidence": 90.0,
+      "source": "ocr"
+    },
+    {
+      "id": "P103A",
+      "label": "P103A",
+      "kind": "pompa",
+      "x": 0.5,
+      "y": 0.28728522336769763,
+      "w": 0.06,
+      "h": 0.07127147766323023,
+      "source": "catalog"
+    },
+    {
+      "id": "P103B",
+      "label": "P103B",
+      "kind": "pompa",
+      "x": 0.64,
+      "y": 0.28728522336769763,
       "w": 0.06,
       "h": 0.07127147766323023,
       "source": "catalog"
@@ -119,61 +143,21 @@
       "source": "catalog"
     },
     {
-      "id": "P101A",
-      "label": "P101A",
+      "id": "P106A",
+      "label": "P106A",
       "kind": "pompa",
-      "x": 0.78,
+      "x": 0.08,
       "y": 0.14474226804123713,
       "w": 0.06,
       "h": 0.07127147766323023,
       "source": "catalog"
     },
     {
-      "id": "P101B",
-      "label": "P101B",
-      "kind": "pompa",
-      "x": 0.08,
-      "y": 0.28728522336769763,
-      "w": 0.06,
-      "h": 0.07127147766323023,
-      "source": "catalog"
-    },
-    {
-      "id": "P102A",
-      "label": "P102A",
+      "id": "P106B",
+      "label": "P106B",
       "kind": "pompa",
       "x": 0.22,
-      "y": 0.28728522336769763,
-      "w": 0.06,
-      "h": 0.07127147766323023,
-      "source": "catalog"
-    },
-    {
-      "id": "P102B",
-      "label": "P102B",
-      "kind": "pompa",
-      "x": 0.36,
-      "y": 0.28728522336769763,
-      "w": 0.06,
-      "h": 0.07127147766323023,
-      "source": "catalog"
-    },
-    {
-      "id": "P103A",
-      "label": "P103A",
-      "kind": "pompa",
-      "x": 0.5,
-      "y": 0.28728522336769763,
-      "w": 0.06,
-      "h": 0.07127147766323023,
-      "source": "catalog"
-    },
-    {
-      "id": "P103B",
-      "label": "P103B",
-      "kind": "pompa",
-      "x": 0.64,
-      "y": 0.28728522336769763,
+      "y": 0.14474226804123713,
       "w": 0.06,
       "h": 0.07127147766323023,
       "source": "catalog"
@@ -199,25 +183,35 @@
       "source": "catalog"
     },
     {
-      "id": "FIT106",
-      "label": "FIT106",
-      "kind": "strumento",
-      "x": 0.3992,
-      "y": 0.20757995418098507,
-      "w": 0.0232,
-      "h": 0.03563573883161512,
-      "confidence": 91.0,
+      "id": "PK106",
+      "label": "PK106 POLIPREPARATORE",
+      "kind": "apparecchio",
+      "x": 0.78,
+      "y": 0.0021993127147766503,
+      "w": 0.06,
+      "h": 0.07127147766323023,
+      "source": "catalog"
+    },
+    {
+      "id": "TK-10",
+      "label": "TK-10",
+      "kind": "serbatoio",
+      "x": 0.6642816987785558,
+      "y": 0.5867866046762348,
+      "w": 0.026881995195993255,
+      "h": 0.028,
+      "confidence": 79.0,
       "source": "ocr"
     },
     {
-      "id": "P1028T",
-      "label": "P1028T",
-      "kind": "pompa",
-      "x": 0.8216,
-      "y": 0.40476437571592205,
-      "w": 0.026,
-      "h": 0.03658602520045819,
-      "confidence": 61.0,
+      "id": "TK-101",
+      "label": "TK-101",
+      "kind": "serbatoio",
+      "x": 0.6731401509343964,
+      "y": 0.1455764436358736,
+      "w": 0.03233335036881825,
+      "h": 0.028,
+      "confidence": 90.0,
       "source": "ocr"
     },
     {
@@ -232,6 +226,6 @@
       "source": "ocr"
     }
   ],
-  "seedRev": 6,
+  "seedRev": 8,
   "cropTop": 328
 }
