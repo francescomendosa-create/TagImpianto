@@ -1,4 +1,4 @@
-import { resolveLocalImageUrl } from "./image-cache.js?v=1.6.5";
+import { resolveLocalImageUrl } from "./image-cache.js?v=1.6.6";
 
 const MAX_MEM_IMAGES = 10;
 
@@ -29,6 +29,9 @@ export class MapViewer {
 
     this.onAnnotatePlace = null;
     this.onTagMoved = null;
+    /** Doppio tap/click su un tag esistente → ricerca */
+    this.onTagDoubleSelect = null;
+    this._lastTap = null;
 
     this._bind();
   }
@@ -39,6 +42,10 @@ export class MapViewer {
     vp.addEventListener("pointermove", (e) => this._onPointerMove(e));
     vp.addEventListener("pointerup", (e) => this._onPointerUp(e));
     vp.addEventListener("pointercancel", (e) => this._onPointerUp(e));
+    vp.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+      this._emitTagDoubleSelect(e.clientX, e.clientY);
+    });
     vp.addEventListener(
       "wheel",
       (e) => {
@@ -51,6 +58,53 @@ export class MapViewer {
       },
       { passive: false }
     );
+  }
+
+  _emitTagDoubleSelect(clientX, clientY) {
+    if (!this.onTagDoubleSelect) return;
+    const now = Date.now();
+    if (this._lastEmitSelect && now - this._lastEmitSelect < 450) return;
+    const tag = this.findTagAtClient(clientX, clientY);
+    if (!tag) return;
+    this._lastEmitSelect = now;
+    this.onTagDoubleSelect(tag);
+  }
+
+  /** Tag sotto le coordinate schermo (hit-test su tutti i tag della mappa). */
+  findTagAtClient(clientX, clientY) {
+    if (!this.map || !this.imageEl?.width) return null;
+    const rect = this.viewport.getBoundingClientRect();
+    const vx = clientX - rect.left;
+    const vy = clientY - rect.top;
+    const iw = this.imageEl.width;
+    const ih = this.imageEl.height;
+    const nx = (vx - this.tx) / this.scale / iw;
+    const ny = (vy - this.ty) / this.scale / ih;
+    const tags = this.map.tags || [];
+    let best = null;
+    let bestArea = Infinity;
+    for (const t of tags) {
+      const x = Number(t.x) || 0;
+      const y = Number(t.y) || 0;
+      const w = Math.max(Number(t.w) || 0.02, 0.01);
+      const h = Math.max(Number(t.h) || 0.02, 0.01);
+      // margine touch ~8px in coordinate normalizzate
+      const padX = 8 / this.scale / iw;
+      const padY = 8 / this.scale / ih;
+      if (
+        nx >= x - padX &&
+        nx <= x + w + padX &&
+        ny >= y - padY &&
+        ny <= y + h + padY
+      ) {
+        const area = w * h;
+        if (area < bestArea) {
+          best = t;
+          bestArea = area;
+        }
+      }
+    }
+    return best;
   }
 
   setAnnotate(on) {
@@ -251,6 +305,7 @@ export class MapViewer {
 
   _onPointerUp(e) {
     const wasDrag = this._dragTag;
+    const moved = this._moved;
     if (wasDrag) {
       this._dragTag = null;
       if (this.onTagMoved) this.onTagMoved(wasDrag.id);
@@ -260,6 +315,22 @@ export class MapViewer {
     if (this._pointers.size < 2) this._lastPinch = null;
 
     if (this._pointers.size === 0) {
+      // Doppio tap (soprattutto touch): due tocchi fermi entro 400ms → tag in ricerca
+      if (!wasDrag && !moved && this.onTagDoubleSelect) {
+        const now = Date.now();
+        const prev = this._lastTap;
+        if (
+          prev &&
+          now - prev.t < 400 &&
+          Math.hypot(e.clientX - prev.x, e.clientY - prev.y) < 28
+        ) {
+          this._emitTagDoubleSelect(e.clientX, e.clientY);
+          this._lastTap = null;
+        } else {
+          this._lastTap = { t: now, x: e.clientX, y: e.clientY };
+        }
+      }
+
       this._panning = false;
       this.viewport.classList.remove("panning");
       this._panStart = null;
