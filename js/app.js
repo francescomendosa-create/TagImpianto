@@ -9,12 +9,13 @@ import {
   saveMap,
   searchAllTags,
   pullMapsFromCloud,
-} from "./db.js?v=1.6.2";
-import { MapViewer } from "./viewer.js?v=1.6.2";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.6.2";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.6.2";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.6.2";
-import { warmAllMapImages, countLocalImages } from "./image-cache.js?v=1.6.2";
+  syncAllWithCloud,
+} from "./db.js?v=1.6.3";
+import { MapViewer } from "./viewer.js?v=1.6.3";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.6.3";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.6.3";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.6.3";
+import { warmAllMapImages, countLocalImages } from "./image-cache.js?v=1.6.3";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -67,9 +68,14 @@ viewer.onTagMoved = async (tagId) => {
   if (tag) {
     tag.source = "manual";
     tag.locked = true;
+    tag.updatedAt = Date.now();
   }
   await persistCurrent();
-  toast("Posizione aggiornata (bloccata per OCR)");
+  toast(
+    isCloudReady()
+      ? "Posizione salvata (locale + cloud)"
+      : "Posizione salvata solo su questo dispositivo"
+  );
 };
 
 function toast(msg) {
@@ -349,6 +355,7 @@ els.noteSave.addEventListener("click", async () => {
   tag.note = els.noteBody.value.trim();
   tag.source = "manual";
   tag.locked = true;
+  tag.updatedAt = Date.now();
   await persistCurrent();
   activeTagId = id;
   viewer.map = currentMap;
@@ -498,16 +505,17 @@ els.btnNotes.addEventListener("click", () => {
 
 els.btnSync.addEventListener("click", async () => {
   if (!isCloudReady()) {
-    toast("Configura Firebase in js/firebase-config.js");
+    toast("Cloud non attivo: serve Firebase (vedi firebase-config)");
     return;
   }
   els.btnSync.disabled = true;
+  setStatus("Sincronizzazione cloud…");
   try {
-    if (currentMap) await saveMap(currentMap, { sync: true });
-    await pullMapsFromCloud();
+    const n = await syncAllWithCloud();
     await refreshMaps();
-    if (currentMap) await selectMap(currentMap.id, { keepHighlight: true });
-    toast("Sincronizzato con Firestore");
+    if (currentMap) await selectMap(currentMap.id, { keepHighlight: true, keepView: true });
+    toast(`Cloud sync ok (${n} mappe)`);
+    els.cloudBadge.innerHTML = `<span class="ok">Cloud sync</span>`;
   } catch (err) {
     toast("Sync fallita");
     console.warn(err);
@@ -556,16 +564,19 @@ async function boot() {
 
   const cloud = await initCloud();
   if (cloud.ok) {
-    els.cloudBadge.innerHTML = `<span class="ok">Cloud pronto</span>`;
+    els.cloudBadge.innerHTML = `<span class="ok">Cloud…</span>`;
     try {
+      setStatus("Allineo dati dal cloud…");
       await pullMapsFromCloud();
       await refreshMaps();
       if (currentMap) await selectMap(currentMap.id);
+      els.cloudBadge.innerHTML = `<span class="ok">Cloud attivo</span>`;
     } catch (err) {
       console.warn(err);
+      els.cloudBadge.innerHTML = `<span class="warn">Cloud errore</span>`;
     }
   } else {
-    els.cloudBadge.innerHTML = `<span class="muted" title="Dati e mappe sul dispositivo">Solo dispositivo</span>`;
+    els.cloudBadge.innerHTML = `<span class="muted" title="Riposizionamenti solo su questo dispositivo">Solo dispositivo</span>`;
   }
 
   if ("serviceWorker" in navigator) {

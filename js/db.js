@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.6.2";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.6.3";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -493,6 +493,19 @@ export async function searchAllTags(query) {
   return hits.slice(0, 40);
 }
 
+function mergeTagCloudLocal(localTag, cloudTag) {
+  if (!localTag) return { ...cloudTag };
+  if (!cloudTag) return { ...localTag };
+  const lt = Number(localTag.updatedAt) || 0;
+  const ct = Number(cloudTag.updatedAt) || 0;
+  // Più recente vince; a parità preferisci manual/locked
+  if (ct > lt) return { ...cloudTag };
+  if (lt > ct) return { ...localTag };
+  if (localTag.locked || localTag.source === "manual") return { ...localTag };
+  if (cloudTag.locked || cloudTag.source === "manual") return { ...cloudTag };
+  return { ...cloudTag };
+}
+
 async function pushMapToCloud(map) {
   const { doc, setDoc, collection, writeBatch } = await import(
     "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js"
@@ -503,36 +516,93 @@ async function pushMapToCloud(map) {
     image: map.image,
     width: map.width,
     height: map.height,
+    area: map.area || "",
     notes: map.notes || "",
+    seedRev: map.seedRev || 0,
     updatedAt: map.updatedAt || Date.now(),
     tagCount: (map.tags || []).length,
   };
   await setDoc(doc(firestore, "tagImpianto_maps", map.id), meta, { merge: true });
 
-  const batch = writeBatch(firestore);
-  for (const tag of map.tags || []) {
-    const ref = doc(collection(firestore, "tagImpianto_maps", map.id, "tags"), tag.id);
-    batch.set(ref, tag, { merge: true });
+  const tags = map.tags || [];
+  const CHUNK = 400;
+  for (let i = 0; i < tags.length; i += CHUNK) {
+    const batch = writeBatch(firestore);
+    const slice = tags.slice(i, i + CHUNK);
+    for (const tag of slice) {
+      const id = String(tag.id || "").trim();
+      if (!id) continue;
+      const ref = doc(collection(firestore, "tagImpianto_maps", map.id, "tags"), id);
+      batch.set(ref, { ...tag, id, updatedAt: tag.updatedAt || map.updatedAt || Date.now() }, { merge: true });
+    }
+    await batch.commit();
   }
-  await batch.commit();
 }
 
+/** Carica dal cloud e unisce con IndexedDB (updatedAt più recente vince). */
 export async function pullMapsFromCloud() {
   if (!cloudReady) return [];
   const { collection, getDocs } = await import(
     "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js"
   );
   const snap = await getDocs(collection(firestore, "tagImpianto_maps"));
+  const localAll = await idbGetAll();
+  const localById = new Map(localAll.map((m) => [m.id, m]));
   const maps = [];
+
   for (const d of snap.docs) {
     const meta = d.data();
     const tagsSnap = await getDocs(collection(firestore, "tagImpianto_maps", d.id, "tags"));
-    const tags = tagsSnap.docs.map((t) => t.data());
-    const map = { ...meta, id: d.id, tags };
+    const cloudTags = tagsSnap.docs.map((t) => t.data());
+    const local = localById.get(d.id);
+    const byId = new Map();
+    for (const t of local?.tags || []) {
+      if (t?.id) byId.set(String(t.id).toUpperCase(), t);
+    }
+    for (const t of cloudTags) {
+      if (!t?.id) continue;
+      const key = String(t.id).toUpperCase();
+      byId.set(key, mergeTagCloudLocal(byId.get(key), t));
+    }
+    const cloudAt = Number(meta.updatedAt) || 0;
+    const localAt = Number(local?.updatedAt) || 0;
+    const map = {
+      ...(local || {}),
+      ...meta,
+      id: d.id,
+      tags: [...byId.values()],
+      updatedAt: Math.max(cloudAt, localAt, Date.now()),
+    };
+    // Se locale più nuovo a livello mappa, tieni image/seed locali se cloud incompleto
+    if (local && localAt > cloudAt) {
+      map.image = local.image || map.image;
+      map.width = local.width || map.width;
+      map.height = local.height || map.height;
+      map.seedRev = Math.max(Number(local.seedRev) || 0, Number(map.seedRev) || 0);
+    }
     await idbPut(map);
     maps.push(map);
   }
   return maps;
+}
+
+/** Carica TUTTE le mappe locali sul cloud (es. dal tablet più aggiornato). */
+export async function pushAllMapsToCloud() {
+  if (!cloudReady) throw new Error("Cloud non pronto");
+  const all = await idbGetAll();
+  for (const map of all) {
+    await pushMapToCloud(map);
+  }
+  return all.length;
+}
+
+/** Pull + push: allinea dispositivi (merge per updatedAt). */
+export async function syncAllWithCloud() {
+  if (!cloudReady) throw new Error("Cloud non pronto");
+  await pullMapsFromCloud();
+  const n = await pushAllMapsToCloud();
+  await pullMapsFromCloud();
+  return n;
 }
 
 export async function uploadMapImage(mapId, file) {
