@@ -1,4 +1,4 @@
-import { resolveLocalImageUrl } from "./image-cache.js?v=1.7.9";
+import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.0";
 
 const MAX_MEM_IMAGES = 10;
 
@@ -179,8 +179,11 @@ export class MapViewer {
   }
 
   /**
-   * Posizione iniziale: alto-sinistra, stessa logica di scala per tutte le schermate.
-   * Poi pan/zoom restano liberi (nessun blocco).
+   * Posizione iniziale uguale per tutte le mappe:
+   * - pagina intera visibile (contain)
+   * - attaccata a sinistra (barra menu)
+   * - centrata in verticale
+   * Pan/zoom dopo restano liberi.
    */
   fit() {
     if (!this.imageEl.naturalWidth && !this.imageEl.width) return;
@@ -189,11 +192,14 @@ export class MapViewer {
     const iw = this.imageEl.width || this.imageEl.naturalWidth;
     const ih = this.imageEl.height || this.imageEl.naturalHeight;
     if (!iw || !ih || !vw || !vh) return;
-    const padX = 8;
+    const padL = 2; // attaccata alla colonna sinistra
+    const padR = 6;
     const padY = 8;
-    this.scale = Math.min((vw - padX * 2) / iw, (vh - padY * 2) / ih, 4);
-    this.tx = padX;
-    this.ty = padY;
+    // Stessa regola per tutte: entra tutta in viewport, zoom leggermente più piccolo
+    const fitScale = Math.min((vw - padL - padR) / iw, (vh - padY * 2) / ih);
+    this.scale = Math.min(fitScale * 0.98, 4);
+    this.tx = padL;
+    this.ty = (vh - ih * this.scale) / 2;
     this.applyTransform();
   }
 
