@@ -9,17 +9,17 @@ import {
   saveMap,
   searchAllTags,
   syncAllWithCloud,
-} from "./db.js?v=1.8.22";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.22";
-import { MapViewer } from "./viewer.js?v=1.8.22";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.22";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.22";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.22";
+} from "./db.js?v=1.8.23";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.23";
+import { MapViewer } from "./viewer.js?v=1.8.23";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.23";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.23";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.23";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.22";
+} from "./image-cache.js?v=1.8.23";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -784,19 +784,32 @@ els.btnSync.addEventListener("click", async () => {
   try {
     const cloud = await initCloud();
     if (!cloud.ok || !isCloudReady()) {
-      toast("Cloud non raggiungibile");
+      const why = cloud?.reason || "non raggiungibile";
+      toast(`Cloud: ${why}`);
+      setStatus(`Cloud errore: ${escapeHtml(why)}`);
       els.cloudBadge.innerHTML = `<span class="warn">Cloud errore</span>`;
       return;
     }
-    setStatus("Sincronizzazione cloud…");
+    // 1) Note/posizioni tra dispositivi
+    setStatus("Sync note/posizioni su Firebase…");
     const n = await syncAllWithCloud();
+    // 2) Catalogo + PNG dal sito (Sync NON scaricava le immagini: ecco perché “non cambiava nulla”)
+    setStatus("Aggiorno catalogo mappe dal sito…");
+    await forceReloadSeeds();
     await refreshMaps();
+    setStatus("Scarico PNG ad alta definizione…");
+    await syncImagesLocal({ force: true });
     if (currentMap) await selectMap(currentMap.id, { keepHighlight: true, keepView: true });
-    toast(`Cloud sync ok (${n} mappe)`);
-    els.cloudBadge.innerHTML = `<span class="ok">Cloud sync</span>`;
+    const imgs = await countLocalImages();
+    toast(`Sync ok: ${n} mappe cloud · ${imgs} PNG sul dispositivo`);
+    els.cloudBadge.innerHTML = `<span class="ok">Cloud sync</span> · <span class="ok">Mappe in locale (${imgs})</span>`;
+    setStatus(`Sync completata · cloud ${n} · PNG locali ${imgs}`);
   } catch (err) {
-    toast("Sync fallita");
-    console.warn(err);
+    const msg = String(err?.message || err || "errore");
+    console.warn("Sync fallita", err);
+    toast(`Sync fallita: ${msg.slice(0, 120)}`);
+    setStatus(`Sync fallita: <span class="warn">${escapeHtml(msg)}</span>`);
+    els.cloudBadge.innerHTML = `<span class="warn">Sync errore</span>`;
   } finally {
     els.btnSync.disabled = false;
   }

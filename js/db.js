@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.22";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.23";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -58,13 +58,15 @@ export async function initCloud() {
     cloudReady = false;
     return { ok: false, reason: "Firebase non configurato" };
   }
+  // Già connesso (secondo Sync / hot reload)
+  if (cloudReady && firestore) return { ok: true };
   try {
-    const [{ initializeApp }, { getFirestore }, { getStorage }] = await Promise.all([
+    const [{ initializeApp, getApps, getApp }, { getFirestore }, { getStorage }] = await Promise.all([
       import("https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js"),
       import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js"),
       import("https://www.gstatic.com/firebasejs/11.0.2/firebase-storage.js"),
     ]);
-    const app = initializeApp(firebaseConfig);
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     firestore = getFirestore(app);
     storage = getStorage(app);
     cloudReady = true;
@@ -180,7 +182,7 @@ export async function mergeSeedsFromSite() {
         const merged = mergeSeedTags(seed.tags || [], localTags);
         if (seed.image && seed.image !== local.image) {
           try {
-            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.22");
+            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.23");
             await deleteLocalImage(local.image);
             await deleteLocalImage(seed.image);
           } catch (_) {
@@ -241,7 +243,7 @@ export async function mergeSeedsFromSite() {
 
       if (seed.image && local.image !== seed.image) {
         try {
-          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.22");
+          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.23");
           await deleteLocalImage(local.image);
           await deleteLocalImage(seed.image);
         } catch (_) {
@@ -791,12 +793,24 @@ async function pushMapToCloud(map) {
     const batch = writeBatch(firestore);
     const slice = tags.slice(i, i + CHUNK);
     for (const tag of slice) {
-      const id = String(tag.id || "").trim();
+      // Firestore: id senza "/" e non vuoto
+      const id = String(tag.id || "")
+        .trim()
+        .replace(/\//g, "_")
+        .slice(0, 700);
       if (!id) continue;
       const ref = doc(collection(firestore, "tagImpianto_maps", map.id, "tags"), id);
-      batch.set(ref, { ...tag, id, updatedAt: tag.updatedAt || map.updatedAt || Date.now() }, { merge: true });
+      batch.set(
+        ref,
+        { ...tag, id, updatedAt: tag.updatedAt || map.updatedAt || Date.now() },
+        { merge: true }
+      );
     }
-    await batch.commit();
+    try {
+      await batch.commit();
+    } catch (err) {
+      throw new Error(`${map.id} tags[${i}…]: ${err?.message || err}`);
+    }
   }
 }
 
@@ -827,20 +841,23 @@ export async function pullMapsFromCloud() {
     }
     const cloudAt = Number(meta.updatedAt) || 0;
     const localAt = Number(local?.updatedAt) || 0;
+    // Meta cloud = note/stato; geometria/PNG restano dal dispositivo (seed sito),
+    // altrimenti un Firestore vecchio sovrascrive width/height e “rompe” i tag.
     const map = {
       ...(local || {}),
       ...meta,
       id: d.id,
       tags: [...byId.values()],
       updatedAt: Math.max(cloudAt, localAt, Date.now()),
+      image: local?.image || meta.image,
+      width: local?.width || meta.width,
+      height: local?.height || meta.height,
+      seedRev: Math.max(Number(local?.seedRev) || 0, Number(meta.seedRev) || 0),
+      cropLeft: local?.cropLeft ?? meta.cropLeft,
+      cropTop: local?.cropTop ?? meta.cropTop,
+      area: local?.area || meta.area || "",
+      name: local?.name || meta.name || d.id,
     };
-    // Se locale più nuovo a livello mappa, tieni image/seed locali se cloud incompleto
-    if (local && localAt > cloudAt) {
-      map.image = local.image || map.image;
-      map.width = local.width || map.width;
-      map.height = local.height || map.height;
-      map.seedRev = Math.max(Number(local.seedRev) || 0, Number(map.seedRev) || 0);
-    }
     await idbPut(map);
     maps.push(map);
   }
@@ -857,12 +874,25 @@ export async function pushAllMapsToCloud() {
   return all.length;
 }
 
-/** Pull + push: allinea dispositivi (merge per updatedAt). */
+/** Pull + push: allinea note/posizioni tra dispositivi (merge per updatedAt). */
 export async function syncAllWithCloud() {
   if (!cloudReady) throw new Error("Cloud non pronto");
-  await pullMapsFromCloud();
-  const n = await pushAllMapsToCloud();
-  await pullMapsFromCloud();
+  try {
+    await pullMapsFromCloud();
+  } catch (err) {
+    throw new Error(`Pull cloud: ${err?.message || err}`);
+  }
+  let n = 0;
+  try {
+    n = await pushAllMapsToCloud();
+  } catch (err) {
+    throw new Error(`Push cloud: ${err?.message || err}`);
+  }
+  try {
+    await pullMapsFromCloud();
+  } catch (err) {
+    throw new Error(`Pull finale: ${err?.message || err}`);
+  }
   return n;
 }
 
