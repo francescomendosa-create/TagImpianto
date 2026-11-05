@@ -11,12 +11,12 @@ import {
   pullMapsFromCloud,
   syncAllWithCloud,
   pushLocalChangesToCloud,
-} from "./db.js?v=1.6.6";
-import { MapViewer } from "./viewer.js?v=1.6.6";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.6.6";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.6.6";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.6.6";
-import { warmAllMapImages, countLocalImages } from "./image-cache.js?v=1.6.6";
+} from "./db.js?v=1.6.7";
+import { MapViewer } from "./viewer.js?v=1.6.7";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.6.7";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.6.7";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.6.7";
+import { warmAllMapImages, countLocalImages } from "./image-cache.js?v=1.6.7";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -63,19 +63,22 @@ const viewer = new MapViewer({
 // Riposiziona: niente nuovi tag al tap — solo trascinamento del tag evidenziato
 viewer.onAnnotatePlace = null;
 
-/** Doppio click/tap su un tag in mappa → stessa UI della ricerca a testo. */
-viewer.onTagDoubleSelect = async (tag) => {
+/** Doppio click/tap: solo barra ricerca = sigla (+ nota completa se c’è), senza suggerimenti. */
+viewer.onTagDoubleSelect = (tag) => {
   if (!tag || !currentMap) return;
-  const query = String(tag.label || tag.id || "").trim();
-  if (!query) return;
-  els.searchInput.value = query;
+  const sigla = String(tag.label || tag.id || "").trim();
+  if (!sigla) return;
+  const note = String(tag.note || "").trim();
+  const text = note ? `${sigla} — ${note}` : sigla;
+  closeSuggestions();
+  els.searchInput.value = text;
   els.clearBtn.classList.add("visible");
   activeTagId = tag.id;
   viewer.highlight(tag.id);
-  await runSearch(query);
-  const note = tag.note ? ` · nota: ${escapeHtml(tag.note)}` : "";
   setStatus(
-    `Evidenziato <strong>${escapeHtml(query)}</strong> in ${escapeHtml(currentMap.name)}${note}`
+    note
+      ? `<strong>${escapeHtml(sigla)}</strong> · ${escapeHtml(note)}`
+      : `<strong>${escapeHtml(sigla)}</strong> in ${escapeHtml(currentMap.name)}`
   );
 };
 
