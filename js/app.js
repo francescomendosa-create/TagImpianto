@@ -10,16 +10,16 @@ import {
   pullMapsFromCloud,
   syncAllWithCloud,
   pushLocalChangesToCloud,
-} from "./db.js?v=1.8.1";
-import { MapViewer } from "./viewer.js?v=1.8.1";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.1";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.1";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.1";
+} from "./db.js?v=1.8.2";
+import { MapViewer } from "./viewer.js?v=1.8.2";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.2";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.2";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.2";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.1";
+} from "./image-cache.js?v=1.8.2";
 
 const $ = (sel) => document.querySelector(sel);
 
