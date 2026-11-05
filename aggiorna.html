@@ -12,14 +12,13 @@
   </style>
 </head>
 <body>
-  <p>Pulizia cache e passaggio alla versione ufficiale…</p>
+  <p>Pulizia cache e passaggio alla versione ufficiale 1.8.3…</p>
   <p id="msg"></p>
   <script>
     (async function () {
-      var CANON = "https://francescomendosa-create.github.io/TagImpianto/";
+      var CANON = "https://francescomendosa-create.github.io/tagimpianto-app/";
       var msg = document.getElementById("msg");
-      // Se sei sul mirror vecchio, vai subito sull’URL ufficiale
-      if (/tagimpianto-app/i.test(location.href)) {
+      if (/\/TagImpianto\//i.test(location.href) && !/tagimpianto-app/i.test(location.href)) {
         location.replace(CANON + "aggiorna.html?_app=" + Date.now());
         return;
       }
@@ -56,7 +55,7 @@
             tx.onerror = function () { db.close(); resolve(); };
           };
         });
-        msg.textContent = "Ok. Apro Tag Impianto v1.8.2…";
+        msg.textContent = "Ok. Apro Tag Impianto v1.8.3…";
       } catch (e) {
         msg.textContent = "Pulizia parziale, apro comunque…";
       }
