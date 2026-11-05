@@ -186,6 +186,9 @@ html, body {
   z-index: 20;
   max-height: 42vh;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -203,6 +206,9 @@ html, body {
   border-bottom: 1px solid rgba(51,65,85,0.5);
   font-family: var(--mono);
   font-size: 0.92rem;
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .sug-item:last-child { border-bottom: 0; }
 .sug-item:hover, .sug-item.active { background: var(--accent-dim); }
