@@ -12,56 +12,27 @@
   </style>
 </head>
 <body>
-  <p>Pulizia cache e passaggio alla versione ufficiale 1.8.3…</p>
+  <p>Pulizia cache (una sola volta)…</p>
   <p id="msg"></p>
   <script>
     (async function () {
-      var CANON = "https://francescomendosa-create.github.io/tagimpianto-app/";
       var msg = document.getElementById("msg");
-      if (/\/TagImpianto\//i.test(location.href) && !/tagimpianto-app/i.test(location.href)) {
-        location.replace(CANON + "aggiorna.html?_app=" + Date.now());
-        return;
-      }
       try {
-        try {
-          var keys = Object.keys(localStorage);
-          for (var i = 0; i < keys.length; i++) {
-            if (/^ti-boot-clean|^ti-img-sync|^ti-sw-reloaded/.test(keys[i])) {
-              localStorage.removeItem(keys[i]);
-            }
-          }
-        } catch (_) {}
         if ("serviceWorker" in navigator) {
           var regs = await navigator.serviceWorker.getRegistrations();
           await Promise.all(regs.map(function (r) { return r.unregister(); }));
         }
         if (window.caches) {
-          var ckeys = await caches.keys();
-          await Promise.all(ckeys.map(function (k) { return caches.delete(k); }));
+          var keys = await caches.keys();
+          await Promise.all(keys.map(function (k) { return caches.delete(k); }));
         }
-        await new Promise(function (resolve) {
-          var open = indexedDB.open("tag-impianto");
-          open.onerror = function () { resolve(); };
-          open.onsuccess = function () {
-            var db = open.result;
-            if (!db.objectStoreNames.contains("images")) {
-              db.close();
-              resolve();
-              return;
-            }
-            var tx = db.transaction("images", "readwrite");
-            tx.objectStore("images").clear();
-            tx.oncomplete = function () { db.close(); resolve(); };
-            tx.onerror = function () { db.close(); resolve(); };
-          };
-        });
-        msg.textContent = "Ok. Apro Tag Impianto v1.8.3…";
+        msg.textContent = "Ok. Apro l’app…";
       } catch (e) {
         msg.textContent = "Pulizia parziale, apro comunque…";
       }
       setTimeout(function () {
-        location.replace(CANON + "index.html?_app=" + Date.now());
-      }, 400);
+        location.replace("./index.html?_fix=" + Date.now());
+      }, 300);
     })();
   </script>
 </body>

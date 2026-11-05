@@ -8,45 +8,12 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <title>Tag Impianto</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=1.8.3" />
+  <link rel="manifest" href="./manifest.webmanifest?v=1.8.4" />
   <link rel="icon" href="./icons/icon-192.png" />
   <link rel="apple-touch-icon" href="./icons/icon-192.png" />
-  <link rel="stylesheet" href="./css/app.css?v=1.8.3" />
+  <link rel="stylesheet" href="./css/app.css?v=1.8.4" />
   <script>
-    /* Un solo URL ufficiale (mirror aggiornato): evita versioni miste 1.7/1.8. */
-    (function () {
-      try {
-        if (/\/TagImpianto\/?/i.test(location.pathname) && !/tagimpianto-app/i.test(location.pathname)) {
-          var q = location.search || "";
-          var h = location.hash || "";
-          location.replace("https://francescomendosa-create.github.io/tagimpianto-app/" + q + h);
-          return;
-        }
-      } catch (_) {}
-    })();
-    /* Gira prima dei moduli: un service worker vecchio puo' servire JS incompatibili e bloccare l'avvio. */
-    (function () {
-      var KEY = "ti-boot-clean-1.8.3";
-      try {
-        if (localStorage.getItem(KEY)) return;
-        localStorage.setItem(KEY, "1");
-      } catch (_) {
-        return;
-      }
-      if (!("serviceWorker" in navigator)) return;
-      navigator.serviceWorker.getRegistrations()
-        .then(function (regs) {
-          return Promise.all(regs.map(function (r) { return r.unregister(); }));
-        })
-        .then(function () { return window.caches ? caches.keys() : []; })
-        .then(function (keys) {
-          return Promise.all((keys || []).map(function (k) { return caches.delete(k); }));
-        })
-        .then(function () {
-          location.reload();
-        })
-        .catch(function () { /* ignore */ });
-    })();
+    /* Niente redirect e niente reload automatici (causavano lampeggio infinito). */
     window.addEventListener("load", function () {
       setTimeout(function () {
         var nav = document.getElementById("plantNav");
@@ -54,14 +21,14 @@
         if (nav && !nav.children.length && st) {
           st.innerHTML = 'Avvio non riuscito. <a href="./aggiorna.html" style="color:#22d3a6;font-weight:700">Tocca qui per ripristinare</a>';
         }
-      }, 6000);
+      }, 8000);
     });
   </script>
 </head>
 <body>
   <div id="app">
     <header class="topbar">
-      <div class="brand">TAG <span>IMPIANTO</span> <small id="appVersion" class="app-version" title="Versione app">v1.8.3</small></div>
+      <div class="brand">TAG <span>IMPIANTO</span> <small id="appVersion" class="app-version" title="Versione app">v1.8.4</small></div>
       <select id="mapSelect" class="map-select visually-hidden" aria-label="Parte di impianto" tabindex="-1"></select>
       <div class="map-title" id="mapTitle" aria-live="polite"></div>
       <div class="top-actions">
@@ -140,6 +107,6 @@
   </div>
 
   <div id="toast" class="toast" role="status"></div>
-  <script type="module" src="./js/app.js?v=1.8.3"></script>
+  <script type="module" src="./js/app.js?v=1.8.4"></script>
 </body>
 </html>

@@ -10,16 +10,16 @@ import {
   pullMapsFromCloud,
   syncAllWithCloud,
   pushLocalChangesToCloud,
-} from "./db.js?v=1.8.3";
-import { MapViewer } from "./viewer.js?v=1.8.3";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.3";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.3";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.3";
+} from "./db.js?v=1.8.4";
+import { MapViewer } from "./viewer.js?v=1.8.4";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.4";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.4";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.4";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.3";
+} from "./image-cache.js?v=1.8.4";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -222,12 +222,6 @@ async function syncImagesLocal({ force = false } = {}) {
   const n = await countLocalImages().catch(() => total);
   setMapsLocalBadge(n);
   if (currentMap) {
-    // Ricarica la mappa corrente dalla cache nuova (niente PNG vecchia a schermo)
-    try {
-      await selectMap(currentMap.id, { keepHighlight: true });
-    } catch (_) {
-      /* ignore */
-    }
     setStatus(
       `Mappa: <strong>${escapeHtml(currentMap.name)}</strong> · ${(currentMap.tags || []).length} tag`
     );
@@ -736,35 +730,10 @@ async function boot() {
     pushLocalChangesToCloud().catch((err) => console.warn(err));
   });
 
+  // Service worker silenzioso: niente reload automatici (causavano lampeggio)
   if ("serviceWorker" in navigator) {
     try {
-      const reg = await navigator.serviceWorker.register(`./sw.js?v=${APP_VERSION}`, {
-        updateViaCache: "none",
-      });
-      // Controlla subito se c’è una versione nuova sul sito
-      reg.update().catch(() => {});
-      const reloadOnce = () => {
-        if (sessionStorage.getItem("ti-sw-reloaded")) return;
-        sessionStorage.setItem("ti-sw-reloaded", "1");
-        location.reload();
-      };
-      navigator.serviceWorker.addEventListener("controllerchange", reloadOnce);
-      if (reg.waiting) {
-        reg.waiting.postMessage({ type: "SKIP_WAITING" });
-      }
-      reg.addEventListener("updatefound", () => {
-        const nw = reg.installing;
-        if (!nw) return;
-        nw.addEventListener("statechange", () => {
-          if (nw.state === "installed" && navigator.serviceWorker.controller) {
-            nw.postMessage({ type: "SKIP_WAITING" });
-          }
-        });
-      });
-      // Ogni volta che la pagina torna in primo piano, cerca aggiornamenti
-      document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible") reg.update().catch(() => {});
-      });
+      await navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" });
     } catch (_) {
       /* ignore */
     }
