@@ -1,5 +1,5 @@
-const CACHE = "tag-impianto-shell-v21";
-const MAP_CACHE = "tag-impianto-maps-v21";
+const CACHE = "tag-impianto-shell-v22";
+const MAP_CACHE = "tag-impianto-maps-v22";
 const SHELL = [
   "./",
   "./index.html",
@@ -11,6 +11,7 @@ const SHELL = [
   "./js/plant-nav.js",
   "./js/firebase-config.js",
   "./js/version.js",
+  "./js/image-cache.js",
   "./data/manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

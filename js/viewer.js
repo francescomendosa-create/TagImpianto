@@ -1,4 +1,6 @@
-const MAX_MEM_IMAGES = 8;
+import { resolveLocalImageUrl } from "./image-cache.js?v=1.6.0";
+
+const MAX_MEM_IMAGES = 10;
 
 export class MapViewer {
   constructor({ viewport, world, imageEl, overlayEl }) {
@@ -14,9 +16,10 @@ export class MapViewer {
     this.highlightId = null;
     this.annotate = false;
     this._viewInitialized = false;
-    this._lastSrc = "";
-    /** @type {Map<string, HTMLImageElement>} */
-    this._mem = new Map();
+    /** URL logica remota (non blob:) */
+    this._lastRemote = "";
+    /** @type {Map<string, string>} remote -> display url */
+    this._resolved = new Map();
     this._loadToken = 0;
 
     this._pointers = new Map();
@@ -56,66 +59,53 @@ export class MapViewer {
     this.renderOverlay();
   }
 
-  _touchMem(src, img) {
-    if (this._mem.has(src)) this._mem.delete(src);
-    this._mem.set(src, img);
-    while (this._mem.size > MAX_MEM_IMAGES) {
-      const oldest = this._mem.keys().next().value;
-      this._mem.delete(oldest);
-    }
-  }
-
-  /** Precache in background (HTTP + memoria). */
+  /** Precache in IndexedDB + memoria (non blocca UI). */
   preload(src) {
-    if (!src || this._mem.has(src)) return;
-    const img = new Image();
-    img.decoding = "async";
-    img.onload = () => this._touchMem(src, img);
-    img.src = src;
+    if (!src) return;
+    resolveLocalImageUrl(src)
+      .then((url) => {
+        this._resolved.set(src, url);
+        const img = new Image();
+        img.decoding = "async";
+        img.src = url;
+      })
+      .catch(() => {});
   }
 
-  async _ensureImage(src) {
-    const cached = this._mem.get(src);
-    if (cached?.complete && cached.naturalWidth) {
-      this._touchMem(src, cached);
-      return cached;
+  async _displayUrl(remote) {
+    if (this._resolved.has(remote)) return this._resolved.get(remote);
+    const url = await resolveLocalImageUrl(remote);
+    this._resolved.set(remote, url);
+    // Limita mappa risoluzioni tenute in memoria (i blob restano in IDB)
+    while (this._resolved.size > MAX_MEM_IMAGES) {
+      const first = this._resolved.keys().next().value;
+      this._resolved.delete(first);
     }
-    const img = new Image();
-    img.decoding = "async";
-    await new Promise((resolve, reject) => {
-      img.onload = () => resolve();
-      img.onerror = () => reject(new Error("Immagine mappa non caricata"));
-      img.src = src;
-    });
-    try {
-      if (img.decode) await img.decode();
-    } catch (_) {
-      /* decode opzionale */
-    }
-    this._touchMem(src, img);
-    return img;
+    return url;
   }
 
   async loadMap(map, { keepView = false } = {}) {
     this.map = map;
-    const src = map.image;
+    const remote = map.image;
     const token = ++this._loadToken;
-    const sameImage = src === this._lastSrc && this.imageEl.naturalWidth;
+    const sameImage = remote === this._lastRemote && this.imageEl.naturalWidth;
 
     if (!sameImage) {
-      const img = await this._ensureImage(src);
-      if (token !== this._loadToken) return; // cambio mappa più recente
-      // Copia sul nodo visibile (src già in cache browser → quasi istantaneo)
-      if (this.imageEl.src !== img.src) {
-        await new Promise((resolve, reject) => {
-          this.imageEl.onload = () => resolve();
-          this.imageEl.onerror = () => reject(new Error("Immagine mappa non caricata"));
-          this.imageEl.src = img.src || src;
-          if (this.imageEl.complete && this.imageEl.naturalWidth) resolve();
-        });
-      }
+      const display = await this._displayUrl(remote);
       if (token !== this._loadToken) return;
-      this._lastSrc = src;
+
+      await new Promise((resolve, reject) => {
+        const done = () => resolve();
+        this.imageEl.onload = done;
+        this.imageEl.onerror = () => reject(new Error("Immagine mappa non caricata"));
+        if (this.imageEl.src === display && this.imageEl.complete && this.imageEl.naturalWidth) {
+          done();
+          return;
+        }
+        this.imageEl.src = display;
+      });
+      if (token !== this._loadToken) return;
+      this._lastRemote = remote;
     }
 
     const w = map.width || this.imageEl.naturalWidth;
@@ -161,7 +151,6 @@ export class MapViewer {
     this.applyTransform();
   }
 
-  /** Solo evidenzia: non cambia mai zoom/pan. */
   highlight(tagId) {
     this.highlightId = tagId || null;
     this.renderOverlay();

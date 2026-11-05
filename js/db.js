@@ -1,8 +1,9 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.5.1";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.6.0";
 
 const DB_NAME = "tag-impianto";
-const DB_VER = 1;
+const DB_VER = 2;
 const STORE = "maps";
+const STORE_IMAGES = "images";
 
 let idb;
 let firestore = null;
@@ -17,6 +18,9 @@ function openIdb() {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) {
         db.createObjectStore(STORE, { keyPath: "id" });
+      }
+      if (!db.objectStoreNames.contains(STORE_IMAGES)) {
+        db.createObjectStore(STORE_IMAGES, { keyPath: "url" });
       }
     };
     req.onsuccess = () => resolve(req.result);

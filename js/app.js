@@ -8,11 +8,12 @@ import {
   saveMap,
   searchAllTags,
   pullMapsFromCloud,
-} from "./db.js?v=1.5.1";
-import { MapViewer } from "./viewer.js?v=1.5.1";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.5.1";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.5.1";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.5.1";
+} from "./db.js?v=1.6.0";
+import { MapViewer } from "./viewer.js?v=1.6.0";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.6.0";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.6.0";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.6.0";
+import { warmAllMapImages, countLocalImages } from "./image-cache.js?v=1.6.0";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -137,16 +138,34 @@ function preloadNearby(mapId) {
   }
 }
 
-function preloadAllMapsIdle() {
-  const run = () => {
-    for (const m of maps) {
-      if (m?.image) viewer.preload(m.image);
-    }
-  };
-  if ("requestIdleCallback" in window) {
-    requestIdleCallback(run, { timeout: 4000 });
+function setMapsLocalBadge(n) {
+  const cloud = isCloudReady() ? `<span class="ok">Cloud</span> · ` : "";
+  els.cloudBadge.innerHTML =
+    `${cloud}<span class="ok" title="PNG salvate su questo dispositivo">Mappe in locale (${n})</span>`;
+}
+
+async function syncImagesLocal() {
+  const already = await countLocalImages().catch(() => 0);
+  const total = maps.filter((m) => m?.image).length;
+  if (total && already >= total) {
+    setMapsLocalBadge(already);
+    return;
+  }
+  setStatus(`Salvo le mappe sul dispositivo… 0/${total}`);
+  await warmAllMapImages(maps, (done, tot, name) => {
+    setStatus(
+      `Salvo le mappe sul dispositivo… <strong>${done}/${tot}</strong>` +
+        (name ? ` · ${escapeHtml(name)}` : "")
+    );
+  });
+  const n = await countLocalImages().catch(() => total);
+  setMapsLocalBadge(n);
+  if (currentMap) {
+    setStatus(
+      `Mappa: <strong>${escapeHtml(currentMap.name)}</strong> · ${(currentMap.tags || []).length} tag`
+    );
   } else {
-    setTimeout(run, 1200);
+    setStatus("Mappe pronte in locale");
   }
 }
 
@@ -526,7 +545,7 @@ async function boot() {
       console.warn(err);
     }
   } else {
-    els.cloudBadge.innerHTML = `<span class="muted" title="I tag restano sul dispositivo; sync cloud non configurato">Solo dispositivo</span>`;
+    els.cloudBadge.innerHTML = `<span class="muted" title="Dati e mappe sul dispositivo">Solo dispositivo</span>`;
   }
 
   if ("serviceWorker" in navigator) {
@@ -537,8 +556,9 @@ async function boot() {
     }
   }
 
-  preloadAllMapsIdle();
+  // Prima mappa subito usabile; in background scarica TUTTE le PNG in IndexedDB
   if (currentMap) preloadNearby(currentMap.id);
+  syncImagesLocal().catch((err) => console.warn(err));
   els.searchInput.focus();
 }
 
