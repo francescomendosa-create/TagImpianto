@@ -10,12 +10,12 @@ import {
   pullMapsFromCloud,
   syncAllWithCloud,
   pushLocalChangesToCloud,
-} from "./db.js?v=1.7.1";
-import { MapViewer } from "./viewer.js?v=1.7.1";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.7.1";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.7.1";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.7.1";
-import { warmAllMapImages, countLocalImages } from "./image-cache.js?v=1.7.1";
+} from "./db.js?v=1.7.2";
+import { MapViewer } from "./viewer.js?v=1.7.2";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.7.2";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.7.2";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.7.2";
+import { warmAllMapImages, countLocalImages } from "./image-cache.js?v=1.7.2";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -621,7 +621,33 @@ async function boot() {
 
   if ("serviceWorker" in navigator) {
     try {
-      await navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" });
+      const reg = await navigator.serviceWorker.register(`./sw.js?v=${APP_VERSION}`, {
+        updateViaCache: "none",
+      });
+      // Controlla subito se c’è una versione nuova sul sito
+      reg.update().catch(() => {});
+      const reloadOnce = () => {
+        if (sessionStorage.getItem("ti-sw-reloaded")) return;
+        sessionStorage.setItem("ti-sw-reloaded", "1");
+        location.reload();
+      };
+      navigator.serviceWorker.addEventListener("controllerchange", reloadOnce);
+      if (reg.waiting) {
+        reg.waiting.postMessage({ type: "SKIP_WAITING" });
+      }
+      reg.addEventListener("updatefound", () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener("statechange", () => {
+          if (nw.state === "installed" && navigator.serviceWorker.controller) {
+            nw.postMessage({ type: "SKIP_WAITING" });
+          }
+        });
+      });
+      // Ogni volta che la pagina torna in primo piano, cerca aggiornamenti
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") reg.update().catch(() => {});
+      });
     } catch (_) {
       /* ignore */
     }

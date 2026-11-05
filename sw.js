@@ -1,5 +1,5 @@
-const CACHE = "tag-impianto-shell-v30";
-const MAP_CACHE = "tag-impianto-maps-v30";
+const CACHE = "tag-impianto-shell-v31";
+const MAP_CACHE = "tag-impianto-maps-v31";
 const SHELL = [
   "./",
   "./index.html",
@@ -17,6 +17,12 @@ const SHELL = [
   "./icons/icon-512.png",
 ];
 
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
@@ -24,7 +30,8 @@ self.addEventListener("install", (event) => {
       await Promise.all(
         SHELL.map(async (url) => {
           try {
-            await cache.add(url);
+            // bypass cache HTTP di GitHub Pages (max-age 600)
+            await cache.add(new Request(url, { cache: "reload" }));
           } catch (err) {
             console.warn("SW cache skip", url, err);
           }
@@ -74,11 +81,19 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Resto: rete, fallback cache shell
+  // Shell/app: rete fresca (niente cache HTTP CDN), fallback cache offline
+  const isShell =
+    url.pathname.endsWith(".js") ||
+    url.pathname.endsWith(".css") ||
+    url.pathname.endsWith(".html") ||
+    url.pathname.endsWith(".webmanifest") ||
+    url.pathname.endsWith("/") ||
+    /\/sw\.js$/i.test(url.pathname);
+
   event.respondWith(
-    fetch(req)
+    fetch(req, isShell ? { cache: "no-store" } : undefined)
       .then((res) => {
-        if (res && res.ok && (url.pathname.endsWith(".js") || url.pathname.endsWith(".css") || url.pathname.endsWith(".html") || url.pathname.endsWith("/"))) {
+        if (res && res.ok && isShell) {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
         }

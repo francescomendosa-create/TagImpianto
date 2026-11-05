@@ -12,7 +12,8 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  # Non cancellare deploy in corso: push ravvicinati lasciavano Pages fermo su versione vecchia
+  cancel-in-progress: false
 
 jobs:
   deploy:
