@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.6.4";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.6.5";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -134,13 +134,13 @@ export async function loadSeedIfEmpty() {
       if (seedRev > localRev || seedTagN > localTagN + 3) {
         const locked = new Map(
           (local.tags || [])
-            .filter((t) => t.locked || t.source === "manual")
+            .filter(tagHasUserData)
             .map((t) => [String(t.id).toUpperCase(), t])
         );
         const bySeed = new Map(
           (seed.tags || []).map((t) => [String(t.id).toUpperCase(), { ...t }])
         );
-        // parti dal seed, poi aggiungi manuali mancanti; se manuale e seed coincidono tieni manuale
+        // parti dal seed, poi aggiungi manuali/note mancanti; se coincidono tieni utente
         const merged = [];
         const seen = new Set();
         for (const [key, t] of bySeed) {
@@ -239,7 +239,7 @@ export async function forceReloadSeeds() {
       }
       const locked = new Map(
         (local.tags || [])
-          .filter((t) => t.locked || t.source === "manual")
+          .filter(tagHasUserData)
           .map((t) => [String(t.id).toUpperCase(), t])
       );
       const bySeed = new Map(
@@ -303,17 +303,36 @@ export async function getMap(id) {
   });
 }
 
+function tagHasUserData(t) {
+  return !!(
+    t?.locked ||
+    t?.source === "manual" ||
+    String(t?.note || "").trim()
+  );
+}
+
 export async function saveMap(map, { sync = true } = {}) {
   map.updatedAt = Date.now();
   await idbPut(map);
+  let cloudSynced = false;
+  let cloudError = null;
   if (sync && cloudReady) {
     try {
       await pushMapToCloud(map);
+      cloudSynced = true;
+      map.cloudPending = false;
+      await idbPut(map);
     } catch (err) {
+      cloudError = String(err?.message || err);
       console.warn("Sync cloud fallita:", err);
+      map.cloudPending = true;
+      await idbPut(map);
     }
+  } else if (sync && !cloudReady) {
+    map.cloudPending = true;
+    await idbPut(map);
   }
-  return map;
+  return { map, cloudSynced, cloudError };
 }
 
 /** Confronti ricerca: ignora spazi, -, _, punti e maiuscole (tk 11002 ≈ TK-11002 ≈ tk11002). */
@@ -498,11 +517,11 @@ function mergeTagCloudLocal(localTag, cloudTag) {
   if (!cloudTag) return { ...localTag };
   const lt = Number(localTag.updatedAt) || 0;
   const ct = Number(cloudTag.updatedAt) || 0;
-  // Più recente vince; a parità preferisci manual/locked
+  // Più recente vince; a parità preferisci note/manuali locali
   if (ct > lt) return { ...cloudTag };
   if (lt > ct) return { ...localTag };
-  if (localTag.locked || localTag.source === "manual") return { ...localTag };
-  if (cloudTag.locked || cloudTag.source === "manual") return { ...cloudTag };
+  if (tagHasUserData(localTag)) return { ...localTag };
+  if (tagHasUserData(cloudTag)) return { ...cloudTag };
   return { ...cloudTag };
 }
 
@@ -602,6 +621,24 @@ export async function syncAllWithCloud() {
   await pullMapsFromCloud();
   const n = await pushAllMapsToCloud();
   await pullMapsFromCloud();
+  return n;
+}
+
+/** Dopo init cloud: porta subito online note/riposizionamenti locali. */
+export async function pushLocalChangesToCloud() {
+  if (!cloudReady) return 0;
+  const all = await idbGetAll();
+  let n = 0;
+  for (const map of all) {
+    const pending = map.cloudPending;
+    const hasNotes = (map.tags || []).some((t) => String(t?.note || "").trim());
+    const hasManual = (map.tags || []).some(tagHasUserData);
+    if (!pending && !hasNotes && !hasManual) continue;
+    await pushMapToCloud(map);
+    map.cloudPending = false;
+    await idbPut(map);
+    n += 1;
+  }
   return n;
 }
 

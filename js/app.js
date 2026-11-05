@@ -10,12 +10,13 @@ import {
   searchAllTags,
   pullMapsFromCloud,
   syncAllWithCloud,
-} from "./db.js?v=1.6.4";
-import { MapViewer } from "./viewer.js?v=1.6.4";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.6.4";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.6.4";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.6.4";
-import { warmAllMapImages, countLocalImages } from "./image-cache.js?v=1.6.4";
+  pushLocalChangesToCloud,
+} from "./db.js?v=1.6.5";
+import { MapViewer } from "./viewer.js?v=1.6.5";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.6.5";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.6.5";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.6.5";
+import { warmAllMapImages, countLocalImages } from "./image-cache.js?v=1.6.5";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -70,11 +71,13 @@ viewer.onTagMoved = async (tagId) => {
     tag.locked = true;
     tag.updatedAt = Date.now();
   }
-  await persistCurrent();
+  const { cloudSynced } = await persistCurrent();
   toast(
-    isCloudReady()
+    cloudSynced
       ? "Posizione salvata (locale + cloud)"
-      : "Posizione salvata solo su questo dispositivo"
+      : isCloudReady()
+        ? "Posizione locale — cloud fallito, riprova Sync"
+        : "Posizione salvata solo su questo dispositivo"
   );
 };
 
@@ -196,9 +199,11 @@ async function refreshMaps() {
 }
 
 async function persistCurrent() {
-  if (!currentMap) return;
-  await saveMap(currentMap);
+  if (!currentMap) return { cloudSynced: false, cloudError: null };
+  const result = await saveMap(currentMap);
+  currentMap = result.map;
   maps = await listMaps();
+  return result;
 }
 
 function escapeHtml(s) {
@@ -356,12 +361,18 @@ els.noteSave.addEventListener("click", async () => {
   tag.source = "manual";
   tag.locked = true;
   tag.updatedAt = Date.now();
-  await persistCurrent();
+  const { cloudSynced } = await persistCurrent();
   activeTagId = id;
   viewer.map = currentMap;
   viewer.highlight(id);
   closeDrawer();
-  toast(isNew ? "Tag aggiunto" : "Tag salvato");
+  if (cloudSynced) {
+    toast(isNew ? "Tag + nota online" : "Nota salvata online");
+  } else if (isCloudReady()) {
+    toast("Salvata in locale — cloud fallito, premi Sync");
+  } else {
+    toast(isNew ? "Tag salvato solo qui" : "Nota salvata solo qui");
+  }
   setStatus(`Mappa: <strong>${escapeHtml(currentMap.name)}</strong> · ${currentMap.tags.length} tag`);
 });
 
@@ -369,13 +380,13 @@ els.noteDelete.addEventListener("click", async () => {
   if (!currentMap) return;
   const id = els.drawer.dataset.tagId;
   currentMap.tags = (currentMap.tags || []).filter((t) => t.id !== id);
-  await persistCurrent();
+  const { cloudSynced } = await persistCurrent();
   if (activeTagId === id) activeTagId = null;
   viewer.map = currentMap;
   viewer.highlight(null);
   viewer.renderOverlay();
   closeDrawer();
-  toast("Tag eliminato");
+  toast(cloudSynced ? "Tag eliminato (anche online)" : "Tag eliminato in locale");
 });
 
 els.mapSelect.addEventListener("change", () => selectMap(els.mapSelect.value));
@@ -568,6 +579,8 @@ async function boot() {
     try {
       setStatus("Allineo dati dal cloud…");
       await pullMapsFromCloud();
+      // Porta subito online note e modifiche già presenti sul dispositivo
+      await pushLocalChangesToCloud();
       await refreshMaps();
       if (currentMap) await selectMap(currentMap.id);
       els.cloudBadge.innerHTML = `<span class="ok">Cloud attivo</span>`;
@@ -578,6 +591,11 @@ async function boot() {
   } else {
     els.cloudBadge.innerHTML = `<span class="muted" title="Riposizionamenti solo su questo dispositivo">Solo dispositivo</span>`;
   }
+
+  window.addEventListener("online", () => {
+    if (!isCloudReady()) return;
+    pushLocalChangesToCloud().catch((err) => console.warn(err));
+  });
 
   if ("serviceWorker" in navigator) {
     try {
