@@ -8,11 +8,11 @@ import {
   saveMap,
   searchAllTags,
   pullMapsFromCloud,
-} from "./db.js";
-import { MapViewer } from "./viewer.js";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js";
-import { APP_VERSION, APP_BUILD } from "./version.js";
+} from "./db.js?v=1.5.1";
+import { MapViewer } from "./viewer.js?v=1.5.1";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.5.1";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.5.1";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.5.1";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -531,15 +531,6 @@ async function boot() {
 
   if ("serviceWorker" in navigator) {
     try {
-      // Una sola volta: pulisci SW/cache pre-v21 che scaricavano tutto ogni volta
-      const MIGRATE = "ti-sw-migrate-v21";
-      if (!localStorage.getItem(MIGRATE)) {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map((r) => r.unregister()));
-        const keys = await caches.keys();
-        await Promise.all(keys.map((k) => caches.delete(k)));
-        localStorage.setItem(MIGRATE, "1");
-      }
       await navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" });
     } catch (_) {
       /* ignore */
