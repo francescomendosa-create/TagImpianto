@@ -1,4 +1,4 @@
-import { resolveLocalImageUrl } from "./image-cache.js?v=1.7.7";
+import { resolveLocalImageUrl } from "./image-cache.js?v=1.7.8";
 
 const MAX_MEM_IMAGES = 10;
 
@@ -168,25 +168,51 @@ export class MapViewer {
     this.imageEl.height = h;
     this.overlayEl.style.width = `${w}px`;
     this.overlayEl.style.height = `${h}px`;
+    // Cambio mappa: sempre stesso allineamento (alto-sinistra). keepView solo sulla stessa foto.
     if (keepView && sameImage) {
-      /* lascia inquadratura */
-    } else if (!this._viewInitialized || !sameImage) {
+      this.clampView();
+    } else {
       this.fit();
       this._viewInitialized = true;
     }
     this.renderOverlay();
   }
 
+  /**
+   * Inquadra la mappa allineata all’angolo in alto a sinistra (sempre uguale tra schermate).
+   * Non centratura verticale: così non “salta” cambiando foto.
+   */
   fit() {
-    if (!this.imageEl.naturalWidth) return;
+    if (!this.imageEl.naturalWidth && !this.imageEl.width) return;
     const vw = this.viewport.clientWidth;
     const vh = this.viewport.clientHeight;
-    const iw = this.imageEl.width;
-    const ih = this.imageEl.height;
-    const pad = 16;
-    this.scale = Math.min((vw - pad) / iw, (vh - pad) / ih, 2);
-    this.tx = (vw - iw * this.scale) / 2;
-    this.ty = (vh - ih * this.scale) / 2;
+    const iw = this.imageEl.width || this.imageEl.naturalWidth;
+    const ih = this.imageEl.height || this.imageEl.naturalHeight;
+    if (!iw || !ih || !vw || !vh) return;
+    const padX = 8;
+    const padY = 8;
+    this.scale = Math.min((vw - padX * 2) / iw, (vh - padY * 2) / ih, 4);
+    this.tx = padX;
+    this.ty = padY;
+    this.clampView();
+  }
+
+  /** Impedisce di far uscire l’angolo alto oltre il bordo (e tiene i limiti di pan). */
+  clampView() {
+    const vw = this.viewport.clientWidth;
+    const vh = this.viewport.clientHeight;
+    const iw = this.imageEl.width || 1;
+    const ih = this.imageEl.height || 1;
+    const padX = 8;
+    const padY = 8;
+    const sw = iw * this.scale;
+    const sh = ih * this.scale;
+    const maxTx = padX;
+    const minTx = Math.min(padX, vw - sw - padX);
+    const maxTy = padY;
+    const minTy = Math.min(padY, vh - sh - padY);
+    this.tx = Math.min(maxTx, Math.max(minTx, this.tx));
+    this.ty = Math.min(maxTy, Math.max(minTy, this.ty));
     this.applyTransform();
   }
 
@@ -202,7 +228,7 @@ export class MapViewer {
     this.scale = next;
     this.tx = cx - wx * next;
     this.ty = cy - wy * next;
-    this.applyTransform();
+    this.clampView();
   }
 
   highlight(tagId) {
@@ -299,7 +325,7 @@ export class MapViewer {
       if (Math.abs(dx) + Math.abs(dy) > 4) this._moved = true;
       this.tx = this._panStart.tx + dx;
       this.ty = this._panStart.ty + dy;
-      this.applyTransform();
+      this.clampView();
     }
   }
 

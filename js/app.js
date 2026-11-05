@@ -10,16 +10,16 @@ import {
   pullMapsFromCloud,
   syncAllWithCloud,
   pushLocalChangesToCloud,
-} from "./db.js?v=1.7.7";
-import { MapViewer } from "./viewer.js?v=1.7.7";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.7.7";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.7.7";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.7.7";
+} from "./db.js?v=1.7.8";
+import { MapViewer } from "./viewer.js?v=1.7.8";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.7.8";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.7.8";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.7.8";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.7.7";
+} from "./image-cache.js?v=1.7.8";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -151,7 +151,9 @@ async function selectMap(id, { keepHighlight = false, keepView = false } = {}) {
     viewer.highlight(null);
   }
   try {
-    await viewer.loadMap(map, { keepView: keepView || (keepHighlight && same) });
+    // Cambio schermata: sempre riallinea in alto (niente “salto” tra foto)
+    const stay = keepView && same;
+    await viewer.loadMap(map, { keepView: stay });
   } catch (err) {
     setStatus(`Errore immagine: ${escapeHtml(err.message || err)}`);
     return;
