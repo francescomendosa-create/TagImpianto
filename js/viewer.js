@@ -1,4 +1,4 @@
-import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.4";
+import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.5";
 
 const MAX_MEM_IMAGES = 10;
 
@@ -128,7 +128,14 @@ export class MapViewer {
 
   async _displayUrl(remote) {
     if (this._resolved.has(remote)) return this._resolved.get(remote);
-    const url = await resolveLocalImageUrl(remote);
+    let url;
+    try {
+      url = await resolveLocalImageUrl(remote);
+    } catch (err) {
+      // retry path pulito
+      const bare = String(remote || "").split("?")[0];
+      url = await resolveLocalImageUrl(`${bare}?retry=${Date.now()}`);
+    }
     this._resolved.set(remote, url);
     // Limita mappa risoluzioni tenute in memoria (i blob restano in IDB)
     while (this._resolved.size > MAX_MEM_IMAGES) {
@@ -138,6 +145,24 @@ export class MapViewer {
     return url;
   }
 
+  async _setImageSrc(display) {
+    await new Promise((resolve, reject) => {
+      const done = () => resolve();
+      this.imageEl.onload = done;
+      this.imageEl.onerror = () => reject(new Error("Immagine mappa non caricata"));
+      if (this.imageEl.src === display && this.imageEl.complete && this.imageEl.naturalWidth) {
+        done();
+        return;
+      }
+      this.imageEl.src = display;
+    });
+    try {
+      if (this.imageEl.decode) await this.imageEl.decode();
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
   async loadMap(map, { keepView = false } = {}) {
     this.map = map;
     const remote = map.image;
@@ -145,32 +170,25 @@ export class MapViewer {
     const sameImage = remote === this._lastRemote && this.imageEl.naturalWidth;
 
     if (!sameImage) {
-      const display = await this._displayUrl(remote);
+      let display = await this._displayUrl(remote);
       if (token !== this._loadToken) return;
-
-      await new Promise((resolve, reject) => {
-        const done = () => resolve();
-        this.imageEl.onload = done;
-        this.imageEl.onerror = () => reject(new Error("Immagine mappa non caricata"));
-        if (this.imageEl.src === display && this.imageEl.complete && this.imageEl.naturalWidth) {
-          done();
-          return;
-        }
-        this.imageEl.src = display;
-      });
-      if (token !== this._loadToken) return;
-      // Attendi decode completo (evita pezzi neri su tablet finché non si pan-na)
       try {
-        if (this.imageEl.decode) await this.imageEl.decode();
+        await this._setImageSrc(display);
       } catch (_) {
-        /* alcuni WebView non supportano decode */
+        // blob revocato / cache rotta → riscarica
+        this._resolved.delete(remote);
+        const bare = String(remote || "").split("?")[0];
+        display = await resolveLocalImageUrl(`${bare}?fresh=${Date.now()}`);
+        if (token !== this._loadToken) return;
+        this._resolved.set(remote, display);
+        await this._setImageSrc(display);
       }
       if (token !== this._loadToken) return;
       this._lastRemote = remote;
     }
 
-    const w = map.width || this.imageEl.naturalWidth;
-    const h = map.height || this.imageEl.naturalHeight;
+    const w = this.imageEl.naturalWidth || map.width;
+    const h = this.imageEl.naturalHeight || map.height;
     this.imageEl.width = w;
     this.imageEl.height = h;
     this.overlayEl.style.width = `${w}px`;

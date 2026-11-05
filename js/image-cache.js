@@ -48,6 +48,36 @@ function urlStem(src) {
   }
 }
 
+/** Path file senza query (es. assets/maps/foo.png). */
+function networkPath(src) {
+  return String(src || "").split("?")[0];
+}
+
+async function fetchMapBlob(src) {
+  const path = networkPath(src) || String(src).split("?")[0];
+  // 1) path pulito  2) src originale  3) cache-bust
+  const candidates = [path, src, `${path}?t=${Date.now()}`];
+  let lastErr = null;
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) {
+        lastErr = new Error(`HTTP ${res.status}`);
+        continue;
+      }
+      const blob = await res.blob();
+      if (!blob || blob.size < 2000) {
+        lastErr = new Error("blob vuoto");
+        continue;
+      }
+      return blob;
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr || new Error("Download mappa fallito");
+}
+
 async function getRecord(url) {
   const db = await openDb();
   return new Promise((resolve, reject) => {
@@ -133,16 +163,13 @@ export async function resolveLocalImageUrl(src) {
   if (blobUrls.has(key)) return blobUrls.get(key);
 
   const existing = await getRecord(key);
-  if (existing?.blob) {
+  if (existing?.blob && existing.blob.size >= 2000) {
     const u = URL.createObjectURL(existing.blob);
     blobUrls.set(key, u);
     return u;
   }
 
-  // Sempre rete fresca: le PNG sul sito possono cambiare a path uguale
-  const res = await fetch(src, { cache: "no-store" });
-  if (!res.ok) throw new Error(`Download mappa fallito (${res.status})`);
-  const blob = await res.blob();
+  const blob = await fetchMapBlob(src);
   try {
     await putRecord(key, blob);
   } catch (err) {
@@ -192,7 +219,13 @@ export async function pruneStaleMapImages(maps) {
         }
         if (stems.has(stem) || k.includes("/assets/maps/")) {
           store.delete(key);
-          revokeBlob(k);
+          // Non revocare blob ancora mostrati in <img> (rompe la mappa a video)
+          const blobUrl = blobUrls.get(k);
+          if (!blobUrl || !document.querySelector(`img[src="${blobUrl}"]`)) {
+            revokeBlob(k);
+          } else {
+            blobUrls.delete(k);
+          }
         }
       }
     };
@@ -217,34 +250,41 @@ export async function warmAllMapImages(maps, onProgress, opts = {}) {
   }
   const total = list.length;
   let done = 0;
-  for (const m of list) {
-    const name = m.name || m.id || "";
-    try {
-      const key = absUrl(m.image);
-      const have = force ? null : await getRecord(key);
-      if (!have?.blob) {
-        if (force) await deleteLocalImage(m.image);
-        const res = await fetch(m.image, { cache: "no-store" });
-        if (res.ok) {
-          const blob = await res.blob();
-          // scarta blob sospetti troppo piccoli (download interrotto)
-          if (blob.size < 8000) {
-            console.warn("PNG troppo piccola, skip", m.id, blob.size);
-          } else {
+  const concurrency = 4;
+  let i = 0;
+  async function worker() {
+    while (i < list.length) {
+      const idx = i++;
+      const m = list[idx];
+      const name = m.name || m.id || "";
+      try {
+        const key = absUrl(m.image);
+        const have = force ? null : await getRecord(key);
+        if (!have?.blob || have.blob.size < 2000) {
+          if (force) {
             try {
-              await putRecord(key, blob);
-            } catch (err) {
-              console.warn("Quota IndexedDB:", err);
+              await deleteLocalImage(m.image);
+            } catch (_) {
+              /* ignore */
             }
           }
+          const blob = await fetchMapBlob(m.image);
+          try {
+            await putRecord(key, blob);
+          } catch (err) {
+            console.warn("Quota IndexedDB:", err);
+          }
         }
+      } catch (err) {
+        console.warn("warm map fail", m.id, err);
       }
-    } catch (err) {
-      console.warn("warm map fail", m.id, err);
+      done += 1;
+      if (onProgress) onProgress(done, total, name);
     }
-    done += 1;
-    if (onProgress) onProgress(done, total, name);
   }
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, list.length) }, () => worker())
+  );
   return { done, total };
 }
 

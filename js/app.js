@@ -10,16 +10,16 @@ import {
   pullMapsFromCloud,
   syncAllWithCloud,
   pushLocalChangesToCloud,
-} from "./db.js?v=1.8.4";
-import { MapViewer } from "./viewer.js?v=1.8.4";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.4";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.4";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.4";
+} from "./db.js?v=1.8.5";
+import { MapViewer } from "./viewer.js?v=1.8.5";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.5";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.5";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.5";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.4";
+} from "./image-cache.js?v=1.8.5";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -684,6 +684,13 @@ async function boot() {
   setStatus("Avvio Tag Impianto…");
   renderPlantNav(els.plantNav, {
     onSelect: (page) => {
+      // Non aprire la tastiera quando si cambia pagina dal menu
+      try {
+        els.searchInput.blur();
+      } catch (_) {
+        /* ignore */
+      }
+      closeSuggestions();
       if (page?.mapId) selectMap(page.mapId);
     },
   });
@@ -742,8 +749,41 @@ async function boot() {
   // Prima mappa subito usabile; in background scarica TUTTE le PNG in IndexedDB
   if (currentMap) preloadNearby(currentMap.id);
   syncImagesLocal().catch((err) => console.warn(err));
-  els.searchInput.focus();
+
+  // Mai autofocus ricerca su telefono/tablet (apre la tastiera a caso)
+  const coarse = window.matchMedia("(pointer: coarse)").matches;
+  if (!coarse) {
+    try {
+      els.searchInput.focus({ preventScroll: true });
+    } catch (_) {
+      /* ignore */
+    }
+  }
 }
+
+// Tocco sul menu / mappa: chiudi tastiera. Solo tap sulla barra ricerca la apre.
+els.plantNav?.addEventListener(
+  "pointerdown",
+  () => {
+    try {
+      els.searchInput.blur();
+    } catch (_) {
+      /* ignore */
+    }
+  },
+  { passive: true }
+);
+els.viewport?.addEventListener(
+  "pointerdown",
+  () => {
+    try {
+      els.searchInput.blur();
+    } catch (_) {
+      /* ignore */
+    }
+  },
+  { passive: true }
+);
 
 boot().catch((err) => {
   console.error(err);
