@@ -22,7 +22,7 @@ MANUAL = {
     "IMG_5980.jpg": ("ultrafiltrazione-a", "Ultrafiltrazione A"),
     "IMG_5981.jpg": ("ultrafiltrazione-b", "Ultrafiltrazione B"),
     "IMG_5982.jpg": ("ultrafiltrazione-c", "Ultrafiltrazione C"),
-    "IMG_5983.jpg": ("ultrafiltrazione", "Ultrafiltrazione"),
+    "IMG_5983.jpg": ("ultrafiltrazione", "Ultrafiltrazione D"),
     "IMG_5984.jpg": ("osmosi-1a", "Osmosi 1° passo A"),
     "IMG_5985.jpg": ("osmosi-1b", "Osmosi 1° passo B"),
     "IMG_5986.jpg": ("osmosi-1c", "Osmosi 1° passo C"),

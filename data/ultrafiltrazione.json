@@ -1,6 +1,6 @@
 {
   "id": "ultrafiltrazione",
-  "name": "Ultrafiltrazione",
+  "name": "Ultrafiltrazione D",
   "image": "assets/maps/ultrafiltrazione.png",
   "width": 3468,
   "height": 1862,
@@ -329,5 +329,5 @@
       "source": "ocr"
     }
   ],
-  "seedRev": 4
+  "seedRev": 5
 }
