@@ -1,3 +1,3 @@
 /** Bump a ogni release online (visibile in app). */
-export const APP_VERSION = "1.8.5";
-export const APP_BUILD = "2026-11-05bb";
+export const APP_VERSION = "1.8.6";
+export const APP_BUILD = "2026-11-05cc";
