@@ -1,7 +1,7 @@
 {
   "id": "biologico-mbbr-123",
   "name": "Biologico MBBR 1 2 3",
-  "image": "assets/maps/biologico-mbbr-123.png?v=14-h362-hq",
+  "image": "assets/maps/biologico-mbbr-123.png?v=15-h362-hq",
   "width": 834,
   "height": 362,
   "notes": "PNG HQ ritagliata (no chrome). Usa Riposiziona per affinare i box.",
@@ -401,17 +401,6 @@
       "source": "catalog"
     },
     {
-      "id": "XV110",
-      "label": "XV110",
-      "kind": "valvola",
-      "x": 0.5870939611946806,
-      "y": 0.06604721245605223,
-      "w": 0.05384783082624809,
-      "h": 0.05374183827222501,
-      "confidence": 47.0,
-      "source": "ocr"
-    },
-    {
       "id": "XV11030",
       "label": "XV11030",
       "kind": "valvola",
@@ -476,6 +465,6 @@
     }
   ],
   "cropLeft": 670,
-  "seedRev": 14,
+  "seedRev": 15,
   "cropTop": 226
 }
