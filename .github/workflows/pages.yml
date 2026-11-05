@@ -11,9 +11,10 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
-  # Non cancellare deploy in corso: push ravvicinati lasciavano Pages fermo su versione vecchia
-  cancel-in-progress: false
+  # Un gruppo per repo: evita che un deploy "waiting" su tagimpianto-app blocchi tutto
+  group: pages-${{ github.repository }}
+  # Cancella run in coda/attesa così un nuovo push sblocca Pages fermo su versione vecchia
+  cancel-in-progress: true
 
 jobs:
   deploy:
