@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.6.9";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.7.0";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -342,10 +342,90 @@ export function normalizeSearchKey(s) {
     .replace(/[^A-Z0-9]/g, "");
 }
 
+/** Etichette tipo tag (anche per ricerca semantica). */
+const KIND_WORDS = {
+  pompa: ["pompa", "pompe", "pump"],
+  valvola: ["valvola", "valvole", "valve"],
+  serbatoio: ["serbatoio", "serbatoi", "tank", "vasca", "vasche"],
+  apparecchio: ["apparecchio", "apparecchi"],
+  filtro: ["filtro", "filtri", "filter", "filtrazione"],
+  strumento: ["strumento", "strumenti", "misura"],
+  mixer: ["mixer", "mescolatore", "agitatore"],
+  compressor: ["compressore", "compressori", "compressor"],
+  altro: ["altro"],
+};
+
+/** Sinonimi / espansioni query → chiavi normalizzate. */
+const QUERY_SYNONYMS = {
+  FILTRI: ["FILTRO", "FILTRAZIONE", "FILTER"],
+  FILTRO: ["FILTRI", "FILTRAZIONE", "FILTER"],
+  FILTRAZIONE: ["FILTRO", "FILTRI"],
+  POMPE: ["POMPA", "PUMP"],
+  POMPA: ["POMPE", "PUMP"],
+  VALVOLE: ["VALVOLA", "VALVE", "XV"],
+  VALVOLA: ["VALVOLE", "VALVE"],
+  SERBATOI: ["SERBATOIO", "TANK", "VASCA"],
+  SERBATOIO: ["SERBATOI", "TANK", "VASCA"],
+  VASCHE: ["VASCA", "SERBATOIO"],
+  VASCA: ["VASCHE", "SERBATOIO"],
+};
+
+/**
+ * Radice “soft” IT: filtri/filtro → FILTR, pompe/pompa → POMP.
+ * Serve a match semantici senza dizionario completo.
+ */
+export function stemSearchKey(s) {
+  let w = normalizeSearchKey(s);
+  if (w.length < 4) return w;
+  if (w.endsWith("ZIONE") || w.endsWith("ZIONI")) {
+    w = w.replace(/ZIONI?$/, "");
+  } else if (w.endsWith("MENTI") || w.endsWith("MENTO")) {
+    w = w.replace(/MENT[IO]$/, "");
+  } else if (w.endsWith("AGGI") || w.endsWith("AGGIO")) {
+    w = w.replace(/AGGI?O?$/, "AGG");
+  } else if (w.endsWith("IONI")) {
+    w = w.slice(0, -1); // AZIONI → AZIONE-ish: drop I
+  } else if (w.endsWith("HE") && w.length > 4) {
+    w = w.slice(0, -1); // vecchie → vecch
+  } else if (w.endsWith("I") && w.length > 4 && !/(AI|OI|UI)$/.test(w)) {
+    w = w.slice(0, -1); // FILTRI → FILTR
+  } else if (w.endsWith("E") && w.length > 4) {
+    w = w.slice(0, -1); // POMPE → POMP, VALVOLE → VALVOL
+  } else if (/(A|O)$/.test(w) && w.length > 4) {
+    w = w.slice(0, -1); // FILTRO → FILTR, POMPA → POMP
+  }
+  return w.length >= 3 ? w : normalizeSearchKey(s);
+}
+
+function expandQueryKeys(qRaw) {
+  const base = normalizeSearchKey(qRaw);
+  const keys = new Set();
+  if (!base) return [];
+  keys.add(base);
+  keys.add(stemSearchKey(base));
+  for (const syn of QUERY_SYNONYMS[base] || []) {
+    keys.add(normalizeSearchKey(syn));
+    keys.add(stemSearchKey(syn));
+  }
+  // parole separate: "filtri carboni" → FILTRI, CARBONI, …
+  for (const part of String(qRaw).split(/[\s,;./\\|+\-—–]+/)) {
+    const p = normalizeSearchKey(part);
+    if (p.length < 3) continue;
+    keys.add(p);
+    keys.add(stemSearchKey(p));
+    for (const syn of QUERY_SYNONYMS[p] || []) {
+      keys.add(normalizeSearchKey(syn));
+      keys.add(stemSearchKey(syn));
+    }
+  }
+  return [...keys].filter(Boolean);
+}
+
 function tagSearchKeys(tag) {
   const id = String(tag.id || "");
   const label = String(tag.label || "");
   const note = String(tag.note || "").trim();
+  const kind = String(tag.kind || "").trim();
   const keys = new Set();
   keys.add(normalizeSearchKey(id));
   keys.add(normalizeSearchKey(label));
@@ -354,10 +434,26 @@ function tagSearchKeys(tag) {
   // Nota: tutta la dicitura + singole parole (≥3) per ritrovare dalla descrizione
   if (note) {
     keys.add(normalizeSearchKey(note));
-    for (const word of note.split(/[\s,;./\\|+]+/)) {
-      if (word.length >= 3) keys.add(normalizeSearchKey(word));
+    for (const word of note.split(/[\s,;./\\|+\-—–]+/)) {
+      if (word.length >= 3) {
+        const k = normalizeSearchKey(word);
+        keys.add(k);
+        keys.add(stemSearchKey(k));
+      }
     }
   }
+  // Tipo / kind + sinonimi (filtro ↔ filtri)
+  if (kind) {
+    keys.add(normalizeSearchKey(kind));
+    keys.add(stemSearchKey(kind));
+    for (const w of KIND_WORDS[kind] || []) {
+      keys.add(normalizeSearchKey(w));
+      keys.add(stemSearchKey(w));
+    }
+  }
+  // Stem anche di id/label per near semantic
+  keys.add(stemSearchKey(id));
+  keys.add(stemSearchKey(label));
   return [...keys].filter(Boolean);
 }
 
@@ -386,6 +482,30 @@ function scoreAgainstKey(q, key) {
   if (key === q) {
     return { score: 100, tier: "exact", reason: "Corrispondenza esatta" };
   }
+
+  // Semantica leggera: stessa radice (filtri ↔ filtro, pompe ↔ pompa)
+  const qs = stemSearchKey(q);
+  const ks = stemSearchKey(key);
+  if (qs.length >= 3 && ks.length >= 3) {
+    if (qs === ks) {
+      return {
+        score: 94,
+        tier: "exact",
+        reason: "Stesso significato (singolare/plurale o radice)",
+      };
+    }
+    if (qs.startsWith(ks) || ks.startsWith(qs)) {
+      const diff = Math.abs(qs.length - ks.length);
+      if (diff <= 3) {
+        return {
+          score: 90 - diff,
+          tier: "exact",
+          reason: "Radice simile (ricerca semantica)",
+        };
+      }
+    }
+  }
+
   if (key.startsWith(q)) {
     return {
       score: 92 - Math.min(10, key.length - q.length),
@@ -432,7 +552,7 @@ function scoreAgainstKey(q, key) {
   }
   if (q.length >= 5 && sim >= 0.75) {
     return {
-      score: Math.round(55 + sim * 20),
+      score: 55 + Math.round(sim * 20),
       tier: "near",
       reason: "Possibile corrispondenza per somiglianza",
     };
@@ -459,31 +579,33 @@ function scoreAgainstKey(q, key) {
   return null;
 }
 
-function bestScoreForTag(q, keys) {
+function bestScoreForTag(queryKeys, tagKeys) {
   let best = null;
-  for (const key of keys) {
-    const s = scoreAgainstKey(q, key);
-    if (!s) continue;
-    if (!best || s.score > best.score) best = { ...s, key };
+  for (const q of queryKeys) {
+    for (const key of tagKeys) {
+      const s = scoreAgainstKey(q, key);
+      if (!s) continue;
+      if (!best || s.score > best.score) best = { ...s, key, q };
+    }
   }
   return best;
 }
 
 /**
- * Ricerca intelligente: match normalizzati + proposte vicine con motivo.
+ * Ricerca semantica leggera: radici IT, sinonimi, tipo tag, proposte vicine.
  * @returns {Promise<Array<{mapId,mapName,tag,match:{score,tier,reason}}>>}
  */
 export async function searchAllTags(query) {
   const qRaw = String(query || "").trim();
-  const q = normalizeSearchKey(qRaw);
-  if (!q || q.length < 2) return [];
+  const queryKeys = expandQueryKeys(qRaw);
+  if (!queryKeys.length || queryKeys.every((k) => k.length < 2)) return [];
 
   const maps = await listMaps();
   const hits = [];
   for (const map of maps) {
     for (const tag of map.tags || []) {
       const keys = tagSearchKeys(tag);
-      const match = bestScoreForTag(q, keys);
+      const match = bestScoreForTag(queryKeys, keys);
       if (!match || match.score < 55) continue;
       hits.push({
         mapId: map.id,
