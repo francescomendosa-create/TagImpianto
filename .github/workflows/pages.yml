@@ -17,6 +17,9 @@ concurrency:
 
 jobs:
   deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,16 +43,16 @@ jobs:
           echo "SITE_BYTES=$(du -sb _site | cut -f1)"
           du -sh _site
 
-      - name: Chiudi deploy Actions bloccati + passa a branch gh-pages
+      - name: Chiudi deploy Pages bloccati
         uses: actions/github-script@v7
         with:
           script: |
             const { owner, repo } = context.repo;
-            // 1) Chiudi deployment environment "github-pages" rimasti appesi
             const deps = await github.rest.repos.listDeployments({
-              owner, repo, environment: 'github-pages', per_page: 30
+              owner, repo, environment: 'github-pages', per_page: 40
             });
             for (const d of deps.data) {
+              if (d.sha === context.sha) continue;
               for (const state of ['inactive', 'failure']) {
                 try {
                   await github.rest.repos.createDeploymentStatus({
@@ -60,44 +63,43 @@ jobs:
                     environment: 'github-pages',
                     auto_inactive: true
                   });
-                } catch (_) { /* già chiuso */ }
+                } catch (_) {}
               }
               try {
                 await github.request(
                   'POST /repos/{owner}/{repo}/pages/deployments/{deploymentId}/cancel',
                   { owner, repo, deploymentId: d.sha }
                 );
-                core.info(`cancel pages deploy ${d.sha.slice(0,7)}`);
+                core.info(`cancel ${d.sha.slice(0,7)}`);
               } catch (e) {
                 core.info(`cancel ${d.sha.slice(0,7)}: ${e.message}`);
               }
             }
-            // 2) Pubblica da branch gh-pages (evita deploy-pages stuck in deployment_queued)
-            try {
-              await github.request('PUT /repos/{owner}/{repo}/pages', {
-                owner, repo,
-                build_type: 'legacy',
-                source: { branch: 'gh-pages', path: '/' }
-              });
-              core.info('Pages source -> gh-pages branch');
-            } catch (e) {
-              try {
-                await github.rest.repos.updateInformationAboutPagesSite({
-                  owner, repo,
-                  build_type: 'legacy',
-                  source: { branch: 'gh-pages', path: '/' }
-                });
-                core.info('Pages source updated via rest');
-              } catch (e2) {
-                core.warning(`Pages source: ${e2.message}`);
-              }
-            }
 
-      - name: Pubblica su branch gh-pages
+      - name: Mirror su branch gh-pages (backup)
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./_site
           publish_branch: gh-pages
           force_orphan: true
-          commit_message: 'deploy ${{ github.sha }}'
+          commit_message: 'mirror ${{ github.sha }}'
+
+      - name: Pausa rilascio lock
+        run: sleep 20
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy (con retry)
+        id: deployment
+        uses: Wandalen/wretry.action@v3.8.0
+        with:
+          action: actions/deploy-pages@v4
+          attempt_limit: 4
+          attempt_delay: 45000
