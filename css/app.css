@@ -136,6 +136,12 @@ body.has-update-banner #app {
   display: flex;
   gap: 8px;
   margin-left: auto;
+  flex-wrap: nowrap;
+  max-width: min(58vw, 520px);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  padding-bottom: 2px;
 }
 
 .btn {
@@ -453,15 +459,10 @@ body.has-update-banner #app {
   transform: translateZ(0);
 }
 
-.cloud-badge {
-  left: auto !important;
-  right: 12px;
-  bottom: 12px;
-}
-
 @media (max-width: 720px) {
   :root { --plant-nav-w: 132px; }
   .plant-nav-item { font-size: 0.6rem; padding: 6px 5px; }
+  .top-actions { max-width: 52vw; }
 }
 .viewport.panning { cursor: grabbing; }
 .viewport.annotate { cursor: grab; }
@@ -537,22 +538,76 @@ body.has-update-banner #app {
   50% { box-shadow: 0 0 0 3px rgba(253,224,71,0.9), 0 0 36px rgba(253,224,71,0.85); }
 }
 
-.status {
+/* Barra info in basso sulla mappa: resta DENTRO lo stage (niente fuori schermo) */
+.bottom-chrome {
   position: absolute;
-  left: 12px;
-  bottom: 12px;
+  left: 8px;
+  right: 8px;
+  bottom: max(8px, env(safe-area-inset-bottom, 0px));
   z-index: 5;
-  background: rgba(15,20,25,0.88);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  max-width: 100%;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.status,
+.cloud-badge {
+  pointer-events: auto;
+  position: static;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  background: rgba(15, 20, 25, 0.92);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 0.8rem;
+  padding: 7px 10px;
+  font-size: 0.78rem;
   color: var(--muted);
-  max-width: min(92vw, 420px);
+  max-width: 100%;
+  width: fit-content;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.35;
 }
+
+.status {
+  max-width: 100%;
+}
+
+.cloud-badge {
+  align-self: flex-end;
+  font-size: 0.72rem;
+  padding: 5px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
 .status strong { color: var(--text); font-family: var(--mono); }
-.status .ok { color: var(--accent); }
-.status .warn { color: var(--warn); }
+.status .ok,
+.cloud-badge .ok { color: var(--accent); }
+.status .warn,
+.cloud-badge .warn { color: var(--warn); }
+
+@media (orientation: landscape) and (max-height: 480px) {
+  .bottom-chrome {
+    left: 6px;
+    right: 6px;
+    bottom: max(4px, env(safe-area-inset-bottom, 0px));
+    gap: 4px;
+  }
+  .status,
+  .cloud-badge {
+    font-size: 0.7rem;
+    padding: 4px 8px;
+  }
+}
 
 .drawer {
   position: absolute;

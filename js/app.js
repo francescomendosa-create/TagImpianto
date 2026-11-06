@@ -9,17 +9,17 @@ import {
   saveMap,
   searchAllTags,
   syncAllWithCloud,
-} from "./db.js?v=1.8.24";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.24";
-import { MapViewer } from "./viewer.js?v=1.8.24";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.24";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.24";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.24";
+} from "./db.js?v=1.8.25";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.25";
+import { MapViewer } from "./viewer.js?v=1.8.25";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.25";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.25";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.25";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.24";
+} from "./image-cache.js?v=1.8.25";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -299,9 +299,11 @@ function preloadNearby(mapId) {
 }
 
 function setMapsLocalBadge(n) {
+  if (!els.cloudBadge) return;
   const cloud = isCloudReady() ? `<span class="ok">Cloud</span> · ` : "";
   els.cloudBadge.innerHTML =
-    `${cloud}<span class="ok" title="PNG salvate su questo dispositivo">Mappe in locale (${n})</span>`;
+    `${cloud}<span class="ok" title="PNG salvate su questo dispositivo">Locale ${n}</span>`;
+  els.cloudBadge.title = `Mappe PNG salvate sul dispositivo: ${n}`;
 }
 
 async function syncImagesLocal({ force = false } = {}) {
@@ -827,7 +829,11 @@ els.btnSync.addEventListener("click", async () => {
     if (currentMap) await selectMap(currentMap.id, { keepHighlight: true, keepView: true });
     const imgs = await countLocalImages();
     toast(`Sync ok: ${n} mappe cloud · ${imgs} PNG sul dispositivo`);
-    els.cloudBadge.innerHTML = `<span class="ok">Cloud sync</span> · <span class="ok">Mappe in locale (${imgs})</span>`;
+    setMapsLocalBadge(imgs);
+    if (isCloudReady()) {
+      els.cloudBadge.innerHTML =
+        `<span class="ok">Cloud</span> · <span class="ok">Locale ${imgs}</span>`;
+    }
     setStatus(`Sync completata · cloud ${n} · PNG locali ${imgs}`);
   } catch (err) {
     const msg = String(err?.message || err || "errore");
