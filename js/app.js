@@ -9,17 +9,17 @@ import {
   saveMap,
   searchAllTags,
   syncAllWithCloud,
-} from "./db.js?v=1.8.34";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.34";
-import { MapViewer } from "./viewer.js?v=1.8.34";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.34";
-import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.34";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.34";
+} from "./db.js?v=1.8.35";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.35";
+import { MapViewer } from "./viewer.js?v=1.8.35";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.35";
+import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.35";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.35";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.34";
+} from "./image-cache.js?v=1.8.35";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -80,7 +80,7 @@ viewer.onTagDoubleSelect = (tag) => {
   const note = String(tag.note || "").trim();
   const page = pageLabelForMap(currentMap.id, currentMap.name);
   const pagePart = page ? ` [${page}]` : "";
-  const text = note ? `${sigla} — ${note}${pagePart}` : `${sigla}${pagePart}`;
+  const text = note ? `${sigla} - ${note}${pagePart}` : `${sigla}${pagePart}`;
   closeSuggestions();
   els.searchInput.value = text;
   els.clearBtn.classList.add("visible");
@@ -544,9 +544,8 @@ async function pickHit(hit) {
   const note = String(hit.tag.note || "").trim();
   const page = pageLabelForMap(hit.mapId, hit.mapName);
   const pagePart = page ? ` [${page}]` : "";
-  els.searchInput.value = note ? `${sigla} — ${note}${pagePart}` : `${sigla}${pagePart}`;
+  els.searchInput.value = note ? `${sigla} - ${note}${pagePart}` : `${sigla}${pagePart}`;
   els.clearBtn.classList.add("visible");
-  // Imposta subito lâ€™id cosÃ¬ keepHighlight / overlay non restano vuoti
   activeTagId = hit.tag.id;
   if (!currentMap || currentMap.id !== hit.mapId) {
     // nuova mappa: un solo fit iniziale; sulla stessa mappa non si tocca lo zoom
@@ -557,10 +556,11 @@ async function pickHit(hit) {
   }
   viewer.map = currentMap;
   viewer.highlight(hit.tag.id);
-  const note = hit.tag.note ? ` Â· nota: ${escapeHtml(hit.tag.note)}` : "";
-  const why = hit.match?.reason ? ` Â· ${escapeHtml(hit.match.reason)}` : "";
+  const pageStatus = page ? ` · ${escapeHtml(pagePart)}` : "";
+  const noteStatus = note ? ` · nota: ${escapeHtml(note)}` : "";
+  const why = hit.match?.reason ? ` · ${escapeHtml(hit.match.reason)}` : "";
   setStatus(
-    `Evidenziato <strong>${escapeHtml(hit.tag.label || hit.tag.id)}</strong> in ${escapeHtml(hit.mapName)}${why}${note}`
+    `Evidenziato <strong>${escapeHtml(sigla)}</strong> in ${escapeHtml(page || hit.mapName)}${why}${noteStatus}${pageStatus}`
   );
 }
 
