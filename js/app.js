@@ -9,17 +9,17 @@ import {
   saveMap,
   searchAllTags,
   syncAllWithCloud,
-} from "./db.js?v=1.8.36";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.36";
-import { MapViewer } from "./viewer.js?v=1.8.36";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.36";
-import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.36";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.36";
+} from "./db.js?v=1.8.37";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.37";
+import { MapViewer } from "./viewer.js?v=1.8.37";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.37";
+import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.37";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.37";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.36";
+} from "./image-cache.js?v=1.8.37";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -672,15 +672,36 @@ els.searchInput.addEventListener("input", async () => {
   await runSearch(q);
 });
 
+/** Snapshot tipo al tocco: se riscelgo lo stesso con lista aperta → chiudi popup. */
+let searchKindSnapshot = "tutti";
+els.searchKind?.addEventListener("pointerdown", () => {
+  searchKindSnapshot = currentSearchKind();
+});
 els.searchKind?.addEventListener("change", async () => {
-  const q = els.searchInput.value;
-  if (!q.trim() && currentSearchKind() === "tutti") {
+  const q = String(els.searchInput.value || "");
+  const kind = currentSearchKind();
+  const sugOpen = els.suggestions.classList.contains("open");
+  // Stesso tipo di nuovo (lista già aperta) → solo chiudi, niente messaggio sotto
+  if (kind === searchKindSnapshot && sugOpen) {
+    closeSuggestions();
+    return;
+  }
+  if (!q.trim() && kind === "tutti") {
     closeSuggestions();
     viewer.highlight(null);
-    setStatus("Ricerca: tutti i tipi");
     return;
   }
   await runSearch(q);
+});
+// Stesso valore: molti browser non emettono "change" → chiudi al blur
+els.searchKind?.addEventListener("blur", () => {
+  if (
+    !String(els.searchInput.value || "").trim() &&
+    currentSearchKind() === searchKindSnapshot &&
+    els.suggestions.classList.contains("open")
+  ) {
+    closeSuggestions();
+  }
 });
 
 // Suggerimenti: tap -> vai subito al tag; scroll -> chiudi solo la tastiera

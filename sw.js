@@ -1,6 +1,6 @@
-/* Shell leggera: HTML/JS/CSS sempre da rete se online. Niente precache che blocca gli aggiornamenti. */
-const CACHE = "tag-impianto-shell-v72";
-const MAP_CACHE = "tag-impianto-maps-v72";
+﻿/* Shell leggera: HTML/JS/CSS sempre da rete se online. Niente precache che blocca gli aggiornamenti. */
+const CACHE = "tag-impianto-shell-v73";
+const MAP_CACHE = "tag-impianto-maps-v73";
 
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
@@ -9,7 +9,7 @@ self.addEventListener("message", (event) => {
 });
 
 self.addEventListener("install", (event) => {
-  // Non precache-are l’app: altrimenti resti bloccato su JS/HTML vecchi
+  // Non precache-are lâ€™app: altrimenti resti bloccato su JS/HTML vecchi
   event.waitUntil(self.skipWaiting());
 });
 
