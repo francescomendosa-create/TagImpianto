@@ -659,18 +659,29 @@ body.has-update-banner #app {
 .toast {
   position: fixed;
   left: 50%;
-  bottom: 24px;
-  transform: translateX(-50%) translateY(120%);
+  bottom: max(16px, env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%) translateY(calc(100% + 48px));
   background: var(--panel-2);
   border: 1px solid var(--border);
   color: var(--text);
   padding: 10px 16px;
   border-radius: 999px;
   z-index: 50;
-  transition: transform 0.25s ease;
+  transition: transform 0.25s ease, opacity 0.2s ease, visibility 0.2s;
   font-size: 0.9rem;
+  max-width: min(92vw, 420px);
+  text-align: center;
+  /* Nascosto: niente “pallino” che spunta dal bordo basso */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
-.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
 
 @media (max-width: 640px) {
   .brand { font-size: 0.92rem; }
