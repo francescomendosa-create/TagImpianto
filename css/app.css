@@ -74,23 +74,28 @@ body.has-update-banner #app {
 .topbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 14px;
+  gap: 8px;
+  padding: 0 10px;
   background: linear-gradient(180deg, #15202b, #0f1419);
   border-bottom: 1px solid var(--border);
+  min-width: 0;
 }
 
 .brand {
+  flex: 0 1 auto;
+  min-width: 0;
   font-weight: 700;
   letter-spacing: 0.04em;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .brand span { color: var(--accent); }
 .app-version {
-  margin-left: 8px;
+  margin-left: 6px;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   letter-spacing: 0.02em;
   color: var(--accent);
   font-family: var(--mono);
@@ -121,9 +126,10 @@ body.has-update-banner #app {
   border: 0;
 }
 .map-title {
-  flex: 1;
+  flex: 1 1 0;
   min-width: 0;
-  font-size: 0.95rem;
+  max-width: 28vw;
+  font-size: 0.85rem;
   font-weight: 650;
   color: var(--text);
   white-space: nowrap;
@@ -134,14 +140,13 @@ body.has-update-banner #app {
 
 .top-actions {
   display: flex;
-  gap: 8px;
-  margin-left: auto;
+  flex: 0 0 auto;
   flex-wrap: nowrap;
-  max-width: min(58vw, 520px);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  padding-bottom: 2px;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  overflow: visible;
+  max-width: none;
 }
 
 .btn {
@@ -150,10 +155,11 @@ body.has-update-banner #app {
   background: var(--panel);
   color: var(--text);
   border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 0.85rem;
+  padding: 7px 9px;
+  font-size: 0.78rem;
   cursor: pointer;
   white-space: nowrap;
+  flex: 0 0 auto;
 }
 .btn:hover { background: var(--panel-2); }
 .btn.active {
@@ -462,7 +468,9 @@ body.has-update-banner #app {
 @media (max-width: 720px) {
   :root { --plant-nav-w: 132px; }
   .plant-nav-item { font-size: 0.6rem; padding: 6px 5px; }
-  .top-actions { max-width: 52vw; }
+  .map-title { max-width: 18vw; font-size: 0.78rem; }
+  .top-actions { gap: 4px; }
+  .btn { padding: 6px 7px; font-size: 0.72rem; }
 }
 .viewport.panning { cursor: grabbing; }
 .viewport.annotate { cursor: grab; }
@@ -699,7 +707,8 @@ body.has-update-banner #app {
 }
 
 @media (max-width: 640px) {
-  .brand { font-size: 0.92rem; }
-  .btn { padding: 8px 10px; }
+  .brand { font-size: 0.82rem; }
+  .app-version { font-size: 0.7rem; margin-left: 4px; }
   .map-select { max-width: none; }
+  .map-title { display: none; }
 }

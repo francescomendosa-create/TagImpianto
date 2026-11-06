@@ -9,17 +9,17 @@ import {
   saveMap,
   searchAllTags,
   syncAllWithCloud,
-} from "./db.js?v=1.8.28";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.28";
-import { MapViewer } from "./viewer.js?v=1.8.28";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.28";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.28";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.28";
+} from "./db.js?v=1.8.29";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.29";
+import { MapViewer } from "./viewer.js?v=1.8.29";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.29";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.29";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.29";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.28";
+} from "./image-cache.js?v=1.8.29";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -38,7 +38,6 @@ const els = {
   btnAnnotate: $("#btnAnnotate"),
   btnAddTag: $("#btnAddTag"),
   btnOcr: $("#btnOcr"),
-  btnFit: $("#btnFit"),
   btnRefresh: $("#btnRefresh"),
   btnSync: $("#btnSync"),
   btnNotes: $("#btnNotes"),
@@ -746,8 +745,6 @@ els.clearBtn.addEventListener("click", () => {
   }
   els.searchInput.focus();
 });
-
-els.btnFit.addEventListener("click", () => viewer.fit());
 
 els.btnRefresh?.addEventListener("click", async () => {
   els.btnRefresh.disabled = true;
