@@ -9,17 +9,17 @@ import {
   saveMap,
   searchAllTags,
   syncAllWithCloud,
-} from "./db.js?v=1.8.27";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.27";
-import { MapViewer } from "./viewer.js?v=1.8.27";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.27";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.27";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.27";
+} from "./db.js?v=1.8.28";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.28";
+import { MapViewer } from "./viewer.js?v=1.8.28";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.28";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.28";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.28";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.27";
+} from "./image-cache.js?v=1.8.28";
 
 const $ = (sel) => document.querySelector(sel);
 

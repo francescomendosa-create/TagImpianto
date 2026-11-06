@@ -11,10 +11,9 @@ permissions:
   id-token: write
 
 concurrency:
-  # Un gruppo per repo: evita che un deploy "waiting" su tagimpianto-app blocchi tutto
   group: pages-${{ github.repository }}
-  # Cancella run in coda/attesa così un nuovo push sblocca Pages fermo su versione vecchia
-  cancel-in-progress: true
+  # false: non spezzare un deploy a metà (lasciava il sito a 404)
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -24,12 +23,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Prepara sito (solo file utili)
+        run: |
+          set -euo pipefail
+          rm -rf _site
+          mkdir -p _site
+          # Copia l’app senza cartelle di lavoro / script / git
+          for item in index.html aggiorna.html manifest.webmanifest sw.js deploy-stamp.txt \
+                      css js data icons assets .nojekyll; do
+            if [ -e "$item" ]; then
+              cp -a "$item" "_site/"
+            fi
+          done
+          # Escludi originali HQ e probe (se presenti per sbaglio)
+          rm -rf _site/assets/maps/full-hq _site/assets/maps/full \
+                 _site/assets/maps/_crops _site/assets/maps/_bio_crop_probe \
+                 _site/assets/maps/_upscale _site/assets/maps/_verify_up \
+                 _site/assets/maps/_crops 2>/dev/null || true
+          find _site -type f -name '_*' -delete 2>/dev/null || true
+          # sanity
+          test -f _site/index.html
+          test -f _site/js/app.js
+          test -f _site/js/version.js
+          test -f _site/data/manifest.json
+          echo "SITE_BYTES=$(du -sb _site | cut -f1)"
+          ls -la _site
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
+
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
