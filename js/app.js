@@ -9,17 +9,17 @@ import {
   saveMap,
   searchAllTags,
   syncAllWithCloud,
-} from "./db.js?v=1.8.31";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.31";
-import { MapViewer } from "./viewer.js?v=1.8.31";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.31";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.31";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.31";
+} from "./db.js?v=1.8.32";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.32";
+import { MapViewer } from "./viewer.js?v=1.8.32";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.32";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.32";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.32";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.31";
+} from "./image-cache.js?v=1.8.32";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -195,8 +195,9 @@ async function applyAppUpdate({ wipeImages = false } = {}) {
   setStatus("Aggiornamento: pulizia cache…");
   toast("Aggiorno senza reinstallare…");
   try {
+    // Solo catalogo seed al prossimo avvio — NON scaricare tutte le PNG
     localStorage.setItem("ti-force-seed", "1");
-    localStorage.setItem("ti-force-images", "1");
+    localStorage.removeItem("ti-force-images");
   } catch (_) {
     /* ignore */
   }
@@ -352,34 +353,27 @@ function setMapsLocalBadge(n) {
 }
 
 async function syncImagesLocal({ force = false } = {}) {
+  // Solo su richiesta esplicita: niente download di massa automatico
   const total = maps.filter((m) => m?.image).length;
-  const syncKey = `ti-img-sync-${APP_VERSION}`;
-  let needForce = force;
-  try {
-    if (!needForce && !localStorage.getItem(syncKey)) needForce = true;
-  } catch (_) {
-    needForce = true;
+  if (!force) {
+    try {
+      setMapsLocalBadge(await countLocalImages());
+    } catch (_) {
+      /* ignore */
+    }
+    return { done: 0, total };
   }
-  setStatus(
-    needForce
-      ? `Aggiorno le mappe sul dispositivo… 0/${total}`
-      : `Salvo le mappe sul dispositivo… 0/${total}`
-  );
+  setStatus(`Aggiorno le mappe sul dispositivo… 0/${total}`);
   await warmAllMapImages(
     maps,
     (done, tot, name) => {
       setStatus(
-        `${needForce ? "Aggiorno" : "Salvo"} le mappe… <strong>${done}/${tot}</strong>` +
+        `Aggiorno le mappe… <strong>${done}/${tot}</strong>` +
           (name ? ` · ${escapeHtml(name)}` : "")
       );
     },
-    { force: needForce }
+    { force: true }
   );
-  try {
-    localStorage.setItem(syncKey, "1");
-  } catch (_) {
-    /* ignore */
-  }
   // Pulisci anche cache SW delle mappe vecchie
   try {
     if ("caches" in window) {
@@ -961,28 +955,26 @@ els.btnSync.addEventListener("click", async () => {
       els.cloudBadge.innerHTML = `<span class="warn">Cloud errore</span>`;
       return;
     }
-    // 1) Note/posizioni tra dispositivi
+    // Solo note/posizioni su Firebase — niente download PNG
     setStatus("Sync note/posizioni su Firebase…");
     const n = await syncAllWithCloud();
-    // 2) Catalogo + PNG dal sito (Sync NON scaricava le immagini: ecco perché “non cambiava nulla”)
-    setStatus("Aggiorno catalogo mappe dal sito…");
-    await forceReloadSeeds();
     await refreshMaps();
-    setStatus("Scarico PNG ad alta definizione…");
-    await syncImagesLocal({ force: true });
-    if (currentMap) await selectMap(currentMap.id, { keepHighlight: true, keepView: true });
-    const imgs = await countLocalImages();
-    toast(`Sync ok: ${n} mappe cloud · ${imgs} PNG sul dispositivo`);
-    setMapsLocalBadge(imgs);
-    if (isCloudReady()) {
-      els.cloudBadge.innerHTML =
-        `<span class="ok">Cloud</span> · <span class="ok">Locale ${imgs}</span>`;
+    if (currentMap) {
+      await selectMap(currentMap.id, { keepHighlight: true, keepView: true });
     }
-    setStatus(`Sync completata · cloud ${n} · PNG locali ${imgs}`);
+    const imgs = await countLocalImages().catch(() => 0);
+    setMapsLocalBadge(imgs);
+    toast(`Sync cloud ok (${n} mappe)`);
+    els.cloudBadge.innerHTML = `<span class="ok">Cloud sync</span>`;
+    setStatus(
+      currentMap
+        ? `Sync ok · <strong>${escapeHtml(currentMap.name)}</strong> · ${(currentMap.tags || []).length} tag`
+        : `Sync cloud ok (${n} mappe)`
+    );
   } catch (err) {
     const msg = String(err?.message || err || "errore");
     console.warn("Sync fallita", err);
-    toast(`Sync fallita: ${msg.slice(0, 120)}`);
+    toast(`Sync fallita: ${msg.slice(0, 140)}`);
     setStatus(`Sync fallita: <span class="warn">${escapeHtml(msg)}</span>`);
     els.cloudBadge.innerHTML = `<span class="warn">Sync errore</span>`;
   } finally {
@@ -1084,25 +1076,23 @@ async function boot() {
     }
   }
 
-  // Offline-first: niente download di massa. Dopo Aggiorna riscarica le PNG (revisioni nuove).
+  // Offline-first: le PNG si scaricano solo quando apri una mappa (mai download di massa).
   if (currentMap) preloadNearby(currentMap.id);
-  if (forceSeed || forceImages) {
-    syncImagesLocal({ force: true }).catch((err) => console.warn(err));
-  } else {
-    try {
-      const n = await countLocalImages();
-      setMapsLocalBadge(n);
-      if (currentMap) {
-        setStatus(
-          `Mappa: <strong>${escapeHtml(currentMap.name)}</strong> · ${(currentMap.tags || []).length} tag`
-        );
-      } else {
-        setStatus("Pronto (offline)");
-      }
-    } catch (_) {
-      setMapsLocalBadge(0);
+  try {
+    const n = await countLocalImages();
+    setMapsLocalBadge(n);
+    if (currentMap) {
+      setStatus(
+        `Mappa: <strong>${escapeHtml(currentMap.name)}</strong> · ${(currentMap.tags || []).length} tag`
+      );
+    } else {
+      setStatus(forceSeed ? "Catalogo aggiornato" : "Pronto (offline)");
     }
+  } catch (_) {
+    setMapsLocalBadge(0);
   }
+  // forceImages lasciato solo per debug legacy — non avviare warm di tutte le mappe
+  void forceImages;
 
   // Controlla subito (e poi in background) se online c’è una versione più nuova
   checkForAppUpdate({ silent: true }).catch(() => {});

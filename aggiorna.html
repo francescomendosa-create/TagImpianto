@@ -13,7 +13,7 @@
   </style>
 </head>
 <body>
-  <p>Aggiornamento dell?app <strong>già installata</strong> (non serve reinstallare)?</p>
+  <p>Aggiornamento dell?app <strong>gi? installata</strong> (non serve reinstallare)?</p>
   <p id="msg">Pulizia cache?</p>
   <script>
     (async function () {
@@ -37,7 +37,7 @@
       }
       try {
         try { localStorage.setItem("ti-force-seed", "1"); } catch (e) {}
-        try { localStorage.setItem("ti-force-images", "1"); } catch (e) {}
+        try { localStorage.removeItem("ti-force-images"); } catch (e) {}
         if ("serviceWorker" in navigator) {
           var regs = await navigator.serviceWorker.getRegistrations();
           await Promise.all(regs.map(function (r) { return r.unregister(); }));
@@ -55,7 +55,7 @@
         target = await readVer();
         msg.textContent = "Versione online: v" + target + " (" + (i + 1) + "/24)?";
         if (target !== "?" && target !== first) break;
-        // se già nuova rispetto a ciò che avevamo in query, ok
+        // se gi? nuova rispetto a ci? che avevamo in query, ok
         if (target !== "?" && i >= 1) break;
       }
       msg.textContent = "Ok. Ricarico l?app v" + target + "?";

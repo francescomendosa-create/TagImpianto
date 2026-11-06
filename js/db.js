@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.31";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.32";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -182,7 +182,7 @@ export async function mergeSeedsFromSite() {
         const merged = mergeSeedTags(seed.tags || [], localTags);
         if (seed.image && seed.image !== local.image) {
           try {
-            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.31");
+            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.32");
             await deleteLocalImage(local.image);
             await deleteLocalImage(seed.image);
           } catch (_) {
@@ -243,7 +243,7 @@ export async function mergeSeedsFromSite() {
 
       if (seed.image && local.image !== seed.image) {
         try {
-          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.31");
+          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.32");
           await deleteLocalImage(local.image);
           await deleteLocalImage(seed.image);
         } catch (_) {
@@ -797,22 +797,33 @@ function mergeTagCloudLocal(localTag, cloudTag) {
   return { ...localTag };
 }
 
+/** Firestore rifiuta `undefined` → togli i campi vuoti. */
+function stripUndefined(obj) {
+  if (!obj || typeof obj !== "object") return obj;
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v === undefined) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
 async function pushMapToCloud(map) {
   const { doc, setDoc, collection, writeBatch } = await import(
     "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js"
   );
-  const meta = {
+  const meta = stripUndefined({
     id: map.id,
-    name: map.name,
-    image: map.image,
-    width: map.width,
-    height: map.height,
+    name: map.name || map.id,
+    image: map.image || "",
+    width: Number(map.width) || 0,
+    height: Number(map.height) || 0,
     area: map.area || "",
     notes: map.notes || "",
-    seedRev: map.seedRev || 0,
-    updatedAt: map.updatedAt || Date.now(),
+    seedRev: Number(map.seedRev) || 0,
+    updatedAt: Number(map.updatedAt) || Date.now(),
     tagCount: (map.tags || []).length,
-  };
+  });
   await setDoc(doc(firestore, "tagImpianto_maps", map.id), meta, { merge: true });
 
   const tags = map.tags || [];
@@ -820,6 +831,7 @@ async function pushMapToCloud(map) {
   for (let i = 0; i < tags.length; i += CHUNK) {
     const batch = writeBatch(firestore);
     const slice = tags.slice(i, i + CHUNK);
+    let n = 0;
     for (const tag of slice) {
       // Firestore: id senza "/" e non vuoto
       const id = String(tag.id || "")
@@ -828,12 +840,26 @@ async function pushMapToCloud(map) {
         .slice(0, 700);
       if (!id) continue;
       const ref = doc(collection(firestore, "tagImpianto_maps", map.id, "tags"), id);
-      batch.set(
-        ref,
-        { ...tag, id, updatedAt: tag.updatedAt || map.updatedAt || Date.now() },
-        { merge: true }
-      );
+      const payload = stripUndefined({
+        id,
+        label: tag.label || id,
+        kind: tag.kind || "altro",
+        x: Number(tag.x) || 0,
+        y: Number(tag.y) || 0,
+        w: Number(tag.w) || 0.04,
+        h: Number(tag.h) || 0.05,
+        note: tag.note || "",
+        source: tag.source || "manual",
+        locked: !!tag.locked,
+        confidence: tag.confidence == null ? null : Number(tag.confidence),
+        updatedAt: Number(tag.updatedAt) || Number(map.updatedAt) || Date.now(),
+      });
+      // null su confidence: meglio omettere
+      if (payload.confidence == null) delete payload.confidence;
+      batch.set(ref, payload, { merge: true });
+      n += 1;
     }
+    if (!n) continue;
     try {
       await batch.commit();
     } catch (err) {
@@ -895,11 +921,25 @@ export async function pullMapsFromCloud() {
 /** Carica TUTTE le mappe locali sul cloud (es. dal tablet più aggiornato). */
 export async function pushAllMapsToCloud() {
   if (!cloudReady) throw new Error("Cloud non pronto");
-  const all = await idbGetAll();
+  const all = (await idbGetAll()).filter((m) => m?.id && !String(m.id).startsWith("__"));
+  let ok = 0;
+  const errors = [];
   for (const map of all) {
-    await pushMapToCloud(map);
+    try {
+      await pushMapToCloud(map);
+      ok += 1;
+    } catch (err) {
+      errors.push(`${map.id}: ${err?.message || err}`);
+      console.warn("pushMapToCloud", map.id, err);
+    }
   }
-  return all.length;
+  if (!ok && errors.length) {
+    throw new Error(errors[0]);
+  }
+  if (errors.length) {
+    console.warn("Push cloud parziale:", errors.slice(0, 5).join(" · "));
+  }
+  return ok;
 }
 
 /** Pull + push: allinea note/posizioni tra dispositivi (merge per updatedAt). */
