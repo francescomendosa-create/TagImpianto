@@ -49,7 +49,7 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const deps = await github.rest.repos.listDeployments({
-              owner, repo, environment: 'github-pages', per_page: 20
+              owner, repo, environment: 'github-pages', per_page: 30
             });
             for (const d of deps.data) {
               if (d.sha === context.sha) continue;
@@ -58,15 +58,16 @@ jobs:
                   owner, repo,
                   deployment_id: d.id,
                   state: 'inactive',
-                  description: 'Superseded by newer deploy',
-                  environment: 'github-pages',
-                  environment_url: 'https://francescomendosa-create.github.io/tagimpianto-app/'
+                  description: 'Superseded',
+                  environment: 'github-pages'
                 });
-                core.info(`inactive deployment ${d.id} (${d.sha.slice(0,7)})`);
               } catch (e) {
                 core.warning(`skip ${d.id}: ${e.message}`);
               }
             }
+
+      - name: Pausa breve (rilascio lock Pages)
+        run: sleep 20
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -79,21 +80,3 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
-        continue-on-error: true
-
-      - name: Attesa sblocco
-        if: steps.deployment.outcome == 'failure'
-        run: sleep 60
-
-      - name: Deploy retry
-        id: deployment2
-        if: steps.deployment.outcome == 'failure'
-        uses: actions/deploy-pages@v4
-
-      - name: Esito
-        run: |
-          if [ "${{ steps.deployment.outcome }}" = "success" ] || [ "${{ steps.deployment2.outcome }}" = "success" ]; then
-            echo OK
-          else
-            exit 1
-          fi
