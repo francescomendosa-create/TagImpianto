@@ -1,4 +1,4 @@
-import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.35";
+import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.36";
 
 const MAX_MEM_IMAGES = 10;
 
@@ -15,7 +15,7 @@ export class MapViewer {
     this.map = null;
     this.highlightId = null;
     this.annotate = false;
-    /** ModalitÃ  â€œAggiungiâ€: un dito disegna il riquadro, due dita zoom */
+    /** ModalitÃ  "Aggiungi": un dito disegna il riquadro, due dita zoom */
     this.addMode = false;
     this._viewInitialized = false;
     /** URL logica remota (non blob:) */
@@ -35,7 +35,7 @@ export class MapViewer {
 
     this.onAnnotatePlace = null;
     this.onTagMoved = null;
-    /** Tap/click su un tag esistente â†’ ricerca */
+    /** Tap/click su un tag esistente -> ricerca */
     this.onTagDoubleSelect = null;
     /** @type {null|((rect:{x:number,y:number,w:number,h:number})=>void)} */
     this.onAddRect = null;
@@ -133,7 +133,7 @@ export class MapViewer {
     this.renderOverlay();
   }
 
-  /** Client â†’ pixel immagine */
+  /** Client -> pixel immagine */
   _clientToImagePx(clientX, clientY) {
     const vp = this._viewportPoint(clientX, clientY);
     const iw = this.imageEl.naturalWidth || this.imageEl.width || 1;
@@ -238,7 +238,7 @@ export class MapViewer {
       try {
         await this._setImageSrc(display);
       } catch (_) {
-        // blob revocato / cache rotta â†’ riscarica
+        // blob revocato / cache rotta -> riscarica
         this._resolved.delete(remote);
         const bare = String(remote || "").split("?")[0];
         display = await resolveLocalImageUrl(`${bare}?fresh=${Date.now()}`);
@@ -256,7 +256,7 @@ export class MapViewer {
     this.imageEl.height = h;
     this.overlayEl.style.width = `${w}px`;
     this.overlayEl.style.height = `${h}px`;
-    // Cambio mappa: parte sempre dallâ€™angolo alto-sinistra. keepView solo sulla stessa foto.
+    // Cambio mappa: parte sempre dall'angolo alto-sinistra. keepView solo sulla stessa foto.
     if (keepView && sameImage) {
       this.applyTransform();
     } else {
@@ -299,7 +299,7 @@ export class MapViewer {
     const padL = 2; // attaccata alla colonna sinistra
     const padR = 6;
     const padY = 8;
-    // Stessa regola per tutte: entra tutta in viewport, zoom leggermente piÃ¹ piccolo
+    // Stessa regola per tutte: entra tutta in viewport, zoom leggermente più piccolo
     const fitScale = Math.min((vw - padL - padR) / iw, (vh - padY * 2) / ih);
     this.scale = Math.min(fitScale * 0.98, 4);
     this.tx = padL;
@@ -539,7 +539,7 @@ export class MapViewer {
       }
     }
 
-    // Fine pinch â†’ se resta un ditoâ€¦
+    // Fine pinch -> se resta un dito...
     if (this._pointers.size < 2) {
       this._pinch = null;
       if (this._pointers.size === 1 && !this._dragTag) {
@@ -564,7 +564,7 @@ export class MapViewer {
     }
 
     if (this._pointers.size === 0) {
-      // Un tap/click sul tag (non pan, non Aggiungi) â†’ ricerca
+      // Un tap/click sul tag (non pan, non Aggiungi) -> ricerca
       if (!this.addMode && !wasDrag && !moved && this.onTagDoubleSelect) {
         if (this.findTagAtClient(e.clientX, e.clientY)) {
           this._emitTagDoubleSelect(e.clientX, e.clientY);

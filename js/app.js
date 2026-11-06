@@ -9,17 +9,17 @@ import {
   saveMap,
   searchAllTags,
   syncAllWithCloud,
-} from "./db.js?v=1.8.35";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.35";
-import { MapViewer } from "./viewer.js?v=1.8.35";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.35";
-import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.35";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.35";
+} from "./db.js?v=1.8.36";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.36";
+import { MapViewer } from "./viewer.js?v=1.8.36";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.36";
+import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.36";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.36";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.35";
+} from "./image-cache.js?v=1.8.36";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -69,7 +69,7 @@ const viewer = new MapViewer({
   overlayEl: $("#overlay"),
 });
 
-// Riposiziona: niente nuovi tag al tap â€” solo trascinamento del tag evidenziato
+// Riposiziona: niente nuovi tag al tap - solo trascinamento del tag evidenziato
 viewer.onAnnotatePlace = null;
 
 /** Click/tap sul tag: barra ricerca = sigla (+ nota se c’è) + [pagina], senza suggerimenti. */
@@ -106,7 +106,7 @@ viewer.onTagMoved = async (tagId) => {
     cloudSynced
       ? "Posizione salvata (locale + cloud)"
       : isCloudReady()
-        ? "Posizione locale â€” cloud fallito, riprova Sync"
+        ? "Posizione locale - cloud fallito, riprova Sync"
         : "Posizione salvata solo su questo dispositivo"
   );
 };
@@ -190,14 +190,14 @@ function hideUpdateBanner() {
 }
 
 /**
- * Aggiorna lâ€™app installata SENZA reinstallare:
+ * Aggiorna l'app installata SENZA reinstallare:
  * pulisce SW/cache, aspetta che Pages pubblichi (se in ritardo), ricarica index pulito.
  */
 async function applyAppUpdate({ wipeImages = false } = {}) {
-  setStatus("Aggiornamento: pulizia cacheâ€¦");
-  toast("Aggiorno senza reinstallareâ€¦");
+  setStatus("Aggiornamento: pulizia cache...");
+  toast("Aggiorno senza reinstallare...");
   try {
-    // Solo catalogo seed al prossimo avvio â€” NON scaricare tutte le PNG
+    // Solo catalogo seed al prossimo avvio - NON scaricare tutte le PNG
     localStorage.setItem("ti-force-seed", "1");
     localStorage.removeItem("ti-force-images");
   } catch (_) {
@@ -229,9 +229,9 @@ async function applyAppUpdate({ wipeImages = false } = {}) {
     console.warn("Pulizia cache app:", err);
   }
 
-  // Se online câ€™Ã¨ giÃ  una versione piÃ¹ nuova â†’ ok.
-  // Se Pages sta ancora pubblicando, aspetta fino a ~90s una piÃ¹ nuova della tua.
-  setStatus("Controllo versione onlineâ€¦");
+  // Se online c'è giÃ  una versione più nuova -> ok.
+  // Se Pages sta ancora pubblicando, aspetta fino a ~90s una più nuova della tua.
+  setStatus("Controllo versione online...");
   let live = APP_VERSION;
   try {
     live = (await fetchLiveAppVersion()) || APP_VERSION;
@@ -240,7 +240,7 @@ async function applyAppUpdate({ wipeImages = false } = {}) {
   }
   if (!versionNewer(live, APP_VERSION)) {
     for (let i = 0; i < 18; i++) {
-      setStatus(`Attendo pubblicazione onlineâ€¦ (${i + 1}/18)`);
+      setStatus(`Attendo pubblicazione online... (${i + 1}/18)`);
       await sleep(5000);
       try {
         live = (await fetchLiveAppVersion()) || live;
@@ -251,7 +251,7 @@ async function applyAppUpdate({ wipeImages = false } = {}) {
     }
   }
   liveVersionCache = live || liveVersionCache || APP_VERSION;
-  setStatus(`Carico v${liveVersionCache}â€¦`);
+  setStatus(`Carico v${liveVersionCache}...`);
 
   // Sempre index.html pulito (non restare su URL/cache strani della PWA)
   const base = new URL("./index.html", location.href);
@@ -315,13 +315,13 @@ async function selectMap(id, { keepHighlight = false, keepView = false } = {}) {
   currentMap = map;
   // UI subito (titolo/menu), poi immagine
   syncPlantChrome(map);
-  setStatus(`Mappa: <strong>${escapeHtml(map.name)}</strong> Â· ${(map.tags || []).length} tag`);
+  setStatus(`Mappa: <strong>${escapeHtml(map.name)}</strong> · ${(map.tags || []).length} tag`);
   if (!keepHighlight) {
     activeTagId = null;
     viewer.highlight(null);
   }
   try {
-    // Cambio schermata: sempre riallinea in alto (niente â€œsaltoâ€ tra foto)
+    // Cambio schermata: sempre riallinea in alto (niente "salto" tra foto)
     const stay = keepView && same;
     await viewer.loadMap(map, { keepView: stay });
   } catch (err) {
@@ -348,7 +348,7 @@ function preloadNearby(mapId) {
 
 function setMapsLocalBadge(n) {
   if (!els.cloudBadge) return;
-  const cloud = isCloudReady() ? `<span class="ok">Cloud</span> Â· ` : "";
+  const cloud = isCloudReady() ? `<span class="ok">Cloud</span> · ` : "";
   els.cloudBadge.innerHTML =
     `${cloud}<span class="ok" title="PNG salvate su questo dispositivo">Locale ${n}</span>`;
   els.cloudBadge.title = `Mappe PNG salvate sul dispositivo: ${n}`;
@@ -365,13 +365,13 @@ async function syncImagesLocal({ force = false } = {}) {
     }
     return { done: 0, total };
   }
-  setStatus(`Aggiorno le mappe sul dispositivoâ€¦ 0/${total}`);
+  setStatus(`Aggiorno le mappe sul dispositivo... 0/${total}`);
   await warmAllMapImages(
     maps,
     (done, tot, name) => {
       setStatus(
-        `Aggiorno le mappeâ€¦ <strong>${done}/${tot}</strong>` +
-          (name ? ` Â· ${escapeHtml(name)}` : "")
+        `Aggiorno le mappe... <strong>${done}/${tot}</strong>` +
+          (name ? ` · ${escapeHtml(name)}` : "")
       );
     },
     { force: true }
@@ -391,7 +391,7 @@ async function syncImagesLocal({ force = false } = {}) {
   setMapsLocalBadge(n);
   if (currentMap) {
     setStatus(
-      `Mappa: <strong>${escapeHtml(currentMap.name)}</strong> Â· ${(currentMap.tags || []).length} tag`
+      `Mappa: <strong>${escapeHtml(currentMap.name)}</strong> · ${(currentMap.tags || []).length} tag`
     );
   } else {
     setStatus("Mappe pronte in locale");
@@ -474,8 +474,8 @@ async function runSearch(query, { autoPick = false } = {}) {
       const kindHint = kind !== "tutti" ? ` (tipo ${escapeHtml(kind)})` : "";
       setStatus(
         query.trim()
-          ? `Nessuna sigla vicina a Â«${escapeHtml(query)}Â»${kindHint} â€” prova un altro tipo o senza trattini`
-          : `Nessun tag di tipo Â«${escapeHtml(kind)}Â»`
+          ? `Nessuna sigla vicina a "${escapeHtml(query)}"${kindHint} - prova un altro tipo o senza trattini`
+          : `Nessun tag di tipo "${escapeHtml(kind)}"`
       );
     }
     return hits;
@@ -521,17 +521,17 @@ async function runSearch(query, { autoPick = false } = {}) {
 
   if (exactN && nearN) {
     setStatus(
-      `<strong>${exactN}</strong> corrispondenze Â· <strong>${nearN}</strong> proposte vicine â€” scegli dalla lista`
+      `<strong>${exactN}</strong> corrispondenze · <strong>${nearN}</strong> proposte vicine - scegli dalla lista`
     );
   } else if (!exactN && nearN) {
     setStatus(
-      `Nessun match esatto â€” <strong>${nearN}</strong> sigle vicine, scegli quella giusta`
+      `Nessun match esatto - <strong>${nearN}</strong> sigle vicine, scegli quella giusta`
     );
   } else {
-    setStatus(`<strong>${exactN}</strong> risultati â€” seleziona o Invio`);
+    setStatus(`<strong>${exactN}</strong> risultati - seleziona o Invio`);
   }
 
-  // Auto-pick solo se un unico match esatto (non sulle sole proposte â€œvicineâ€)
+  // Auto-pick solo se un unico match esatto (non sulle sole proposte "vicine")
   if (autoPick && exactN === 1 && hits[0].match?.tier === "exact") {
     await pickHit(hits[0]);
   }
@@ -620,7 +620,7 @@ els.noteSave.addEventListener("click", async () => {
   tag.source = "manual";
   tag.locked = true;
   tag.updatedAt = Date.now();
-  // Se creato da â€œAggiungiâ€, tieni la geometria disegnata
+  // Se creato da "Aggiungi", tieni la geometria disegnata
   if (isNew) {
     tag.x = Number(els.drawer.dataset.x) || tag.x;
     tag.y = Number(els.drawer.dataset.y) || tag.y;
@@ -635,14 +635,14 @@ els.noteSave.addEventListener("click", async () => {
   if (cloudSynced) {
     toast(isNew ? "Tag + nota online" : "Nota salvata online");
   } else if (isCloudReady()) {
-    toast("Salvata in locale â€” cloud fallito, premi Sync");
+    toast("Salvata in locale - cloud fallito, premi Sync");
   } else {
     toast(isNew ? "Tag salvato solo qui" : "Nota salvata solo qui");
   }
   setStatus(
     addTagMode
-      ? `Tag <strong>${escapeHtml(label)}</strong> creato â€” disegnane un altro o spegni Aggiungi`
-      : `Mappa: <strong>${escapeHtml(currentMap.name)}</strong> Â· ${currentMap.tags.length} tag`
+      ? `Tag <strong>${escapeHtml(label)}</strong> creato - disegnane un altro o spegni Aggiungi`
+      : `Mappa: <strong>${escapeHtml(currentMap.name)}</strong> · ${currentMap.tags.length} tag`
   );
 });
 
@@ -683,7 +683,7 @@ els.searchKind?.addEventListener("change", async () => {
   await runSearch(q);
 });
 
-// Suggerimenti: tap â†’ vai subito al tag; scroll â†’ chiudi solo la tastiera
+// Suggerimenti: tap -> vai subito al tag; scroll -> chiudi solo la tastiera
 els.suggestions.addEventListener("pointerdown", (e) => {
   const item = e.target.closest?.(".sug-item");
   sugTouchHandled = false;
@@ -703,7 +703,7 @@ els.suggestions.addEventListener(
     if (Math.hypot(e.clientX - sugPointer.x, e.clientY - sugPointer.y) > 10) {
       if (!sugPointer.moved) {
         sugPointer.moved = true;
-        dismissSearchKeyboard(); // scroll â†’ tastiera via, resto a guardare la lista
+        dismissSearchKeyboard(); // scroll -> tastiera via, resto a guardare la lista
       }
     }
   },
@@ -735,7 +735,7 @@ function endSugPointer(e) {
   els.suggestions.querySelectorAll(".sug-item").forEach((el, i) => {
     el.classList.toggle("active", i === index);
   });
-  pickHit(hit); // tap â†’ entra subito (niente secondo colpo)
+  pickHit(hit); // tap -> entra subito (niente secondo colpo)
 }
 
 els.suggestions.addEventListener("pointerup", endSugPointer);
@@ -803,7 +803,7 @@ els.clearBtn.addEventListener("click", () => {
 els.btnRefresh?.addEventListener("click", async () => {
   els.btnRefresh.disabled = true;
   try {
-    // Non cancella le PNG locali: lâ€™app installata resta, si aggiorna solo il codice
+    // Non cancella le PNG locali: l'app installata resta, si aggiorna solo il codice
     await applyAppUpdate({ wipeImages: false });
   } finally {
     els.btnRefresh.disabled = false;
@@ -846,12 +846,12 @@ els.btnAddTag?.addEventListener("click", () => {
   viewer.setAddMode(addTagMode);
   els.btnAddTag.classList.toggle("active", addTagMode);
   if (addTagMode) {
-    setStatus("Aggiungi tag: zoom a 2 dita Â· un dito disegna il riquadro sulla sigla");
+    setStatus("Aggiungi tag: zoom a 2 dita · un dito disegna il riquadro sulla sigla");
     toast("Disegna il riquadro sul tag mancante");
   } else {
     setStatus(
       currentMap
-        ? `Mappa: <strong>${escapeHtml(currentMap.name)}</strong> Â· ${(currentMap.tags || []).length} tag`
+        ? `Mappa: <strong>${escapeHtml(currentMap.name)}</strong> · ${(currentMap.tags || []).length} tag`
         : "Pronto"
     );
     toast("Aggiungi disattivato");
@@ -866,20 +866,20 @@ viewer.onAddRect = async (rect) => {
     return;
   }
   addTagBusy = true;
-  setStatus("OCR sulla selezioneâ€¦");
-  toast("Leggo la siglaâ€¦");
+  setStatus("OCR sulla selezione...");
+  toast("Leggo la sigla...");
   let best = "";
   let kind = "altro";
   try {
     const result = await ocrImageRegion(img, rect, {
       onProgress: (p) => {
-        if (p > 0.05) setStatus(`OCR selezioneâ€¦ <strong>${Math.round(p * 100)}%</strong>`);
+        if (p > 0.05) setStatus(`OCR selezione... <strong>${Math.round(p * 100)}%</strong>`);
       },
     });
     best = result.best || "";
     kind = result.kind || "altro";
     if (!best && result.text) {
-      // fallback grezzo: prima â€œparolaâ€ alfanumerica
+      // fallback grezzo: prima "parola" alfanumerica
       const m = String(result.text)
         .toUpperCase()
         .replace(/\s+/g, "")
@@ -888,7 +888,7 @@ viewer.onAddRect = async (rect) => {
     }
   } catch (err) {
     console.warn("OCR selezione", err);
-    toast("OCR selezione fallita â€” inserisci la sigla a mano");
+    toast("OCR selezione fallita - inserisci la sigla a mano");
   } finally {
     addTagBusy = false;
   }
@@ -906,10 +906,10 @@ viewer.onAddRect = async (rect) => {
   });
   if (best) {
     setStatus(
-      `Nuovo tag proposto: <strong>${escapeHtml(best)}</strong> â€” controlla e Salva`
+      `Nuovo tag proposto: <strong>${escapeHtml(best)}</strong> - controlla e Salva`
     );
   } else {
-    setStatus("Selezione ok â€” digita la sigla nel pannello e Salva");
+    setStatus("Selezione ok - digita la sigla nel pannello e Salva");
   }
 };
 
@@ -921,11 +921,11 @@ els.btnOcr.addEventListener("click", async () => {
   }
   els.btnOcr.disabled = true;
   els.btnOcr.classList.add("active");
-  setStatus("OCR in corsoâ€¦ primo avvio puÃ² scaricare il motore (~minuto)");
+  setStatus("OCR in corso... primo avvio può scaricare il motore (~minuto)");
   try {
     const found = await runMapOcr(img, {
       onProgress: (p) => {
-        setStatus(`OCRâ€¦ <strong>${Math.round(p * 100)}%</strong>`);
+        setStatus(`OCR... <strong>${Math.round(p * 100)}%</strong>`);
       },
     });
     const { tags, added, updated, skipped } = mergeOcrIntoMap(currentMap, found);
@@ -934,9 +934,9 @@ els.btnOcr.addEventListener("click", async () => {
     viewer.map = currentMap;
     viewer.renderOverlay();
     setStatus(
-      `OCR: <strong>${found.length}</strong> letti Â· +${added} nuovi Â· ${updated} aggiornati Â· ${skipped} bloccati (manuali). Cerca una sigla per evidenziarla.`
+      `OCR: <strong>${found.length}</strong> letti · +${added} nuovi · ${updated} aggiornati · ${skipped} bloccati (manuali). Cerca una sigla per evidenziarla.`
     );
-    toast("OCR finito â€” cerca una sigla per vederla");
+    toast("OCR finito - cerca una sigla per vederla");
   } catch (err) {
     console.warn(err);
     setStatus(`OCR fallita: ${escapeHtml(err.message || err)}`);
@@ -962,7 +962,7 @@ els.btnSync.addEventListener("click", async () => {
     return;
   }
   els.btnSync.disabled = true;
-  setStatus("Connessione cloudâ€¦");
+  setStatus("Connessione cloud...");
   try {
     const cloud = await initCloud();
     if (!cloud.ok || !isCloudReady()) {
@@ -972,8 +972,8 @@ els.btnSync.addEventListener("click", async () => {
       els.cloudBadge.innerHTML = `<span class="warn">Cloud errore</span>`;
       return;
     }
-    // Solo note/posizioni su Firebase â€” niente download PNG
-    setStatus("Sync note/posizioni su Firebaseâ€¦");
+    // Solo note/posizioni su Firebase - niente download PNG
+    setStatus("Sync note/posizioni su Firebase...");
     const n = await syncAllWithCloud();
     await refreshMaps();
     if (currentMap) {
@@ -985,7 +985,7 @@ els.btnSync.addEventListener("click", async () => {
     els.cloudBadge.innerHTML = `<span class="ok">Cloud sync</span>`;
     setStatus(
       currentMap
-        ? `Sync ok Â· <strong>${escapeHtml(currentMap.name)}</strong> Â· ${(currentMap.tags || []).length} tag`
+        ? `Sync ok · <strong>${escapeHtml(currentMap.name)}</strong> · ${(currentMap.tags || []).length} tag`
         : `Sync cloud ok (${n} mappe)`
     );
   } catch (err) {
@@ -1005,14 +1005,14 @@ document.addEventListener("click", (e) => {
   }
 });
 
-// resize: non forzare fit â€” lâ€™inquadratura resta quella dellâ€™utente
+// resize: non forzare fit - l'inquadratura resta quella dell'utente
 
 async function boot() {
   if (els.appVersion) {
     els.appVersion.textContent = `v${APP_VERSION}`;
     els.appVersion.title = `Versione ${APP_VERSION} (${APP_BUILD})`;
   }
-  setStatus("Avvio Tag Impiantoâ€¦");
+  setStatus("Avvio Tag Impianto...");
   renderPlantNav(els.plantNav, {
     onSelect: (page) => {
       // Non aprire la tastiera quando si cambia pagina dal menu
@@ -1040,11 +1040,11 @@ async function boot() {
   }
 
   if (wantReset) {
-    setStatus("Ripristino mappe e tag dal sitoâ€¦");
+    setStatus("Ripristino mappe e tag dal sito...");
     await resetMapsFromSeed();
   } else if (forceSeed) {
     // Solo dopo pulsante Aggiorna: merge seed + poi le PNG si scaricano al bisogno
-    setStatus("Aggiorno catalogo mappe dal sitoâ€¦");
+    setStatus("Aggiorno catalogo mappe dal sito...");
     await forceReloadSeeds();
   } else {
     // Offline-first: se le mappe ci sono giÃ  in locale, zero rete
@@ -1053,14 +1053,14 @@ async function boot() {
 
   await refreshMaps();
 
-  // Se dopo il load non câ€™Ã¨ nulla, forza ripristino seed (cache/IndexedDB corrotti)
+  // Se dopo il load non c'è nulla, forza ripristino seed (cache/IndexedDB corrotti)
   if (!maps.length) {
-    setStatus("Nessuna mappa in locale â€” ripristinoâ€¦");
+    setStatus("Nessuna mappa in locale - ripristino...");
     await resetMapsFromSeed();
     await refreshMaps();
   }
 
-  // Cloud: NESSUN pull/push allâ€™avvio. Solo badge; Sync Ã¨ manuale.
+  // Cloud: NESSUN pull/push all'avvio. Solo badge; Sync è manuale.
   if (isFirebaseConfigured()) {
     els.cloudBadge.innerHTML =
       `<span class="muted" title="Premi Sync per allineare note/posizioni">Cloud: Sync manuale</span>`;
@@ -1069,7 +1069,7 @@ async function boot() {
       `<span class="muted" title="Riposizionamenti solo su questo dispositivo">Solo dispositivo</span>`;
   }
 
-  // Service worker: aggiorna in background; se câ€™Ã¨ waiting, banner senza reload forzato
+  // Service worker: aggiorna in background; se c'è waiting, banner senza reload forzato
   if ("serviceWorker" in navigator) {
     try {
       const reg = await navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" });
@@ -1100,7 +1100,7 @@ async function boot() {
     setMapsLocalBadge(n);
     if (currentMap) {
       setStatus(
-        `Mappa: <strong>${escapeHtml(currentMap.name)}</strong> Â· ${(currentMap.tags || []).length} tag`
+        `Mappa: <strong>${escapeHtml(currentMap.name)}</strong> · ${(currentMap.tags || []).length} tag`
       );
     } else {
       setStatus(forceSeed ? "Catalogo aggiornato" : "Pronto (offline)");
@@ -1108,10 +1108,10 @@ async function boot() {
   } catch (_) {
     setMapsLocalBadge(0);
   }
-  // forceImages lasciato solo per debug legacy â€” non avviare warm di tutte le mappe
+  // forceImages lasciato solo per debug legacy - non avviare warm di tutte le mappe
   void forceImages;
 
-  // Controlla subito (e poi in background) se online câ€™Ã¨ una versione piÃ¹ nuova
+  // Controlla subito (e poi in background) se online c'è una versione più nuova
   checkForAppUpdate({ silent: true }).catch(() => {});
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {

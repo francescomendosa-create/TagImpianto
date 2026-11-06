@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.35";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.36";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -89,7 +89,7 @@ function remapTagsAfterCrop(tags, cropLeft, oldW, newW) {
   });
 }
 
-/** Dopo ritaglio barra superiore (SF3 / HOLD-UP / â€¦). */
+/** Dopo ritaglio barra superiore (SF3 / HOLD-UP / ...). */
 function remapTagsAfterCropTop(tags, cropTop, oldH, newH) {
   return (tags || [])
     .map((t) => {
@@ -127,7 +127,7 @@ async function resolveSeedPaths() {
 }
 
 /**
- * Allâ€™avvio: se IndexedDB ha giÃ  le mappe, NON tocca la rete (offline-first).
+ * All'avvio: se IndexedDB ha giÃ  le mappe, NON tocca la rete (offline-first).
  * Solo DB vuoto (primo avvio) scarica i seed dal sito.
  * Per aggiornare catalogo/immagini dal sito: forceReloadSeeds / Aggiorna.
  */
@@ -165,7 +165,7 @@ export async function mergeSeedsFromSite() {
       const localRev = Number(local.seedRev) || 0;
       const seedTagN = (seed.tags || []).length;
       const localTagN = (local.tags || []).length;
-      // Aggiorna se revision piÃ¹ nuova OPPURE il seed ha molti piÃ¹ tag (fix catalogo/OCR)
+      // Aggiorna se revision più nuova OPPURE il seed ha molti più tag (fix catalogo/OCR)
       if (seedRev > localRev || seedTagN > localTagN + 3) {
         let localTags = local.tags || [];
         const seedCropTop = Number(seed.cropTop) || 0;
@@ -182,7 +182,7 @@ export async function mergeSeedsFromSite() {
         const merged = mergeSeedTags(seed.tags || [], localTags);
         if (seed.image && seed.image !== local.image) {
           try {
-            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.35");
+            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.36");
             await deleteLocalImage(local.image);
             await deleteLocalImage(seed.image);
           } catch (_) {
@@ -243,7 +243,7 @@ export async function mergeSeedsFromSite() {
 
       if (seed.image && local.image !== seed.image) {
         try {
-          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.35");
+          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.36");
           await deleteLocalImage(local.image);
           await deleteLocalImage(seed.image);
         } catch (_) {
@@ -385,7 +385,7 @@ function tagHasUserData(t) {
 
 /**
  * Unisce tag seed + locali: le coordinate locali NON si perdono mai se il tag esiste giÃ .
- * Il seed puÃ² aggiornare label/kind/image meta, non cancellare il lavoro di riposizionamento.
+ * Il seed può aggiornare label/kind/image meta, non cancellare il lavoro di riposizionamento.
  */
 function mergeSeedTags(seedTags, localTags) {
   const localById = new Map(
@@ -471,7 +471,7 @@ const KIND_WORDS = {
   altro: ["altro"],
 };
 
-/** Sinonimi / espansioni query â†’ chiavi normalizzate. */
+/** Sinonimi / espansioni query -> chiavi normalizzate. */
 const QUERY_SYNONYMS = {
   FILTRI: ["FILTRO", "FILTRAZIONE", "FILTER"],
   FILTRO: ["FILTRI", "FILTRAZIONE", "FILTER"],
@@ -487,7 +487,7 @@ const QUERY_SYNONYMS = {
 };
 
 /**
- * Radice â€œsoftâ€ IT: filtri/filtro â†’ FILTR, pompe/pompa â†’ POMP.
+ * Radice "soft" IT: filtri/filtro -> FILTR, pompe/pompa -> POMP.
  * Serve a match semantici senza dizionario completo.
  */
 export function stemSearchKey(s) {
@@ -500,15 +500,15 @@ export function stemSearchKey(s) {
   } else if (w.endsWith("AGGI") || w.endsWith("AGGIO")) {
     w = w.replace(/AGGI?O?$/, "AGG");
   } else if (w.endsWith("IONI")) {
-    w = w.slice(0, -1); // AZIONI â†’ AZIONE-ish: drop I
+    w = w.slice(0, -1); // AZIONI -> AZIONE-ish: drop I
   } else if (w.endsWith("HE") && w.length > 4) {
-    w = w.slice(0, -1); // vecchie â†’ vecch
+    w = w.slice(0, -1); // vecchie -> vecch
   } else if (w.endsWith("I") && w.length > 4 && !/(AI|OI|UI)$/.test(w)) {
-    w = w.slice(0, -1); // FILTRI â†’ FILTR
+    w = w.slice(0, -1); // FILTRI -> FILTR
   } else if (w.endsWith("E") && w.length > 4) {
-    w = w.slice(0, -1); // POMPE â†’ POMP, VALVOLE â†’ VALVOL
+    w = w.slice(0, -1); // POMPE -> POMP, VALVOLE -> VALVOL
   } else if (/(A|O)$/.test(w) && w.length > 4) {
-    w = w.slice(0, -1); // FILTRO â†’ FILTR, POMPA â†’ POMP
+    w = w.slice(0, -1); // FILTRO -> FILTR, POMPA -> POMP
   }
   return w.length >= 3 ? w : normalizeSearchKey(s);
 }
@@ -523,8 +523,8 @@ function expandQueryKeys(qRaw) {
     keys.add(normalizeSearchKey(syn));
     keys.add(stemSearchKey(syn));
   }
-  // parole separate: "filtri carboni" â†’ FILTRI, CARBONI, â€¦
-  for (const part of String(qRaw).split(/[\s,;./\\|+\-â€”â€“]+/)) {
+  // parole separate: "filtri carboni" -> FILTRI, CARBONI, ...
+  for (const part of String(qRaw).split(/[\s,;./\\|+\---]+/)) {
     const p = normalizeSearchKey(part);
     if (p.length < 3) continue;
     keys.add(p);
@@ -550,7 +550,7 @@ function tagSearchKeys(tag) {
   // Nota: tutta la dicitura + singole parole (â‰¥3) per ritrovare dalla descrizione
   if (note) {
     keys.add(normalizeSearchKey(note));
-    for (const word of note.split(/[\s,;./\\|+\-â€”â€“]+/)) {
+    for (const word of note.split(/[\s,;./\\|+\---]+/)) {
       if (word.length >= 3) {
         const k = normalizeSearchKey(word);
         keys.add(k);
@@ -558,7 +558,7 @@ function tagSearchKeys(tag) {
       }
     }
   }
-  // Tipo / kind + sinonimi (filtro â†” filtri)
+  // Tipo / kind + sinonimi (filtro ->” filtri)
   if (kind) {
     keys.add(normalizeSearchKey(kind));
     keys.add(stemSearchKey(kind));
@@ -592,14 +592,14 @@ function levenshtein(a, b) {
   return row[b.length];
 }
 
-/** Punteggio 0â€“100 + motivo leggibile per suggerimenti â€œintelligentiâ€. */
+/** Punteggio 0-100 + motivo leggibile per suggerimenti "intelligenti". */
 function scoreAgainstKey(q, key) {
   if (!q || !key) return null;
   if (key === q) {
     return { score: 100, tier: "exact", reason: "Corrispondenza esatta" };
   }
 
-  // Semantica leggera: stessa radice (filtri â†” filtro, pompe â†” pompa)
+  // Semantica leggera: stessa radice (filtri ->” filtro, pompe ->” pompa)
   const qs = stemSearchKey(q);
   const ks = stemSearchKey(key);
   if (qs.length >= 3 && ks.length >= 3) {
@@ -633,7 +633,7 @@ function scoreAgainstKey(q, key) {
     return {
       score: 88,
       tier: "exact",
-      reason: "Sigla piÃ¹ corta, stesso inizio",
+      reason: "Sigla più corta, stesso inizio",
     };
   }
   if (key.includes(q) && q.length >= 3) {
@@ -647,7 +647,7 @@ function scoreAgainstKey(q, key) {
     return {
       score: 78,
       tier: "near",
-      reason: "Hai digitato piÃ¹ caratteri del necessario",
+      reason: "Hai digitato più caratteri del necessario",
     };
   }
 
@@ -655,7 +655,7 @@ function scoreAgainstKey(q, key) {
   const maxLen = Math.max(q.length, key.length);
   const sim = 1 - dist / maxLen;
 
-  // 1â€“2 caratteri di differenza (trattino giÃ  ignorato in normalize)
+  // 1-2 caratteri di differenza (trattino giÃ  ignorato in normalize)
   if (q.length >= 4 && dist <= 2) {
     return {
       score: Math.round(70 - dist * 8 + sim * 15),
@@ -674,7 +674,7 @@ function scoreAgainstKey(q, key) {
     };
   }
 
-  // stesso â€œnucleoâ€ numerico: TK11002 vs 11002 o P11100A vs 11100A
+  // stesso "nucleo" numerico: TK11002 vs 11002 o P11100A vs 11100A
   const qDigits = q.replace(/\D/g, "");
   const kDigits = key.replace(/\D/g, "");
   if (qDigits.length >= 4 && kDigits.includes(qDigits)) {
@@ -713,7 +713,7 @@ function bestScoreForTag(queryKeys, tagKeys) {
  */
 /**
  * @param {string} query
- * @param {{ kind?: string|null }} [opts] kind = valore Tipo (pompa, valvola, â€¦) oppure "tutti"/vuoto
+ * @param {{ kind?: string|null }} [opts] kind = valore Tipo (pompa, valvola, ...) oppure "tutti"/vuoto
  */
 export async function searchAllTags(query, opts = {}) {
   const kindRaw = String(opts.kind || "tutti").trim().toLowerCase();
@@ -722,7 +722,7 @@ export async function searchAllTags(query, opts = {}) {
   const queryKeys = expandQueryKeys(qRaw);
   const hasQuery = queryKeys.length > 0 && !queryKeys.every((k) => k.length < 2);
 
-  // Senza testo: solo se câ€™Ã¨ un filtro tipo (sfoglia quella categoria)
+  // Senza testo: solo se c'è un filtro tipo (sfoglia quella categoria)
   if (!hasQuery && !kindFilter) return [];
 
   const maps = await listMaps();
@@ -785,11 +785,11 @@ function mergeTagCloudLocal(localTag, cloudTag) {
   const ct = Number(cloudTag.updatedAt) || 0;
   const localUser = tagHasUserData(localTag);
   const cloudUser = tagHasUserData(cloudTag);
-  // Note / riposizionamenti locali non devono sparire per un seed cloud piÃ¹ fresco
+  // Note / riposizionamenti locali non devono sparire per un seed cloud più fresco
   if (localUser && !cloudUser) return { ...localTag };
   if (cloudUser && !localUser) return { ...cloudTag };
   if (localUser && cloudUser) {
-    // Entrambi â€œutenteâ€: piÃ¹ recente, ma tieni geometria del piÃ¹ recente
+    // Entrambi "utente": più recente, ma tieni geometria del più recente
     return ct > lt ? { ...cloudTag } : { ...localTag };
   }
   if (ct > lt) return { ...cloudTag };
@@ -797,7 +797,7 @@ function mergeTagCloudLocal(localTag, cloudTag) {
   return { ...localTag };
 }
 
-/** Firestore rifiuta `undefined` â†’ togli i campi vuoti. */
+/** Firestore rifiuta `undefined` -> togli i campi vuoti. */
 function stripUndefined(obj) {
   if (!obj || typeof obj !== "object") return obj;
   const out = {};
@@ -863,12 +863,12 @@ async function pushMapToCloud(map) {
     try {
       await batch.commit();
     } catch (err) {
-      throw new Error(`${map.id} tags[${i}â€¦]: ${err?.message || err}`);
+      throw new Error(`${map.id} tags[${i}...]: ${err?.message || err}`);
     }
   }
 }
 
-/** Carica dal cloud e unisce con IndexedDB (updatedAt piÃ¹ recente vince). */
+/** Carica dal cloud e unisce con IndexedDB (updatedAt più recente vince). */
 export async function pullMapsFromCloud() {
   if (!cloudReady) return [];
   const { collection, getDocs } = await import(
@@ -896,7 +896,7 @@ export async function pullMapsFromCloud() {
     const cloudAt = Number(meta.updatedAt) || 0;
     const localAt = Number(local?.updatedAt) || 0;
     // Meta cloud = note/stato; geometria/PNG restano dal dispositivo (seed sito),
-    // altrimenti un Firestore vecchio sovrascrive width/height e â€œrompeâ€ i tag.
+    // altrimenti un Firestore vecchio sovrascrive width/height e "rompe" i tag.
     const map = {
       ...(local || {}),
       ...meta,
@@ -918,7 +918,7 @@ export async function pullMapsFromCloud() {
   return maps;
 }
 
-/** Carica TUTTE le mappe locali sul cloud (es. dal tablet piÃ¹ aggiornato). */
+/** Carica TUTTE le mappe locali sul cloud (es. dal tablet più aggiornato). */
 export async function pushAllMapsToCloud() {
   if (!cloudReady) throw new Error("Cloud non pronto");
   const all = (await idbGetAll()).filter((m) => m?.id && !String(m.id).startsWith("__"));
@@ -937,7 +937,7 @@ export async function pushAllMapsToCloud() {
     throw new Error(errors[0]);
   }
   if (errors.length) {
-    console.warn("Push cloud parziale:", errors.slice(0, 5).join(" Â· "));
+    console.warn("Push cloud parziale:", errors.slice(0, 5).join(" · "));
   }
   return ok;
 }
