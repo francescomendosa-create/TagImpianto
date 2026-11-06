@@ -12,7 +12,6 @@ permissions:
 
 concurrency:
   group: pages-${{ github.repository }}
-  # Deploy leggero (senza PNG): si può cancellare il precedente
   cancel-in-progress: true
 
 jobs:
@@ -29,7 +28,6 @@ jobs:
           set -euo pipefail
           rm -rf _site
           mkdir -p _site
-          # Solo app: le PNG (~170MB) restano su GitHub/jsDelivr → deploy in ~1 minuto
           for item in index.html aggiorna.html manifest.webmanifest sw.js deploy-stamp.txt \
                       version.json css js data icons .nojekyll; do
             if [ -e "$item" ]; then
@@ -37,12 +35,10 @@ jobs:
             fi
           done
           mkdir -p _site/assets/maps
-          # marker: le mappe si scaricano da CDN/git, non dal bundle Pages
           echo "maps-via-cdn" > _site/assets/maps/README.txt
           test -f _site/index.html
           test -f _site/js/app.js
           test -f _site/js/version.js
-          test -f _site/data/manifest.json
           test -f _site/version.json
           echo "SITE_BYTES=$(du -sb _site | cut -f1)"
           du -sh _site
@@ -55,6 +51,28 @@ jobs:
         with:
           path: _site
 
+      # A volte Pages ha un deploy precedente ancora “in corso” → retry
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - name: Attesa sblocco Pages
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 45
+
+      - name: Deploy retry
+        id: deployment2
+        if: steps.deployment.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+
+      - name: Esito
+        run: |
+          if [ "${{ steps.deployment.outcome }}" = "success" ]; then
+            echo "Deploy ok al primo tentativo"
+          elif [ "${{ steps.deployment2.outcome }}" = "success" ]; then
+            echo "Deploy ok al retry"
+          else
+            echo "Deploy fallito due volte"
+            exit 1
+          fi
