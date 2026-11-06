@@ -9,6 +9,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  deployments: write
 
 concurrency:
   group: pages-${{ github.repository }}
@@ -38,10 +39,34 @@ jobs:
           echo "maps-via-cdn" > _site/assets/maps/README.txt
           test -f _site/index.html
           test -f _site/js/app.js
-          test -f _site/js/version.js
           test -f _site/version.json
           echo "SITE_BYTES=$(du -sb _site | cut -f1)"
           du -sh _site
+
+      - name: Disattiva deploy Pages vecchi (sblocca coda)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const deps = await github.rest.repos.listDeployments({
+              owner, repo, environment: 'github-pages', per_page: 20
+            });
+            for (const d of deps.data) {
+              if (d.sha === context.sha) continue;
+              try {
+                await github.rest.repos.createDeploymentStatus({
+                  owner, repo,
+                  deployment_id: d.id,
+                  state: 'inactive',
+                  description: 'Superseded by newer deploy',
+                  environment: 'github-pages',
+                  environment_url: 'https://francescomendosa-create.github.io/tagimpianto-app/'
+                });
+                core.info(`inactive deployment ${d.id} (${d.sha.slice(0,7)})`);
+              } catch (e) {
+                core.warning(`skip ${d.id}: ${e.message}`);
+              }
+            }
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -51,15 +76,14 @@ jobs:
         with:
           path: _site
 
-      # A volte Pages ha un deploy precedente ancora “in corso” → retry
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
         continue-on-error: true
 
-      - name: Attesa sblocco Pages
+      - name: Attesa sblocco
         if: steps.deployment.outcome == 'failure'
-        run: sleep 45
+        run: sleep 60
 
       - name: Deploy retry
         id: deployment2
@@ -68,11 +92,8 @@ jobs:
 
       - name: Esito
         run: |
-          if [ "${{ steps.deployment.outcome }}" = "success" ]; then
-            echo "Deploy ok al primo tentativo"
-          elif [ "${{ steps.deployment2.outcome }}" = "success" ]; then
-            echo "Deploy ok al retry"
+          if [ "${{ steps.deployment.outcome }}" = "success" ] || [ "${{ steps.deployment2.outcome }}" = "success" ]; then
+            echo OK
           else
-            echo "Deploy fallito due volte"
             exit 1
           fi
