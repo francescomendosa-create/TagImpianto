@@ -331,6 +331,11 @@ body.has-update-banner #app {
   border-color: var(--warn);
   background: rgba(245, 158, 11, 0.15);
 }
+.sug-page {
+  color: var(--accent);
+  font-weight: 600;
+  white-space: nowrap;
+}
 .sug-note {
   margin-top: 4px;
   font-family: var(--font);

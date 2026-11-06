@@ -9,17 +9,17 @@ import {
   saveMap,
   searchAllTags,
   syncAllWithCloud,
-} from "./db.js?v=1.8.33";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.33";
-import { MapViewer } from "./viewer.js?v=1.8.33";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.33";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.33";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.33";
+} from "./db.js?v=1.8.34";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.34";
+import { MapViewer } from "./viewer.js?v=1.8.34";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.34";
+import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.34";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.34";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.33";
+} from "./image-cache.js?v=1.8.34";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -72,13 +72,15 @@ const viewer = new MapViewer({
 // Riposiziona: niente nuovi tag al tap â€” solo trascinamento del tag evidenziato
 viewer.onAnnotatePlace = null;
 
-/** Click/tap sul tag: barra ricerca = sigla (+ nota se câ€™Ã¨), senza suggerimenti. */
+/** Click/tap sul tag: barra ricerca = sigla (+ nota se c’è) + [pagina], senza suggerimenti. */
 viewer.onTagDoubleSelect = (tag) => {
   if (!tag || !currentMap) return;
   const sigla = String(tag.label || tag.id || "").trim();
   if (!sigla) return;
   const note = String(tag.note || "").trim();
-  const text = note ? `${sigla} â€” ${note}` : sigla;
+  const page = pageLabelForMap(currentMap.id, currentMap.name);
+  const pagePart = page ? ` [${page}]` : "";
+  const text = note ? `${sigla} — ${note}${pagePart}` : `${sigla}${pagePart}`;
   closeSuggestions();
   els.searchInput.value = text;
   els.clearBtn.classList.add("visible");
@@ -86,8 +88,8 @@ viewer.onTagDoubleSelect = (tag) => {
   viewer.highlight(tag.id);
   setStatus(
     note
-      ? `<strong>${escapeHtml(sigla)}</strong> Â· ${escapeHtml(note)}`
-      : `<strong>${escapeHtml(sigla)}</strong> in ${escapeHtml(currentMap.name)}`
+      ? `<strong>${escapeHtml(sigla)}</strong> · ${escapeHtml(note)}${pagePart ? ` · ${escapeHtml(pagePart)}` : ""}`
+      : `<strong>${escapeHtml(sigla)}</strong> in ${escapeHtml(page || currentMap.name)}`
   );
 };
 
@@ -457,6 +459,12 @@ function currentSearchKind() {
   return v || "tutti";
 }
 
+/** Nome pagina menu (es. Osmosi 1° passo A), non l’id tecnico della mappa. */
+function pageLabelForMap(mapId, fallbackName = "") {
+  const page = pageForMapId(mapId);
+  return String(page?.label || fallbackName || mapId || "").trim();
+}
+
 async function runSearch(query, { autoPick = false } = {}) {
   const kind = currentSearchKind();
   const hits = await searchAllTags(query, { kind });
@@ -483,9 +491,15 @@ async function runSearch(query, { autoPick = false } = {}) {
       const reason = h.match?.reason || "";
       const badge = tier === "near" ? "Vicino" : "Match";
       const noteText = String(h.tag.note || "").trim();
-      const noteHtml = noteText
-        ? `<div class="sug-note">${escapeHtml(noteText)}</div>`
-        : "";
+      const pageLabel = pageLabelForMap(h.mapId, h.mapName);
+      const pageBrackets = pageLabel ? `[${pageLabel}]` : "";
+      // Nota (se c’è) + pagina tra parentesi quadre — automatico da mappa
+      const detailLine = noteText
+        ? `${escapeHtml(noteText)}${pageBrackets ? ` <span class="sug-page">${escapeHtml(pageBrackets)}</span>` : ""}`
+        : pageBrackets
+          ? `<span class="sug-page">${escapeHtml(pageBrackets)}</span>`
+          : "";
+      const noteHtml = detailLine ? `<div class="sug-note">${detailLine}</div>` : "";
       return `
       <div class="sug-item sug-${tier}${i === 0 ? " active" : ""}" data-i="${i}" data-map="${escapeHtml(h.mapId)}" data-tag="${escapeHtml(h.tag.id)}">
         <div>
@@ -497,7 +511,6 @@ async function runSearch(query, { autoPick = false } = {}) {
           <div class="kind">${escapeHtml(h.tag.kind || "")}</div>
           <div class="sug-reason">${escapeHtml(reason)}</div>
         </div>
-        <div class="map">${escapeHtml(h.mapName)}</div>
       </div>`;
     })
     .join("");
@@ -527,7 +540,11 @@ async function runSearch(query, { autoPick = false } = {}) {
 
 async function pickHit(hit) {
   closeSuggestions();
-  els.searchInput.value = hit.tag.label || hit.tag.id;
+  const sigla = String(hit.tag.label || hit.tag.id || "").trim();
+  const note = String(hit.tag.note || "").trim();
+  const page = pageLabelForMap(hit.mapId, hit.mapName);
+  const pagePart = page ? ` [${page}]` : "";
+  els.searchInput.value = note ? `${sigla} — ${note}${pagePart}` : `${sigla}${pagePart}`;
   els.clearBtn.classList.add("visible");
   // Imposta subito lâ€™id cosÃ¬ keepHighlight / overlay non restano vuoti
   activeTagId = hit.tag.id;

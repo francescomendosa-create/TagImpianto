@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.33";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.34";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -182,7 +182,7 @@ export async function mergeSeedsFromSite() {
         const merged = mergeSeedTags(seed.tags || [], localTags);
         if (seed.image && seed.image !== local.image) {
           try {
-            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.33");
+            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.34");
             await deleteLocalImage(local.image);
             await deleteLocalImage(seed.image);
           } catch (_) {
@@ -243,7 +243,7 @@ export async function mergeSeedsFromSite() {
 
       if (seed.image && local.image !== seed.image) {
         try {
-          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.33");
+          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.34");
           await deleteLocalImage(local.image);
           await deleteLocalImage(seed.image);
         } catch (_) {
