@@ -264,6 +264,65 @@ export function mergeOcrIntoMap(map, ocrTags) {
   return { tags, added, updated, skipped };
 }
 
+/**
+ * OCR su una regione normalizzata (0–1) dell’immagine — per “Aggiungi tag”.
+ * @returns {Promise<{text:string,candidates:string[],best:string|null,kind:string,confidence:number}>}
+ */
+export async function ocrImageRegion(imageSource, region, opts = {}) {
+  const worker = await getWorker(opts.onProgress);
+  const img =
+    typeof imageSource === "string"
+      ? await loadImage(imageSource)
+      : imageSource;
+  const iw = img.naturalWidth || img.width;
+  const ih = img.naturalHeight || img.height;
+  if (!iw || !ih) throw new Error("Immagine non pronta");
+
+  const pad = 0.004;
+  const x0 = Math.max(0, Math.floor((Number(region.x) - pad) * iw));
+  const y0 = Math.max(0, Math.floor((Number(region.y) - pad) * ih));
+  const x1 = Math.min(iw, Math.ceil((Number(region.x) + Number(region.w) + pad) * iw));
+  const y1 = Math.min(ih, Math.ceil((Number(region.y) + Number(region.h) + pad) * ih));
+  const rw = Math.max(8, x1 - x0);
+  const rh = Math.max(8, y1 - y0);
+
+  const scale = Math.min(4, Math.max(2.5, 420 / Math.max(rw, rh)));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(rw * scale);
+  canvas.height = Math.round(rh * scale);
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = "#d8dde3";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, x0, y0, rw, rh, 0, 0, canvas.width, canvas.height);
+
+  const { data } = await worker.recognize(canvas);
+  const text = String(data?.text || "").trim();
+  const byId = new Map();
+
+  for (const word of data?.words || []) {
+    const conf = Number(word.confidence) || 0;
+    if (conf < 35) continue;
+    for (const id of extractTagCandidates(word.text)) {
+      const prev = byId.get(id);
+      if (!prev || conf > prev.conf) byId.set(id, { id, conf });
+    }
+  }
+  for (const id of extractTagCandidates(text)) {
+    if (!byId.has(id)) byId.set(id, { id, conf: 50 });
+  }
+
+  const ranked = [...byId.values()].sort((a, b) => b.conf - a.conf);
+  const best = ranked[0]?.id || null;
+  return {
+    text,
+    candidates: ranked.map((r) => r.id),
+    best,
+    kind: best ? guessKind(best) : "altro",
+    confidence: ranked[0]?.conf || 0,
+  };
+}
+
 export async function terminateOcr() {
   if (!workerPromise) return;
   try {

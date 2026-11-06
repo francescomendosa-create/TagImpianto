@@ -1,4 +1,4 @@
-import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.26";
+import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.27";
 
 const MAX_MEM_IMAGES = 10;
 
@@ -15,6 +15,8 @@ export class MapViewer {
     this.map = null;
     this.highlightId = null;
     this.annotate = false;
+    /** Modalità “Aggiungi”: un dito disegna il riquadro, due dita zoom */
+    this.addMode = false;
     this._viewInitialized = false;
     /** URL logica remota (non blob:) */
     this._lastRemote = "";
@@ -26,11 +28,17 @@ export class MapViewer {
     this._pinch = null;
     this._panning = false;
     this._dragTag = null;
+    /** @type {{x0:number,y0:number,x1:number,y1:number}|null} coords immagine px */
+    this._addDrag = null;
+    /** Ultimo riquadro normalizzato disegnato */
+    this._addRectNorm = null;
 
     this.onAnnotatePlace = null;
     this.onTagMoved = null;
     /** Doppio tap/click su un tag esistente → ricerca */
     this.onTagDoubleSelect = null;
+    /** @type {null|((rect:{x:number,y:number,w:number,h:number})=>void)} */
+    this.onAddRect = null;
     this._lastTap = null;
 
     this._bind();
@@ -109,8 +117,64 @@ export class MapViewer {
 
   setAnnotate(on) {
     this.annotate = !!on;
+    if (this.annotate) this.setAddMode(false);
     this.viewport.classList.toggle("annotate", this.annotate);
     this.renderOverlay();
+  }
+
+  setAddMode(on) {
+    this.addMode = !!on;
+    if (this.addMode) {
+      this.annotate = false;
+      this.viewport.classList.remove("annotate");
+    }
+    this.viewport.classList.toggle("add-mode", this.addMode);
+    this._addDrag = null;
+    if (!this.addMode) this._addRectNorm = null;
+    this.renderOverlay();
+  }
+
+  /** Client → pixel immagine */
+  _clientToImagePx(clientX, clientY) {
+    const vp = this._viewportPoint(clientX, clientY);
+    const iw = this.imageEl.naturalWidth || this.imageEl.width || 1;
+    const ih = this.imageEl.naturalHeight || this.imageEl.height || 1;
+    const x = (vp.x - this.tx) / this.scale;
+    const y = (vp.y - this.ty) / this.scale;
+    return {
+      x: Math.min(iw, Math.max(0, x)),
+      y: Math.min(ih, Math.max(0, y)),
+      iw,
+      ih,
+    };
+  }
+
+  _normFromDrag(drag) {
+    const iw = this.imageEl.naturalWidth || this.imageEl.width || 1;
+    const ih = this.imageEl.naturalHeight || this.imageEl.height || 1;
+    const left = Math.min(drag.x0, drag.x1);
+    const top = Math.min(drag.y0, drag.y1);
+    const right = Math.max(drag.x0, drag.x1);
+    const bottom = Math.max(drag.y0, drag.y1);
+    return {
+      x: left / iw,
+      y: top / ih,
+      w: Math.max(0.008, (right - left) / iw),
+      h: Math.max(0.01, (bottom - top) / ih),
+    };
+  }
+
+  _paintSelectionBox(norm, pending = false) {
+    if (!norm) return;
+    const iw = this.imageEl.naturalWidth || this.imageEl.width || 1;
+    const ih = this.imageEl.naturalHeight || this.imageEl.height || 1;
+    const el = document.createElement("div");
+    el.className = pending ? "sel-box pending" : "sel-box";
+    el.style.left = `${norm.x * iw}px`;
+    el.style.top = `${norm.y * ih}px`;
+    el.style.width = `${norm.w * iw}px`;
+    el.style.height = `${norm.h * ih}px`;
+    this.overlayEl.appendChild(el);
   }
 
   /** Precache in IndexedDB + memoria (non blocca UI). */
@@ -315,6 +379,13 @@ export class MapViewer {
   renderOverlay() {
     const overlay = this.overlayEl;
     overlay.innerHTML = "";
+
+    if (this._addDrag) {
+      this._paintSelectionBox(this._normFromDrag(this._addDrag), false);
+    } else if (this._addRectNorm) {
+      this._paintSelectionBox(this._addRectNorm, true);
+    }
+
     if (!this.map || !this.highlightId) return;
     const want = String(this.highlightId);
     const tag = (this.map.tags || []).find(
@@ -371,12 +442,26 @@ export class MapViewer {
     this.viewport.setPointerCapture(e.pointerId);
     this._pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (this._pointers.size === 2) {
+      // Pinch: annulla disegno selezione
+      this._addDrag = null;
+      this._panning = false;
+      this.viewport.classList.remove("panning");
+      this._panStart = null;
       this._beginPinch();
+      this.renderOverlay();
     } else if (this._pointers.size === 1 && !this._dragTag) {
-      this._panning = true;
-      this.viewport.classList.add("panning");
-      this._panStart = { x: e.clientX, y: e.clientY, tx: this.tx, ty: this.ty };
-      this._moved = false;
+      if (this.addMode) {
+        const p = this._clientToImagePx(e.clientX, e.clientY);
+        this._addDrag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };
+        this._addRectNorm = null;
+        this._moved = false;
+        this.renderOverlay();
+      } else {
+        this._panning = true;
+        this.viewport.classList.add("panning");
+        this._panStart = { x: e.clientX, y: e.clientY, tx: this.tx, ty: this.ty };
+        this._moved = false;
+      }
     }
   }
 
@@ -401,6 +486,21 @@ export class MapViewer {
       return;
     }
 
+    if (this.addMode && this._addDrag && this._pointers.size === 1) {
+      const p = this._clientToImagePx(e.clientX, e.clientY);
+      this._addDrag.x1 = p.x;
+      this._addDrag.y1 = p.y;
+      if (
+        Math.abs(this._addDrag.x1 - this._addDrag.x0) +
+          Math.abs(this._addDrag.y1 - this._addDrag.y0) >
+        6
+      ) {
+        this._moved = true;
+      }
+      this.renderOverlay();
+      return;
+    }
+
     if (this._panning && this._panStart) {
       const dx = e.clientX - this._panStart.x;
       const dy = e.clientY - this._panStart.y;
@@ -414,6 +514,9 @@ export class MapViewer {
   _onPointerUp(e) {
     const wasDrag = this._dragTag;
     const moved = this._moved;
+    const finishingAdd =
+      this.addMode && this._addDrag && this._pointers.size === 1;
+
     if (wasDrag) {
       this._dragTag = null;
       if (this.onTagMoved) this.onTagMoved(wasDrag.id);
@@ -421,25 +524,49 @@ export class MapViewer {
 
     this._pointers.delete(e.pointerId);
 
-    // Fine pinch → se resta un dito, riparti il pan da qui (niente salto)
+    if (finishingAdd && this._addDrag) {
+      const norm = this._normFromDrag(this._addDrag);
+      const iw = this.imageEl.naturalWidth || this.imageEl.width || 1;
+      const ih = this.imageEl.naturalHeight || this.imageEl.height || 1;
+      const pxW = norm.w * iw;
+      const pxH = norm.h * ih;
+      this._addDrag = null;
+      if (pxW >= 12 && pxH >= 12) {
+        this._addRectNorm = norm;
+        this.renderOverlay();
+        if (this.onAddRect) this.onAddRect(norm);
+      } else {
+        this.renderOverlay();
+      }
+    }
+
+    // Fine pinch → se resta un dito…
     if (this._pointers.size < 2) {
       this._pinch = null;
       if (this._pointers.size === 1 && !this._dragTag) {
         const remaining = [...this._pointers.values()][0];
-        this._panning = true;
-        this.viewport.classList.add("panning");
-        this._panStart = {
-          x: remaining.x,
-          y: remaining.y,
-          tx: this.tx,
-          ty: this.ty,
-        };
+        if (this.addMode) {
+          const p = this._clientToImagePx(remaining.x, remaining.y);
+          this._addDrag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };
+          this._panning = false;
+          this.viewport.classList.remove("panning");
+          this._panStart = null;
+        } else {
+          this._panning = true;
+          this.viewport.classList.add("panning");
+          this._panStart = {
+            x: remaining.x,
+            y: remaining.y,
+            tx: this.tx,
+            ty: this.ty,
+          };
+        }
       }
     }
 
     if (this._pointers.size === 0) {
-      // Doppio tap (soprattutto touch): due tocchi fermi entro 400ms → tag in ricerca
-      if (!wasDrag && !moved && this.onTagDoubleSelect) {
+      // Doppio tap (non in modalità Aggiungi)
+      if (!this.addMode && !wasDrag && !moved && this.onTagDoubleSelect) {
         const now = Date.now();
         const prev = this._lastTap;
         if (
@@ -458,6 +585,7 @@ export class MapViewer {
       this.viewport.classList.remove("panning");
       this._panStart = null;
       this._moved = false;
+      this._addDrag = null;
     }
   }
 }

@@ -9,17 +9,17 @@ import {
   saveMap,
   searchAllTags,
   syncAllWithCloud,
-} from "./db.js?v=1.8.26";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.26";
-import { MapViewer } from "./viewer.js?v=1.8.26";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.26";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.26";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.26";
+} from "./db.js?v=1.8.27";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.27";
+import { MapViewer } from "./viewer.js?v=1.8.27";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.27";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.27";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.27";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.26";
+} from "./image-cache.js?v=1.8.27";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -36,6 +36,7 @@ const els = {
   suggestions: $("#suggestions"),
   status: $("#status"),
   btnAnnotate: $("#btnAnnotate"),
+  btnAddTag: $("#btnAddTag"),
   btnOcr: $("#btnOcr"),
   btnFit: $("#btnFit"),
   btnRefresh: $("#btnRefresh"),
@@ -57,6 +58,8 @@ let maps = [];
 let currentMap = null;
 let activeTagId = null;
 let annotateMode = false;
+let addTagMode = false;
+let addTagBusy = false;
 let sugIndex = -1;
 let toastTimer = 0;
 
@@ -524,6 +527,10 @@ function openNoteDrawer(tag) {
 
 function closeDrawer() {
   els.drawer.classList.remove("open");
+  if (viewer?._addRectNorm) {
+    viewer._addRectNorm = null;
+    viewer.renderOverlay();
+  }
 }
 
 els.noteClose.addEventListener("click", closeDrawer);
@@ -560,6 +567,13 @@ els.noteSave.addEventListener("click", async () => {
   tag.source = "manual";
   tag.locked = true;
   tag.updatedAt = Date.now();
+  // Se creato da “Aggiungi”, tieni la geometria disegnata
+  if (isNew) {
+    tag.x = Number(els.drawer.dataset.x) || tag.x;
+    tag.y = Number(els.drawer.dataset.y) || tag.y;
+    tag.w = Number(els.drawer.dataset.w) || tag.w;
+    tag.h = Number(els.drawer.dataset.h) || tag.h;
+  }
   const { cloudSynced } = await persistCurrent();
   activeTagId = id;
   viewer.map = currentMap;
@@ -572,7 +586,11 @@ els.noteSave.addEventListener("click", async () => {
   } else {
     toast(isNew ? "Tag salvato solo qui" : "Nota salvata solo qui");
   }
-  setStatus(`Mappa: <strong>${escapeHtml(currentMap.name)}</strong> · ${currentMap.tags.length} tag`);
+  setStatus(
+    addTagMode
+      ? `Tag <strong>${escapeHtml(label)}</strong> creato — disegnane un altro o spegni Aggiungi`
+      : `Mappa: <strong>${escapeHtml(currentMap.name)}</strong> · ${currentMap.tags.length} tag`
+  );
 });
 
 els.noteDelete.addEventListener("click", async () => {
@@ -747,6 +765,11 @@ els.btnAnnotate.addEventListener("click", () => {
     toast("Prima cerca ed evidenzia una sigla");
     return;
   }
+  if (addTagMode) {
+    addTagMode = false;
+    viewer.setAddMode(false);
+    els.btnAddTag?.classList.remove("active");
+  }
   annotateMode = !annotateMode;
   viewer.setAnnotate(annotateMode);
   els.btnAnnotate.classList.toggle("active", annotateMode);
@@ -757,6 +780,87 @@ els.btnAnnotate.addEventListener("click", () => {
     toast("Riposiziona off");
   }
 });
+
+els.btnAddTag?.addEventListener("click", () => {
+  if (!currentMap) {
+    toast("Apri una mappa prima");
+    return;
+  }
+  addTagMode = !addTagMode;
+  if (addTagMode && annotateMode) {
+    annotateMode = false;
+    viewer.setAnnotate(false);
+    els.btnAnnotate.classList.remove("active");
+  }
+  viewer.setAddMode(addTagMode);
+  els.btnAddTag.classList.toggle("active", addTagMode);
+  if (addTagMode) {
+    setStatus("Aggiungi tag: zoom a 2 dita · un dito disegna il riquadro sulla sigla");
+    toast("Disegna il riquadro sul tag mancante");
+  } else {
+    setStatus(
+      currentMap
+        ? `Mappa: <strong>${escapeHtml(currentMap.name)}</strong> · ${(currentMap.tags || []).length} tag`
+        : "Pronto"
+    );
+    toast("Aggiungi disattivato");
+  }
+});
+
+viewer.onAddRect = async (rect) => {
+  if (!addTagMode || !currentMap || addTagBusy) return;
+  const img = $("#mapImage");
+  if (!img?.naturalWidth) {
+    toast("Immagine non pronta");
+    return;
+  }
+  addTagBusy = true;
+  setStatus("OCR sulla selezione…");
+  toast("Leggo la sigla…");
+  let best = "";
+  let kind = "altro";
+  try {
+    const result = await ocrImageRegion(img, rect, {
+      onProgress: (p) => {
+        if (p > 0.05) setStatus(`OCR selezione… <strong>${Math.round(p * 100)}%</strong>`);
+      },
+    });
+    best = result.best || "";
+    kind = result.kind || "altro";
+    if (!best && result.text) {
+      // fallback grezzo: prima “parola” alfanumerica
+      const m = String(result.text)
+        .toUpperCase()
+        .replace(/\s+/g, "")
+        .match(/[A-Z0-9][A-Z0-9_-]{3,20}/);
+      if (m) best = m[0];
+    }
+  } catch (err) {
+    console.warn("OCR selezione", err);
+    toast("OCR selezione fallita — inserisci la sigla a mano");
+  } finally {
+    addTagBusy = false;
+  }
+
+  openNoteDrawer({
+    id: best || "",
+    label: best || "",
+    kind,
+    x: rect.x,
+    y: rect.y,
+    w: rect.w,
+    h: rect.h,
+    isNew: true,
+    note: "",
+  });
+  if (best) {
+    setStatus(
+      `Nuovo tag proposto: <strong>${escapeHtml(best)}</strong> — controlla e Salva`
+    );
+  } else {
+    setStatus("Selezione ok — digita la sigla nel pannello e Salva");
+  }
+};
 
 els.btnOcr.addEventListener("click", async () => {
   const img = $("#mapImage");
