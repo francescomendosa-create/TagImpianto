@@ -15,7 +15,7 @@ export class MapViewer {
     this.map = null;
     this.highlightId = null;
     this.annotate = false;
-    /** ModalitÃ  "Aggiungi": un dito disegna il riquadro, due dita zoom */
+    /** Modalità "Aggiungi": un dito disegna il riquadro, due dita zoom */
     this.addMode = false;
     this._viewInitialized = false;
     /** URL logica remota (non blob:) */

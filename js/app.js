@@ -229,7 +229,7 @@ async function applyAppUpdate({ wipeImages = false } = {}) {
     console.warn("Pulizia cache app:", err);
   }
 
-  // Se online c'è giÃ  una versione più nuova -> ok.
+  // Se online c'è già una versione più nuova -> ok.
   // Se Pages sta ancora pubblicando, aspetta fino a ~90s una più nuova della tua.
   setStatus("Controllo versione online...");
   let live = APP_VERSION;
@@ -1047,7 +1047,7 @@ async function boot() {
     setStatus("Aggiorno catalogo mappe dal sito...");
     await forceReloadSeeds();
   } else {
-    // Offline-first: se le mappe ci sono giÃ  in locale, zero rete
+    // Offline-first: se le mappe ci sono già in locale, zero rete
     await loadSeedIfEmpty();
   }
 

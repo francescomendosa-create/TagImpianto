@@ -58,7 +58,7 @@ export async function initCloud() {
     cloudReady = false;
     return { ok: false, reason: "Firebase non configurato" };
   }
-  // GiÃ  connesso (secondo Sync / hot reload)
+  // Già connesso (secondo Sync / hot reload)
   if (cloudReady && firestore) return { ok: true };
   try {
     const [{ initializeApp, getApps, getApp }, { getFirestore }, { getStorage }] = await Promise.all([
@@ -127,7 +127,7 @@ async function resolveSeedPaths() {
 }
 
 /**
- * All'avvio: se IndexedDB ha giÃ  le mappe, NON tocca la rete (offline-first).
+ * All'avvio: se IndexedDB ha già le mappe, NON tocca la rete (offline-first).
  * Solo DB vuoto (primo avvio) scarica i seed dal sito.
  * Per aggiornare catalogo/immagini dal sito: forceReloadSeeds / Aggiorna.
  */
@@ -384,7 +384,7 @@ function tagHasUserData(t) {
 }
 
 /**
- * Unisce tag seed + locali: le coordinate locali NON si perdono mai se il tag esiste giÃ .
+ * Unisce tag seed + locali: le coordinate locali NON si perdono mai se il tag esiste già.
  * Il seed può aggiornare label/kind/image meta, non cancellare il lavoro di riposizionamento.
  */
 function mergeSeedTags(seedTags, localTags) {
@@ -655,7 +655,7 @@ function scoreAgainstKey(q, key) {
   const maxLen = Math.max(q.length, key.length);
   const sim = 1 - dist / maxLen;
 
-  // 1-2 caratteri di differenza (trattino giÃ  ignorato in normalize)
+  // 1-2 caratteri di differenza (trattino già ignorato in normalize)
   if (q.length >= 4 && dist <= 2) {
     return {
       score: Math.round(70 - dist * 8 + sim * 15),
