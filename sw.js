@@ -1,21 +1,6 @@
-const CACHE = "tag-impianto-shell-v68";
-const MAP_CACHE = "tag-impianto-maps-v68";
-const SHELL = [
-  "./",
-  "./index.html",
-  "./css/app.css",
-  "./js/app.js",
-  "./js/viewer.js",
-  "./js/db.js",
-  "./js/ocr.js",
-  "./js/plant-nav.js",
-  "./js/firebase-config.js",
-  "./js/version.js",
-  "./js/image-cache.js",
-  "./data/manifest.json",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
-];
+/* Shell leggera: HTML/JS/CSS sempre da rete se online. Niente precache che blocca gli aggiornamenti. */
+const CACHE = "tag-impianto-shell-v70";
+const MAP_CACHE = "tag-impianto-maps-v70";
 
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
@@ -24,35 +9,33 @@ self.addEventListener("message", (event) => {
 });
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    (async () => {
-      const cache = await caches.open(CACHE);
-      await Promise.all(
-        SHELL.map(async (url) => {
-          try {
-            // bypass cache HTTP di GitHub Pages (max-age 600)
-            await cache.add(new Request(url, { cache: "reload" }));
-          } catch (err) {
-            console.warn("SW cache skip", url, err);
-          }
-        })
-      );
-      await self.skipWaiting();
-    })()
-  );
+  // Non precache-are l’app: altrimenti resti bloccato su JS/HTML vecchi
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener("activate", (event) => {
   const keep = new Set([CACHE, MAP_CACHE]);
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => !keep.has(k)).map((k) => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => !keep.has(k)).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
   );
 });
 
 function isMapAsset(url) {
   return url.pathname.includes("/assets/maps/") && /\.(png|jpe?g|webp)$/i.test(url.pathname);
+}
+
+function isVersionOrShell(url) {
+  const p = url.pathname;
+  return (
+    /\/version\.(js|json)$/i.test(p) ||
+    /\/index\.html$/i.test(p) ||
+    /\/aggiorna\.html$/i.test(p) ||
+    /\/sw\.js$/i.test(p) ||
+    p.endsWith("/")
+  );
 }
 
 self.addEventListener("fetch", (event) => {
@@ -61,7 +44,15 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  // Mappe: rete fresca se online (evita PNG vecchie), fallback cache offline
+  // version / index: SOLO rete, mai cache (aggiornamenti immediati)
+  if (isVersionOrShell(url)) {
+    event.respondWith(
+      fetch(req, { cache: "no-store" }).catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  // Mappe sullo stesso origin (se presenti): rete poi cache
   if (isMapAsset(url)) {
     event.respondWith(
       caches.open(MAP_CACHE).then(async (cache) => {
@@ -80,7 +71,6 @@ self.addEventListener("fetch", (event) => {
         }
         const hit = await cache.match(req);
         if (hit) return hit;
-        // fallback: stessa PNG senza querystring (revisioni)
         const bare = new Request(url.pathname + url.hash, { method: "GET" });
         return (await cache.match(bare)) || Response.error();
       })
@@ -88,19 +78,17 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Shell/app: rete fresca (niente cache HTTP CDN), fallback cache offline
-  const isShell =
+  // JS/CSS/data: rete fresca, fallback cache offline
+  const isApp =
     url.pathname.endsWith(".js") ||
     url.pathname.endsWith(".css") ||
-    url.pathname.endsWith(".html") ||
-    url.pathname.endsWith(".webmanifest") ||
-    url.pathname.endsWith("/") ||
-    /\/sw\.js$/i.test(url.pathname);
+    url.pathname.endsWith(".json") ||
+    url.pathname.endsWith(".webmanifest");
 
   event.respondWith(
-    fetch(req, isShell ? { cache: "no-store" } : undefined)
+    fetch(req, isApp ? { cache: "no-store" } : undefined)
       .then((res) => {
-        if (res && res.ok && isShell) {
+        if (res && res.ok && isApp) {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
         }

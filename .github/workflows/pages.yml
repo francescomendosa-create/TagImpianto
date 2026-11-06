@@ -12,8 +12,8 @@ permissions:
 
 concurrency:
   group: pages-${{ github.repository }}
-  # false: non spezzare un deploy a metà (lasciava il sito a 404)
-  cancel-in-progress: false
+  # Deploy leggero (senza PNG): si può cancellare il precedente
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -24,31 +24,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Prepara sito (solo file utili)
+      - name: Prepara sito LEGGERO (codice senza PNG mappe)
         run: |
           set -euo pipefail
           rm -rf _site
           mkdir -p _site
-          # Copia l’app senza cartelle di lavoro / script / git
+          # Solo app: le PNG (~170MB) restano su GitHub/jsDelivr → deploy in ~1 minuto
           for item in index.html aggiorna.html manifest.webmanifest sw.js deploy-stamp.txt \
-                      css js data icons assets .nojekyll; do
+                      version.json css js data icons .nojekyll; do
             if [ -e "$item" ]; then
               cp -a "$item" "_site/"
             fi
           done
-          # Escludi originali HQ e probe (se presenti per sbaglio)
-          rm -rf _site/assets/maps/full-hq _site/assets/maps/full \
-                 _site/assets/maps/_crops _site/assets/maps/_bio_crop_probe \
-                 _site/assets/maps/_upscale _site/assets/maps/_verify_up \
-                 _site/assets/maps/_crops 2>/dev/null || true
-          find _site -type f -name '_*' -delete 2>/dev/null || true
-          # sanity
+          mkdir -p _site/assets/maps
+          # marker: le mappe si scaricano da CDN/git, non dal bundle Pages
+          echo "maps-via-cdn" > _site/assets/maps/README.txt
           test -f _site/index.html
           test -f _site/js/app.js
           test -f _site/js/version.js
           test -f _site/data/manifest.json
+          test -f _site/version.json
           echo "SITE_BYTES=$(du -sb _site | cut -f1)"
-          ls -la _site
+          du -sh _site
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

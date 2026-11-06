@@ -14,20 +14,30 @@
 </head>
 <body>
   <p>Aggiornamento dell?app <strong>già installata</strong> (non serve reinstallare)?</p>
-  <p id="msg"></p>
+  <p id="msg">Pulizia cache?</p>
   <script>
     (async function () {
       var msg = document.getElementById("msg");
-      var target = "?";
-      try {
-        var vr = await fetch("./js/version.js?_=" + Date.now(), { cache: "no-store" });
-        var vt = await vr.text();
-        var m = /APP_VERSION\s*=\s*"([^"]+)"/.exec(vt);
-        if (m) target = m[1];
-      } catch (e) {}
+      function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+      async function readVer() {
+        try {
+          var r = await fetch("./version.json?_=" + Date.now(), { cache: "no-store" });
+          if (r.ok) {
+            var j = await r.json();
+            if (j && j.version) return String(j.version);
+          }
+        } catch (e) {}
+        try {
+          var vr = await fetch("./js/version.js?_=" + Date.now(), { cache: "no-store" });
+          var vt = await vr.text();
+          var m = /APP_VERSION\s*=\s*"([^"]+)"/.exec(vt);
+          if (m) return m[1];
+        } catch (e) {}
+        return "?";
+      }
       try {
         try { localStorage.setItem("ti-force-seed", "1"); } catch (e) {}
-        // Non cancella le PNG in IndexedDB: restano sul dispositivo
+        try { localStorage.setItem("ti-force-images", "1"); } catch (e) {}
         if ("serviceWorker" in navigator) {
           var regs = await navigator.serviceWorker.getRegistrations();
           await Promise.all(regs.map(function (r) { return r.unregister(); }));
@@ -36,13 +46,22 @@
           var keys = await caches.keys();
           await Promise.all(keys.map(function (k) { return caches.delete(k); }));
         }
-        msg.textContent = "Ok. Ricarico l?app v" + target + "?";
-      } catch (e) {
-        msg.textContent = "Pulizia parziale, apro comunque v" + target + "?";
+      } catch (e) {}
+      var first = await readVer();
+      var target = first;
+      msg.textContent = "Versione online: v" + first + " ? attendo pubblicazione?";
+      for (var i = 0; i < 24; i++) {
+        await sleep(5000);
+        target = await readVer();
+        msg.textContent = "Versione online: v" + target + " (" + (i + 1) + "/24)?";
+        if (target !== "?" && target !== first) break;
+        // se già nuova rispetto a ciò che avevamo in query, ok
+        if (target !== "?" && i >= 1) break;
       }
+      msg.textContent = "Ok. Ricarico l?app v" + target + "?";
       setTimeout(function () {
         location.replace("./index.html?_ver=" + encodeURIComponent(target) + "&_ts=" + Date.now());
-      }, 350);
+      }, 300);
     })();
   </script>
 </body>

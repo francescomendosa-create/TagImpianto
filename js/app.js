@@ -9,17 +9,17 @@ import {
   saveMap,
   searchAllTags,
   syncAllWithCloud,
-} from "./db.js?v=1.8.29";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.29";
-import { MapViewer } from "./viewer.js?v=1.8.29";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.29";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.29";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.29";
+} from "./db.js?v=1.8.30";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.30";
+import { MapViewer } from "./viewer.js?v=1.8.30";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.30";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.30";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.30";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.29";
+} from "./image-cache.js?v=1.8.30";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -144,6 +144,19 @@ let liveVersionCache = null;
 
 /** Legge la versione pubblicata sul sito (bypass cache). Non tocca Firebase. */
 async function fetchLiveAppVersion() {
+  // 1) version.json (piccolo, deploy rapido)  2) fallback version.js
+  try {
+    const res = await fetch(`./version.json?_=${Date.now()}`, { cache: "no-store" });
+    if (res.ok) {
+      const j = await res.json();
+      if (j?.version) {
+        liveVersionCache = String(j.version);
+        return liveVersionCache;
+      }
+    }
+  } catch (_) {
+    /* fallback sotto */
+  }
   const res = await fetch(`./js/version.js?_=${Date.now()}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const text = await res.text();
@@ -151,6 +164,10 @@ async function fetchLiveAppVersion() {
   if (!m) throw new Error("version.js senza APP_VERSION");
   liveVersionCache = m[1];
   return m[1];
+}
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 function showUpdateBanner(liveVer) {
@@ -172,14 +189,13 @@ function hideUpdateBanner() {
 
 /**
  * Aggiorna l’app installata SENZA reinstallare:
- * pulisce solo SW/cache shell, tiene le PNG locali, ricarica stessa origine.
+ * pulisce SW/cache, aspetta che Pages pubblichi (se in ritardo), ricarica index pulito.
  */
 async function applyAppUpdate({ wipeImages = false } = {}) {
-  setStatus("Aggiornamento in corso (app resta installata)…");
+  setStatus("Aggiornamento: pulizia cache…");
   toast("Aggiorno senza reinstallare…");
   try {
     localStorage.setItem("ti-force-seed", "1");
-    // Dopo Aggiorna: riscarica le PNG dal sito (revisioni nuove), senza buttare tutto a caso
     localStorage.setItem("ti-force-images", "1");
   } catch (_) {
     /* ignore */
@@ -189,6 +205,7 @@ async function applyAppUpdate({ wipeImages = false } = {}) {
   } catch (_) {
     /* ignore */
   }
+
   try {
     if ("serviceWorker" in navigator) {
       const regs = await navigator.serviceWorker.getRegistrations();
@@ -208,10 +225,36 @@ async function applyAppUpdate({ wipeImages = false } = {}) {
   } catch (err) {
     console.warn("Pulizia cache app:", err);
   }
-  const url = new URL(location.href);
-  url.searchParams.set("_app", String(Date.now()));
-  if (liveVersionCache) url.searchParams.set("_ver", liveVersionCache);
-  location.replace(url.pathname + url.search + url.hash);
+
+  // Se online c’è già una versione più nuova → ok.
+  // Se Pages sta ancora pubblicando, aspetta fino a ~90s una più nuova della tua.
+  setStatus("Controllo versione online…");
+  let live = APP_VERSION;
+  try {
+    live = (await fetchLiveAppVersion()) || APP_VERSION;
+  } catch (_) {
+    /* ignore */
+  }
+  if (!versionNewer(live, APP_VERSION)) {
+    for (let i = 0; i < 18; i++) {
+      setStatus(`Attendo pubblicazione online… (${i + 1}/18)`);
+      await sleep(5000);
+      try {
+        live = (await fetchLiveAppVersion()) || live;
+        if (versionNewer(live, APP_VERSION)) break;
+      } catch (_) {
+        /* rete */
+      }
+    }
+  }
+  liveVersionCache = live || liveVersionCache || APP_VERSION;
+  setStatus(`Carico v${liveVersionCache}…`);
+
+  // Sempre index.html pulito (non restare su URL/cache strani della PWA)
+  const base = new URL("./index.html", location.href);
+  base.searchParams.set("_ts", String(Date.now()));
+  base.searchParams.set("_ver", String(liveVersionCache));
+  location.replace(base.pathname + base.search);
 }
 
 async function checkForAppUpdate({ silent = true } = {}) {

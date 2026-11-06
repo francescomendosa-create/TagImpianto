@@ -53,14 +53,39 @@ function networkPath(src) {
   return String(src || "").split("?")[0];
 }
 
+/**
+ * Le PNG non stanno più nel bundle Pages (troppo lento da pubblicare).
+ * Ordine: IndexedDB già gestito sopra → locale Pages (se c’è) → CDN jsDelivr dal repo git.
+ */
+function mapFetchCandidates(src) {
+  const raw = String(src || "");
+  const path = (networkPath(raw) || raw.split("?")[0] || "").replace(/^\.\//, "");
+  const q = raw.includes("?") ? raw.slice(raw.indexOf("?")) : "";
+  const bust = `?t=${Date.now()}`;
+  const local = path.startsWith("assets/") ? `./${path}` : path;
+  const cdnBase =
+    "https://cdn.jsdelivr.net/gh/francescomendosa-create/tagimpianto-app@master/";
+  const cdn = cdnBase + path.replace(/^\.\//, "");
+  const rawGh =
+    "https://raw.githubusercontent.com/francescomendosa-create/tagimpianto-app/master/" +
+    path.replace(/^\.\//, "");
+  return [
+    local + (q || bust),
+    cdn + (q || bust),
+    rawGh + (q || bust),
+    local,
+    cdn,
+    rawGh,
+    src,
+  ].filter(Boolean);
+}
+
 async function fetchMapBlob(src) {
-  const path = networkPath(src) || String(src).split("?")[0];
-  // 1) path pulito  2) src originale  3) cache-bust
-  const candidates = [path, src, `${path}?t=${Date.now()}`];
+  const candidates = mapFetchCandidates(src);
   let lastErr = null;
   for (const url of candidates) {
     try {
-      const res = await fetch(url, { cache: "no-store" });
+      const res = await fetch(url, { cache: "no-store", mode: "cors" });
       if (!res.ok) {
         lastErr = new Error(`HTTP ${res.status}`);
         continue;

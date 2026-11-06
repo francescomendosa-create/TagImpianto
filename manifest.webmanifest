@@ -3,7 +3,7 @@
   "name": "Tag Impianto",
   "short_name": "TagImpianto",
   "description": "Ricerca e evidenziazione tag su mappe DCS impianto",
-  "start_url": "./index.html?v=1.6.0",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0f1419",
