@@ -9,17 +9,17 @@ import {
   saveMap,
   searchAllTags,
   syncAllWithCloud,
-} from "./db.js?v=1.8.23";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.23";
-import { MapViewer } from "./viewer.js?v=1.8.23";
-import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.23";
-import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.23";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.23";
+} from "./db.js?v=1.8.24";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.24";
+import { MapViewer } from "./viewer.js?v=1.8.24";
+import { runMapOcr, mergeOcrIntoMap } from "./ocr.js?v=1.8.24";
+import { renderPlantNav, setPlantNavActive } from "./plant-nav.js?v=1.8.24";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.24";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.23";
+} from "./image-cache.js?v=1.8.24";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -31,6 +31,7 @@ const els = {
   updateBannerText: $("#updateBannerText"),
   btnUpdateNow: $("#btnUpdateNow"),
   searchInput: $("#searchInput"),
+  searchKind: $("#searchKind"),
   clearBtn: $("#clearBtn"),
   suggestions: $("#suggestions"),
   status: $("#status"),
@@ -410,13 +411,22 @@ function dismissSearchKeyboard() {
   }
 }
 
+function currentSearchKind() {
+  const v = String(els.searchKind?.value || "tutti").trim().toLowerCase();
+  return v || "tutti";
+}
+
 async function runSearch(query, { autoPick = false } = {}) {
-  const hits = await searchAllTags(query);
+  const kind = currentSearchKind();
+  const hits = await searchAllTags(query, { kind });
   if (!hits.length) {
     closeSuggestions();
-    if (query.trim()) {
+    if (query.trim() || kind !== "tutti") {
+      const kindHint = kind !== "tutti" ? ` (tipo ${escapeHtml(kind)})` : "";
       setStatus(
-        `Nessuna sigla vicina a «${escapeHtml(query)}» — apri la mappa e premi <strong>OCR</strong>, oppure prova senza trattini (es. tk11007)`
+        query.trim()
+          ? `Nessuna sigla vicina a «${escapeHtml(query)}»${kindHint} — prova un altro tipo o senza trattini`
+          : `Nessun tag di tipo «${escapeHtml(kind)}»`
       );
     }
     return hits;
@@ -581,9 +591,20 @@ els.mapSelect.addEventListener("change", () => selectMap(els.mapSelect.value));
 els.searchInput.addEventListener("input", async () => {
   const q = els.searchInput.value;
   els.clearBtn.classList.toggle("visible", !!q);
-  if (!q.trim()) {
+  if (!q.trim() && currentSearchKind() === "tutti") {
     closeSuggestions();
     viewer.highlight(null);
+    return;
+  }
+  await runSearch(q);
+});
+
+els.searchKind?.addEventListener("change", async () => {
+  const q = els.searchInput.value;
+  if (!q.trim() && currentSearchKind() === "tutti") {
+    closeSuggestions();
+    viewer.highlight(null);
+    setStatus("Ricerca: tutti i tipi");
     return;
   }
   await runSearch(q);
@@ -682,7 +703,7 @@ els.searchInput.addEventListener("keydown", async (e) => {
     items.forEach((el, i) => el.classList.toggle("active", i === sugIndex));
   } else if (e.key === "Enter") {
     e.preventDefault();
-    const hits = await searchAllTags(els.searchInput.value);
+    const hits = await searchAllTags(els.searchInput.value, { kind: currentSearchKind() });
     if (!hits.length) {
       toast("Nessun risultato");
       return;
@@ -697,8 +718,12 @@ els.searchInput.addEventListener("keydown", async (e) => {
 els.clearBtn.addEventListener("click", () => {
   els.searchInput.value = "";
   els.clearBtn.classList.remove("visible");
-  closeSuggestions();
-  viewer.highlight(null);
+  if (currentSearchKind() !== "tutti") {
+    runSearch("");
+  } else {
+    closeSuggestions();
+    viewer.highlight(null);
+  }
   els.searchInput.focus();
 });
 

@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.23";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.24";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -182,7 +182,7 @@ export async function mergeSeedsFromSite() {
         const merged = mergeSeedTags(seed.tags || [], localTags);
         if (seed.image && seed.image !== local.image) {
           try {
-            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.23");
+            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.24");
             await deleteLocalImage(local.image);
             await deleteLocalImage(seed.image);
           } catch (_) {
@@ -243,7 +243,7 @@ export async function mergeSeedsFromSite() {
 
       if (seed.image && local.image !== seed.image) {
         try {
-          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.23");
+          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.24");
           await deleteLocalImage(local.image);
           await deleteLocalImage(seed.image);
         } catch (_) {
@@ -711,43 +711,71 @@ function bestScoreForTag(queryKeys, tagKeys) {
  * Ricerca semantica leggera: radici IT, sinonimi, tipo tag, proposte vicine.
  * @returns {Promise<Array<{mapId,mapName,tag,match:{score,tier,reason}}>>}
  */
-export async function searchAllTags(query) {
+/**
+ * @param {string} query
+ * @param {{ kind?: string|null }} [opts] kind = valore Tipo (pompa, valvola, …) oppure "tutti"/vuoto
+ */
+export async function searchAllTags(query, opts = {}) {
+  const kindRaw = String(opts.kind || "tutti").trim().toLowerCase();
+  const kindFilter = !kindRaw || kindRaw === "tutti" ? null : kindRaw;
   const qRaw = String(query || "").trim();
   const queryKeys = expandQueryKeys(qRaw);
-  if (!queryKeys.length || queryKeys.every((k) => k.length < 2)) return [];
+  const hasQuery = queryKeys.length > 0 && !queryKeys.every((k) => k.length < 2);
+
+  // Senza testo: solo se c’è un filtro tipo (sfoglia quella categoria)
+  if (!hasQuery && !kindFilter) return [];
 
   const maps = await listMaps();
   const hits = [];
   for (const map of maps) {
     for (const tag of map.tags || []) {
-      const keys = tagSearchKeys(tag);
-      const match = bestScoreForTag(queryKeys, keys);
-      if (!match || match.score < 55) continue;
-      hits.push({
-        mapId: map.id,
-        mapName: map.name,
-        tag,
-        match: {
-          score: match.score,
-          tier: match.tier,
-          reason: match.reason,
-        },
-      });
+      const tagKind = String(tag.kind || "altro").toLowerCase();
+      if (kindFilter && tagKind !== kindFilter) continue;
+
+      if (hasQuery) {
+        const keys = tagSearchKeys(tag);
+        const match = bestScoreForTag(queryKeys, keys);
+        if (!match || match.score < 55) continue;
+        hits.push({
+          mapId: map.id,
+          mapName: map.name,
+          tag,
+          match: {
+            score: match.score,
+            tier: match.tier,
+            reason: match.reason,
+          },
+        });
+      } else {
+        hits.push({
+          mapId: map.id,
+          mapName: map.name,
+          tag,
+          match: {
+            score: 100,
+            tier: "exact",
+            reason: `Tipo: ${tagKind}`,
+          },
+        });
+      }
     }
   }
 
   hits.sort((a, b) => {
-    if (b.match.score !== a.match.score) return b.match.score - a.match.score;
-    if (a.match.tier !== b.match.tier) return a.match.tier === "exact" ? -1 : 1;
+    if (hasQuery) {
+      if (b.match.score !== a.match.score) return b.match.score - a.match.score;
+      if (a.match.tier !== b.match.tier) return a.match.tier === "exact" ? -1 : 1;
+    }
     return String(a.tag.id).localeCompare(String(b.tag.id), "it");
   });
 
-  // Se ci sono match “exact”, tieni anche i near ma dopo; limita rumore
-  const exactCount = hits.filter((h) => h.match.tier === "exact").length;
-  if (exactCount >= 8) {
-    return hits.filter((h) => h.match.tier === "exact").slice(0, 40);
+  if (hasQuery) {
+    const exactCount = hits.filter((h) => h.match.tier === "exact").length;
+    if (exactCount >= 8) {
+      return hits.filter((h) => h.match.tier === "exact").slice(0, 40);
+    }
   }
-  return hits.slice(0, 40);
+  return hits.slice(0, 60);
 }
 
 function mergeTagCloudLocal(localTag, cloudTag) {

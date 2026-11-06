@@ -187,7 +187,7 @@ body.has-update-banner #app {
   color: var(--text);
   font-family: var(--mono);
   font-size: 1rem;
-  padding: 12px 40px 12px 14px;
+  padding: 12px 132px 12px 14px;
   outline: none;
 }
 #searchInput:focus {
@@ -196,9 +196,35 @@ body.has-update-banner #app {
 }
 #searchInput::placeholder { color: var(--muted); font-family: var(--font); }
 
+.search-kind {
+  position: absolute;
+  right: 36px;
+  top: 50%;
+  transform: translateY(-50%);
+  max-width: 42vw;
+  width: auto;
+  min-width: 6.5rem;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  z-index: 2;
+}
+.search-kind:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-dim);
+}
+
 .clear-btn {
   position: absolute;
-  right: 8px;
+  right: 6px;
   top: 50%;
   transform: translateY(-50%);
   border: 0;
@@ -208,8 +234,20 @@ body.has-update-banner #app {
   cursor: pointer;
   padding: 4px 8px;
   display: none;
+  z-index: 2;
 }
 .clear-btn.visible { display: block; }
+
+@media (max-width: 520px) {
+  #searchInput { padding-right: 118px; }
+  .search-kind {
+    right: 34px;
+    min-width: 5.4rem;
+    max-width: 38vw;
+    font-size: 0.78rem;
+    padding: 0 6px;
+  }
+}
 
 .suggestions {
   position: absolute;
