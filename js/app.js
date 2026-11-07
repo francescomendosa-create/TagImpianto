@@ -9,17 +9,17 @@ import {
   saveMap,
   searchAllTags,
   syncAllWithCloud,
-} from "./db.js?v=1.8.37";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.37";
-import { MapViewer } from "./viewer.js?v=1.8.37";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.37";
-import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.37";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.37";
+} from "./db.js?v=1.8.38";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.38";
+import { MapViewer } from "./viewer.js?v=1.8.38";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.38";
+import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.38";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.38";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.37";
+} from "./image-cache.js?v=1.8.38";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -632,6 +632,12 @@ els.noteSave.addEventListener("click", async () => {
   viewer.map = currentMap;
   viewer.highlight(id);
   closeDrawer();
+  // Dopo Salva di un tag nuovo: spegni Aggiungi (ripremere per crearne un altro)
+  if (isNew && addTagMode) {
+    addTagMode = false;
+    viewer.setAddMode(false);
+    els.btnAddTag?.classList.remove("active");
+  }
   if (cloudSynced) {
     toast(isNew ? "Tag + nota online" : "Nota salvata online");
   } else if (isCloudReady()) {
@@ -640,9 +646,7 @@ els.noteSave.addEventListener("click", async () => {
     toast(isNew ? "Tag salvato solo qui" : "Nota salvata solo qui");
   }
   setStatus(
-    addTagMode
-      ? `Tag <strong>${escapeHtml(label)}</strong> creato - disegnane un altro o spegni Aggiungi`
-      : `Mappa: <strong>${escapeHtml(currentMap.name)}</strong> · ${currentMap.tags.length} tag`
+    `Mappa: <strong>${escapeHtml(currentMap.name)}</strong> · ${currentMap.tags.length} tag`
   );
 });
 
