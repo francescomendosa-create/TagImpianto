@@ -9,17 +9,17 @@ import {
   saveMap,
   searchAllTags,
   syncAllWithCloud,
-} from "./db.js?v=1.8.39";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.39";
-import { MapViewer } from "./viewer.js?v=1.8.39";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.39";
-import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.39";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.39";
+} from "./db.js?v=1.8.40";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.40";
+import { MapViewer } from "./viewer.js?v=1.8.40";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.40";
+import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.40";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.40";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.39";
+} from "./image-cache.js?v=1.8.40";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -36,6 +36,7 @@ const els = {
   suggestions: $("#suggestions"),
   status: $("#status"),
   btnAnnotate: $("#btnAnnotate"),
+  btnRecalibrate: $("#btnRecalibrate"),
   btnAddTag: $("#btnAddTag"),
   btnOcr: $("#btnOcr"),
   btnRefresh: $("#btnRefresh"),
@@ -58,6 +59,7 @@ let currentMap = null;
 let activeTagId = null;
 let annotateMode = false;
 let addTagMode = false;
+let recalibrateMode = false;
 let addTagBusy = false;
 let sugIndex = -1;
 let toastTimer = 0;
@@ -68,6 +70,14 @@ const viewer = new MapViewer({
   imageEl: $("#mapImage"),
   overlayEl: $("#overlay"),
 });
+
+function turnOffAddModes() {
+  addTagMode = false;
+  recalibrateMode = false;
+  viewer.setAddMode(false);
+  els.btnAddTag?.classList.remove("active");
+  els.btnRecalibrate?.classList.remove("active");
+}
 
 // Riposiziona: niente nuovi tag al tap - solo trascinamento del tag evidenziato
 viewer.onAnnotatePlace = null;
@@ -589,6 +599,7 @@ function openNoteDrawer(tag) {
   els.noteKind.value = tag.kind || "altro";
   els.drawer.dataset.tagId = tag.id || "";
   els.drawer.dataset.isNew = tag.isNew ? "1" : "0";
+  els.drawer.dataset.recalibrate = tag.recalibrate ? "1" : "0";
   els.drawer.dataset.x = String(tag.x);
   els.drawer.dataset.y = String(tag.y);
   els.drawer.dataset.w = String(tag.w);
@@ -638,8 +649,10 @@ els.noteSave.addEventListener("click", async () => {
   tag.source = "manual";
   tag.locked = true;
   tag.updatedAt = Date.now();
-  // Se creato da "Aggiungi", tieni la geometria disegnata
-  if (isNew) {
+  const applyGeom =
+    isNew || els.drawer.dataset.recalibrate === "1";
+  // Aggiungi / Ricalibra: geometria dal riquadro disegnato
+  if (applyGeom) {
     tag.x = Number(els.drawer.dataset.x) || tag.x;
     tag.y = Number(els.drawer.dataset.y) || tag.y;
     tag.w = Number(els.drawer.dataset.w) || tag.w;
@@ -650,12 +663,7 @@ els.noteSave.addEventListener("click", async () => {
   viewer.map = currentMap;
   viewer.highlight(id);
   closeDrawer();
-  // Dopo Salva di un tag nuovo: spegni Aggiungi (ripremere per crearne un altro)
-  if (isNew && addTagMode) {
-    addTagMode = false;
-    viewer.setAddMode(false);
-    els.btnAddTag?.classList.remove("active");
-  }
+  turnOffAddModes();
   if (cloudSynced) {
     toast(isNew ? "Tag + nota online" : "Nota salvata online");
   } else if (isCloudReady()) {
@@ -859,11 +867,7 @@ els.btnAnnotate.addEventListener("click", () => {
     toast("Prima cerca ed evidenzia una sigla");
     return;
   }
-  if (addTagMode) {
-    addTagMode = false;
-    viewer.setAddMode(false);
-    els.btnAddTag?.classList.remove("active");
-  }
+  turnOffAddModes();
   annotateMode = !annotateMode;
   viewer.setAnnotate(annotateMode);
   els.btnAnnotate.classList.toggle("active", annotateMode);
@@ -875,34 +879,101 @@ els.btnAnnotate.addEventListener("click", () => {
   }
 });
 
+els.btnRecalibrate?.addEventListener("click", () => {
+  if (!currentMap) {
+    toast("Apri una mappa prima");
+    return;
+  }
+  if (!recalibrateMode && !activeTagId) {
+    toast("Prima cerca ed evidenzia la sigla da ricalibrare");
+    return;
+  }
+  if (recalibrateMode) {
+    turnOffAddModes();
+    setStatus(
+      `Mappa: <strong>${escapeHtml(currentMap.name)}</strong> · ${(currentMap.tags || []).length} tag`
+    );
+    toast("Ricalibra disattivato");
+    return;
+  }
+  if (annotateMode) {
+    annotateMode = false;
+    viewer.setAnnotate(false);
+    els.btnAnnotate.classList.remove("active");
+  }
+  addTagMode = false;
+  els.btnAddTag?.classList.remove("active");
+  recalibrateMode = true;
+  viewer.setAddMode(true);
+  els.btnRecalibrate.classList.add("active");
+  viewer.highlight(activeTagId);
+  setStatus("Ricalibra: ridisegna il riquadro giallo sulla sigla (zoom a 2 dita)");
+  toast("Ridisegna il quadrato del tag selezionato");
+});
+
 els.btnAddTag?.addEventListener("click", () => {
   if (!currentMap) {
     toast("Apri una mappa prima");
     return;
   }
-  addTagMode = !addTagMode;
-  if (addTagMode && annotateMode) {
+  if (addTagMode) {
+    turnOffAddModes();
+    setStatus(
+      `Mappa: <strong>${escapeHtml(currentMap.name)}</strong> · ${(currentMap.tags || []).length} tag`
+    );
+    toast("Aggiungi disattivato");
+    return;
+  }
+  if (annotateMode) {
     annotateMode = false;
     viewer.setAnnotate(false);
     els.btnAnnotate.classList.remove("active");
   }
-  viewer.setAddMode(addTagMode);
-  els.btnAddTag.classList.toggle("active", addTagMode);
-  if (addTagMode) {
-    setStatus("Aggiungi tag: zoom a 2 dita · un dito disegna il riquadro sulla sigla");
-    toast("Disegna il riquadro sul tag mancante");
-  } else {
-    setStatus(
-      currentMap
-        ? `Mappa: <strong>${escapeHtml(currentMap.name)}</strong> · ${(currentMap.tags || []).length} tag`
-        : "Pronto"
-    );
-    toast("Aggiungi disattivato");
-  }
+  recalibrateMode = false;
+  els.btnRecalibrate?.classList.remove("active");
+  addTagMode = true;
+  viewer.setAddMode(true);
+  els.btnAddTag.classList.add("active");
+  setStatus("Aggiungi tag: zoom a 2 dita · un dito disegna il riquadro sulla sigla");
+  toast("Disegna il riquadro sul tag mancante");
 });
 
 viewer.onAddRect = async (rect) => {
-  if (!addTagMode || !currentMap || addTagBusy) return;
+  if (!currentMap || addTagBusy) return;
+  if (!addTagMode && !recalibrateMode) return;
+
+  // Ricalibra: nuovo riquadro sul tag già selezionato → apri Note subito
+  if (recalibrateMode) {
+    const tag = (currentMap.tags || []).find((t) => t.id === activeTagId);
+    if (!tag) {
+      toast("Nessun tag selezionato da ricalibrare");
+      turnOffAddModes();
+      return;
+    }
+    tag.x = rect.x;
+    tag.y = rect.y;
+    tag.w = rect.w;
+    tag.h = rect.h;
+    tag.source = "manual";
+    tag.locked = true;
+    tag.updatedAt = Date.now();
+    viewer.map = currentMap;
+    viewer.highlight(tag.id);
+    turnOffAddModes();
+    openNoteDrawer({
+      ...tag,
+      isNew: false,
+      recalibrate: true,
+      x: rect.x,
+      y: rect.y,
+      w: rect.w,
+      h: rect.h,
+    });
+    setStatus("Riquadro aggiornato - controlla e <strong>Salva</strong> per confermare");
+    toast("Nuovo riquadro pronto - Salva nelle note");
+    return;
+  }
+
   const img = $("#mapImage");
   if (!img?.naturalWidth) {
     toast("Immagine non pronta");
@@ -922,7 +993,6 @@ viewer.onAddRect = async (rect) => {
     best = result.best || "";
     kind = result.kind || "altro";
     if (!best && result.text) {
-      // fallback grezzo: prima "parola" alfanumerica
       const m = String(result.text)
         .toUpperCase()
         .replace(/\s+/g, "")
