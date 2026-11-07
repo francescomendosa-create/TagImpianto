@@ -54,28 +54,38 @@ function networkPath(src) {
 }
 
 /**
- * Le PNG non stanno più nel bundle Pages (troppo lento da pubblicare).
- * Ordine: IndexedDB già gestito sopra → locale Pages (se c’è) → CDN jsDelivr dal repo git.
+ * Le PNG non stanno nel bundle Pages.
+ * Ordine: locale → raw GitHub (sempre aggiornato) → jsDelivr (può restare in cache vecchia).
  */
 function mapFetchCandidates(src) {
   const raw = String(src || "");
   const path = (networkPath(raw) || raw.split("?")[0] || "").replace(/^\.\//, "");
+  const pathClean = path.replace(/^\.\//, "");
   const q = raw.includes("?") ? raw.slice(raw.indexOf("?")) : "";
   const bust = `?t=${Date.now()}`;
   const local = path.startsWith("assets/") ? `./${path}` : path;
-  const cdnBase =
-    "https://cdn.jsdelivr.net/gh/francescomendosa-create/tagimpianto-app@master/";
-  const cdn = cdnBase + path.replace(/^\.\//, "");
-  const rawGh =
+  const rawApp =
     "https://raw.githubusercontent.com/francescomendosa-create/tagimpianto-app/master/" +
-    path.replace(/^\.\//, "");
+    pathClean;
+  const rawMain =
+    "https://raw.githubusercontent.com/francescomendosa-create/TagImpianto/master/" +
+    pathClean;
+  const cdnMain =
+    "https://cdn.jsdelivr.net/gh/francescomendosa-create/TagImpianto@master/" + pathClean;
+  const cdnApp =
+    "https://cdn.jsdelivr.net/gh/francescomendosa-create/tagimpianto-app@master/" +
+    pathClean;
   return [
     local + (q || bust),
-    cdn + (q || bust),
-    rawGh + (q || bust),
+    rawApp + (q || bust),
+    rawMain + (q || bust),
+    cdnMain + (q || bust),
+    cdnApp + (q || bust),
     local,
-    cdn,
-    rawGh,
+    rawApp,
+    rawMain,
+    cdnMain,
+    cdnApp,
     src,
   ].filter(Boolean);
 }
@@ -83,6 +93,7 @@ function mapFetchCandidates(src) {
 async function fetchMapBlob(src) {
   const candidates = mapFetchCandidates(src);
   let lastErr = null;
+  let best = null;
   for (const url of candidates) {
     try {
       const res = await fetch(url, { cache: "no-store", mode: "cors" });
@@ -95,11 +106,17 @@ async function fetchMapBlob(src) {
         lastErr = new Error("blob vuoto");
         continue;
       }
-      return blob;
+      // jsDelivr a volte resta sulla PNG vecchia (piccola): tieni la più grande
+      if (!best || blob.size > best.size) best = blob;
+      // Raw GitHub / file >= ~1.5MB: HD ok, usa subito
+      if (blob.size >= 1500000 || /raw\.githubusercontent\.com/i.test(url)) {
+        return blob;
+      }
     } catch (err) {
       lastErr = err;
     }
   }
+  if (best) return best;
   throw lastErr || new Error("Download mappa fallito");
 }
 
