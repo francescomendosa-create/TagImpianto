@@ -1,10 +1,10 @@
 {
   "id": "biologico-mbbr-123",
   "name": "Biologico MBBR 1 2 3",
-  "image": "assets/maps/biologico-mbbr-123.png?v=18-h2052-hd",
-  "width": 3998,
-  "height": 2052,
-  "notes": "PNG HD 3998x2052 (nov 2026). Se i box sono sfasati usa Ricalibra/Riposiziona.",
+  "image": "assets/maps/biologico-mbbr-123.png?v=19-h1619-hd",
+  "width": 3660,
+  "height": 1619,
+  "notes": "PNG HD 3660x1619 (DCS ok). Se i box sono sfasati usa Ricalibra/Riposiziona.",
   "tags": [
     {
       "id": "02AIT201",
@@ -509,6 +509,6 @@
     }
   ],
   "cropLeft": 0,
-  "seedRev": 18,
+  "seedRev": 19,
   "cropTop": 0
 }
