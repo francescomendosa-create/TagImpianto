@@ -331,6 +331,11 @@ body.has-update-banner #app {
   border-color: var(--warn);
   background: rgba(245, 158, 11, 0.15);
 }
+.sug-kind {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.88em;
+}
 .sug-page {
   color: var(--accent);
   font-weight: 600;

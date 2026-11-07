@@ -9,17 +9,17 @@ import {
   saveMap,
   searchAllTags,
   syncAllWithCloud,
-} from "./db.js?v=1.8.38";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.38";
-import { MapViewer } from "./viewer.js?v=1.8.38";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.38";
-import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.38";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.38";
+} from "./db.js?v=1.8.39";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.39";
+import { MapViewer } from "./viewer.js?v=1.8.39";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.39";
+import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.39";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.39";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.38";
+} from "./image-cache.js?v=1.8.39";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -72,25 +72,25 @@ const viewer = new MapViewer({
 // Riposiziona: niente nuovi tag al tap - solo trascinamento del tag evidenziato
 viewer.onAnnotatePlace = null;
 
-/** Click/tap sul tag: barra ricerca = sigla (+ nota se c’è) + [pagina], senza suggerimenti. */
+/** Click/tap sul tag: barra ricerca = sigla [tipo] (+ nota) [pagina], senza suggerimenti. */
 viewer.onTagDoubleSelect = (tag) => {
   if (!tag || !currentMap) return;
   const sigla = String(tag.label || tag.id || "").trim();
   if (!sigla) return;
+  const text = formatTagSearchText(tag, currentMap.id, currentMap.name);
   const note = String(tag.note || "").trim();
+  const kind = kindLabelForTag(tag);
   const page = pageLabelForMap(currentMap.id, currentMap.name);
-  const pagePart = page ? ` [${page}]` : "";
-  const text = note ? `${sigla} - ${note}${pagePart}` : `${sigla}${pagePart}`;
   closeSuggestions();
   els.searchInput.value = text;
   els.clearBtn.classList.add("visible");
   activeTagId = tag.id;
   viewer.highlight(tag.id);
-  setStatus(
-    note
-      ? `<strong>${escapeHtml(sigla)}</strong> · ${escapeHtml(note)}${pagePart ? ` · ${escapeHtml(pagePart)}` : ""}`
-      : `<strong>${escapeHtml(sigla)}</strong> in ${escapeHtml(page || currentMap.name)}`
-  );
+  const bits = [`<strong>${escapeHtml(sigla)}</strong>`];
+  if (kind) bits.push(escapeHtml(`[${kind}]`));
+  if (note) bits.push(escapeHtml(note));
+  if (page) bits.push(escapeHtml(`[${page}]`));
+  setStatus(bits.join(" · "));
 };
 
 viewer.onTagMoved = async (tagId) => {
@@ -465,6 +465,23 @@ function pageLabelForMap(mapId, fallbackName = "") {
   return String(page?.label || fallbackName || mapId || "").trim();
 }
 
+/** Tipo apparecchiatura (pompa, valvola, …) per i suggerimenti. */
+function kindLabelForTag(tag) {
+  return String(tag?.kind || "").trim().toLowerCase();
+}
+
+/** Testo barra ricerca: sigla [tipo] - nota [pagina] */
+function formatTagSearchText(tag, mapId, mapName) {
+  const sigla = String(tag?.label || tag?.id || "").trim();
+  if (!sigla) return "";
+  const kind = kindLabelForTag(tag);
+  const kindPart = kind ? ` [${kind}]` : "";
+  const note = String(tag?.note || "").trim();
+  const page = pageLabelForMap(mapId, mapName);
+  const pagePart = page ? ` [${page}]` : "";
+  return note ? `${sigla}${kindPart} - ${note}${pagePart}` : `${sigla}${kindPart}${pagePart}`;
+}
+
 async function runSearch(query, { autoPick = false } = {}) {
   const kind = currentSearchKind();
   const hits = await searchAllTags(query, { kind });
@@ -491,9 +508,11 @@ async function runSearch(query, { autoPick = false } = {}) {
       const reason = h.match?.reason || "";
       const badge = tier === "near" ? "Vicino" : "Match";
       const noteText = String(h.tag.note || "").trim();
+      const kind = kindLabelForTag(h.tag);
+      const kindBrackets = kind ? `[${kind}]` : "";
       const pageLabel = pageLabelForMap(h.mapId, h.mapName);
       const pageBrackets = pageLabel ? `[${pageLabel}]` : "";
-      // Nota (se c’è) + pagina tra parentesi quadre — automatico da mappa
+      // Descrizione: nota (se c’è) + [pagina]; il [tipo] sta subito dopo la sigla nel titolo
       const detailLine = noteText
         ? `${escapeHtml(noteText)}${pageBrackets ? ` <span class="sug-page">${escapeHtml(pageBrackets)}</span>` : ""}`
         : pageBrackets
@@ -504,11 +523,10 @@ async function runSearch(query, { autoPick = false } = {}) {
       <div class="sug-item sug-${tier}${i === 0 ? " active" : ""}" data-i="${i}" data-map="${escapeHtml(h.mapId)}" data-tag="${escapeHtml(h.tag.id)}">
         <div>
           <div class="sug-title">
-            <span>${escapeHtml(h.tag.label || h.tag.id)}</span>
+            <span>${escapeHtml(h.tag.label || h.tag.id)}${kindBrackets ? ` <span class="sug-kind">${escapeHtml(kindBrackets)}</span>` : ""}</span>
             <span class="sug-badge ${tier}">${badge}</span>
           </div>
           ${noteHtml}
-          <div class="kind">${escapeHtml(h.tag.kind || "")}</div>
           <div class="sug-reason">${escapeHtml(reason)}</div>
         </div>
       </div>`;
@@ -542,9 +560,9 @@ async function pickHit(hit) {
   closeSuggestions();
   const sigla = String(hit.tag.label || hit.tag.id || "").trim();
   const note = String(hit.tag.note || "").trim();
+  const kind = kindLabelForTag(hit.tag);
   const page = pageLabelForMap(hit.mapId, hit.mapName);
-  const pagePart = page ? ` [${page}]` : "";
-  els.searchInput.value = note ? `${sigla} - ${note}${pagePart}` : `${sigla}${pagePart}`;
+  els.searchInput.value = formatTagSearchText(hit.tag, hit.mapId, hit.mapName);
   els.clearBtn.classList.add("visible");
   activeTagId = hit.tag.id;
   if (!currentMap || currentMap.id !== hit.mapId) {
@@ -556,12 +574,12 @@ async function pickHit(hit) {
   }
   viewer.map = currentMap;
   viewer.highlight(hit.tag.id);
-  const pageStatus = page ? ` · ${escapeHtml(pagePart)}` : "";
-  const noteStatus = note ? ` · nota: ${escapeHtml(note)}` : "";
-  const why = hit.match?.reason ? ` · ${escapeHtml(hit.match.reason)}` : "";
-  setStatus(
-    `Evidenziato <strong>${escapeHtml(sigla)}</strong> in ${escapeHtml(page || hit.mapName)}${why}${noteStatus}${pageStatus}`
-  );
+  const bits = [`Evidenziato <strong>${escapeHtml(sigla)}</strong>`];
+  if (kind) bits.push(escapeHtml(`[${kind}]`));
+  if (page) bits.push(`in ${escapeHtml(page)}`);
+  if (note) bits.push(`nota: ${escapeHtml(note)}`);
+  if (hit.match?.reason) bits.push(escapeHtml(hit.match.reason));
+  setStatus(bits.join(" · "));
 }
 
 function openNoteDrawer(tag) {
