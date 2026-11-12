@@ -1,4 +1,4 @@
-import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.56";
+import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.57";
 
 const MAX_MEM_IMAGES = 10;
 
@@ -69,11 +69,23 @@ export class MapViewer {
 
   _emitTagDoubleSelect(clientX, clientY) {
     if (!this.onTagDoubleSelect) return;
-    const now = Date.now();
-    if (this._lastEmitSelect && now - this._lastEmitSelect < 450) return;
     const tag = this.findTagAtClient(clientX, clientY);
     if (!tag) return;
+    const now = Date.now();
+    const id = String(tag.id);
+    // Solo anti-doppio (pointerup + dblclick sullo STESSO tag).
+    // Tap rapidi su tag diversi devono passare subito.
+    if (
+      this._lastEmitSelect &&
+      this._lastEmitTagId === id &&
+      now - this._lastEmitSelect < 100
+    ) {
+      return;
+    }
     this._lastEmitSelect = now;
+    this._lastEmitTagId = id;
+    // Evidenzia subito (prima del resto UI) così il tap si sente istantaneo
+    this.highlight(id);
     this.onTagDoubleSelect(tag);
   }
 
@@ -95,9 +107,9 @@ export class MapViewer {
       const y = Number(t.y) || 0;
       const w = Math.max(Number(t.w) || 0.02, 0.01);
       const h = Math.max(Number(t.h) || 0.02, 0.01);
-      // margine touch ~8px in coordinate normalizzate
-      const padX = 8 / this.scale / iw;
-      const padY = 8 / this.scale / ih;
+      // margine touch un po' più generoso per tap veloci
+      const padX = 14 / this.scale / iw;
+      const padY = 14 / this.scale / ih;
       if (
         nx >= x - padX &&
         nx <= x + w + padX &&
@@ -513,7 +525,9 @@ export class MapViewer {
     if (this._panning && this._panStart) {
       const dx = e.clientX - this._panStart.x;
       const dy = e.clientY - this._panStart.y;
-      if (Math.abs(dx) + Math.abs(dy) > 4) this._moved = true;
+      // Slop più largo: micro-tremolio dito non annulla il tap sul tag
+      if (Math.abs(dx) + Math.abs(dy) <= 12) return;
+      this._moved = true;
       this.tx = this._panStart.tx + dx;
       this.ty = this._panStart.ty + dy;
       this.applyTransform();
