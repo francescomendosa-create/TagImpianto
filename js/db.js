@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.63";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.64";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -182,7 +182,7 @@ export async function mergeSeedsFromSite() {
         const merged = mergeSeedTags(seed.tags || [], localTags);
         if (seed.image && seed.image !== local.image) {
           try {
-            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.63");
+            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.64");
             await deleteLocalImage(local.image);
             await deleteLocalImage(seed.image);
           } catch (_) {
@@ -243,7 +243,7 @@ export async function mergeSeedsFromSite() {
 
       if (seed.image && local.image !== seed.image) {
         try {
-          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.63");
+          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.64");
           await deleteLocalImage(local.image);
           await deleteLocalImage(seed.image);
         } catch (_) {
@@ -1057,10 +1057,34 @@ function stripUndefined(obj) {
   return out;
 }
 
+function tagCloudPayload(tag, map) {
+  const id = String(tag.id || "")
+    .trim()
+    .replace(/\//g, "_")
+    .slice(0, 700);
+  if (!id) return null;
+  const payload = stripUndefined({
+    id,
+    label: tag.label || id,
+    kind: tag.kind || "altro",
+    x: Number(tag.x) || 0,
+    y: Number(tag.y) || 0,
+    w: Number(tag.w) || 0.04,
+    h: Number(tag.h) || 0.05,
+    note: tag.note || "",
+    source: tag.source || "manual",
+    locked: !!tag.locked,
+    confidence: tag.confidence == null ? null : Number(tag.confidence),
+    updatedAt: Number(tag.updatedAt) || Number(map.updatedAt) || Date.now(),
+  });
+  if (payload.confidence == null) delete payload.confidence;
+  return { id, payload };
+}
+
 /**
  * @param {object} map
  * @param {{ onlyUserTags?: boolean, onProgress?: (msg: string) => void }} [opts]
- *   onlyUserTags: invia solo note/riposizionamenti (Sync tablet)
+ *   onlyUserTags: SOLO note/posizioni sporche — niente meta mappa, niente PNG
  */
 async function pushMapToCloud(map, opts = {}) {
   const onlyUserTags = !!opts.onlyUserTags;
@@ -1076,73 +1100,101 @@ async function pushMapToCloud(map, opts = {}) {
   const tags = onlyUserTags
     ? allTags.filter((t) => tagNeedsCloudPush(t))
     : allTags;
-  // Niente da inviare: non toccare Firestore
-  if (onlyUserTags && !tags.length) return 0;
+  if (!tags.length) return 0;
 
-  const meta = stripUndefined({
-    id: map.id,
-    name: map.name || map.id,
-    image: map.image || "",
-    width: Number(map.width) || 0,
-    height: Number(map.height) || 0,
-    area: map.area || "",
-    notes: map.notes || "",
-    seedRev: Number(map.seedRev) || 0,
-    updatedAt: Number(map.updatedAt) || Date.now(),
-    tagCount: allTags.length,
-    userTagCount: allTags.filter((t) => tagHasLocalEdits(t)).length,
-  });
-  report(`Meta ${map.name || map.id}...`);
-  await withTimeout(
-    setDoc(doc(firestore, "tagImpianto_maps", map.id), meta, { merge: true }),
-    25000,
-    `meta ${map.id}`
-  );
-
-  // Su tablet: un setDoc per tag + timeout; marca cloudSyncedAt dopo ok
-  let wrote = 0;
-  for (let i = 0; i < tags.length; i++) {
-    const tag = tags[i];
-    const id = String(tag.id || "")
-      .trim()
-      .replace(/\//g, "_")
-      .slice(0, 700);
-    if (!id) continue;
-    const payload = stripUndefined({
-      id,
-      label: tag.label || id,
-      kind: tag.kind || "altro",
-      x: Number(tag.x) || 0,
-      y: Number(tag.y) || 0,
-      w: Number(tag.w) || 0.04,
-      h: Number(tag.h) || 0.05,
-      note: tag.note || "",
-      source: tag.source || "manual",
-      locked: !!tag.locked,
-      confidence: tag.confidence == null ? null : Number(tag.confidence),
-      updatedAt: Number(tag.updatedAt) || Number(map.updatedAt) || Date.now(),
-      // cloudSyncedAt resta SOLO in locale (non in Firestore)
+  // Sync tablet: NON scrivere meta mappa (è lì che si bloccava per ore su “Meta…”)
+  if (!onlyUserTags) {
+    const meta = stripUndefined({
+      id: map.id,
+      name: map.name || map.id,
+      image: map.image || "",
+      width: Number(map.width) || 0,
+      height: Number(map.height) || 0,
+      area: map.area || "",
+      notes: map.notes || "",
+      seedRev: Number(map.seedRev) || 0,
+      updatedAt: Number(map.updatedAt) || Date.now(),
+      tagCount: allTags.length,
+      userTagCount: allTags.filter((t) => tagHasLocalEdits(t)).length,
     });
-    if (payload.confidence == null) delete payload.confidence;
-    const ref = doc(collection(firestore, "tagImpianto_maps", map.id, "tags"), id);
-    if (i === 0 || (i + 1) % 5 === 0 || i === tags.length - 1) {
-      report(
-        `Invio ${map.name || map.id} · nuovi ${i + 1}/${tags.length}`
-      );
-    }
-    try {
-      await withTimeout(setDoc(ref, payload, { merge: true }), 20000, `tag ${id}`);
-      markTagCloudSynced(tag);
-      wrote += 1;
-    } catch (err) {
-      throw new Error(`${map.id}/${id}: ${err?.message || err}`);
-    }
-    if (i % 3 === 2) {
-      await new Promise((r) => setTimeout(r, 0));
-    }
+    await withTimeout(
+      setDoc(doc(firestore, "tagImpianto_maps", map.id), meta, { merge: true }),
+      10000,
+      `meta ${map.id}`
+    );
+  }
+
+  // Parallelismo leggero (niente immagini — solo JSON nota/posizione)
+  const CONCURRENCY = 6;
+  const TAG_MS = 8000;
+  let wrote = 0;
+  for (let i = 0; i < tags.length; i += CONCURRENCY) {
+    const slice = tags.slice(i, i + CONCURRENCY);
+    report(
+      `Nota/posizione · ${map.name || map.id} · ${Math.min(i + slice.length, tags.length)}/${tags.length}`
+    );
+    const results = await Promise.all(
+      slice.map(async (tag) => {
+        const packed = tagCloudPayload(tag, map);
+        if (!packed) return false;
+        const ref = doc(
+          collection(firestore, "tagImpianto_maps", map.id, "tags"),
+          packed.id
+        );
+        try {
+          await withTimeout(
+            setDoc(ref, packed.payload, { merge: true }),
+            TAG_MS,
+            packed.id
+          );
+          markTagCloudSynced(tag);
+          return true;
+        } catch (err) {
+          console.warn("push tag", map.id, packed.id, err);
+          return false;
+        }
+      })
+    );
+    wrote += results.filter(Boolean).length;
+    await new Promise((r) => setTimeout(r, 0));
   }
   if (wrote) await idbPut(map);
   return wrote;
+}
+
+/**
+ * Una tantum: le note già sul dispositivo (prima del dirty-tracking)
+ * si considerano già inviate, così Sync non le rimanda tutte.
+ */
+async function migrateExistingEditsAsSynced() {
+  try {
+    if (localStorage.getItem("ti-sync-dirty-v2") === "1") return 0;
+  } catch {
+    return 0;
+  }
+  const all = await idbGetAll();
+  let n = 0;
+  for (const map of all) {
+    if (!map?.id || String(map.id).startsWith("__")) continue;
+    let touched = false;
+    for (const t of map.tags || []) {
+      if (tagHasLocalEdits(t) && !Number(t.cloudSyncedAt)) {
+        markTagCloudSynced(t);
+        touched = true;
+        n += 1;
+      }
+    }
+    if (touched || map.cloudPending) {
+      map.cloudPending = false;
+      await idbPut(map);
+    }
+  }
+  try {
+    localStorage.setItem("ti-sync-dirty-v2", "1");
+  } catch {
+    /* ignore */
+  }
+  return n;
 }
 
 /**
@@ -1306,8 +1358,8 @@ export async function pushAllMapsToCloud() {
 }
 
 /**
- * Sync tablet: PRIMA invia le note locali, POI pull solo mappe cambiate.
- * (Il pull completo di 40+ mappe bloccava il tablet su “1/46”.)
+ * Sync tablet = SOLO invio note/posizioni NUOVE (niente PNG, niente “Meta”, niente pull lungo).
+ * Il PC usa “Scarica cloud” per il download completo.
  * @param {{ onProgress?: (msg: string) => void }} [opts]
  * @returns {Promise<{ mapsPushed: number, tagsPushed: number, errors?: string[] }>}
  */
@@ -1321,28 +1373,41 @@ export async function syncAllWithCloud(opts = {}) {
     }
   };
 
+  report("Preparo Sync (solo novità)…");
+  const migrated = await migrateExistingEditsAsSynced();
+  if (migrated > 0) {
+    report(`Note già presenti: ${migrated} segnate come già inviate`);
+  }
+
   const all = (await idbGetAll()).filter(
     (m) => m?.id && !String(m.id).startsWith("__")
   );
   let mapsPushed = 0;
   let tagsPushed = 0;
   const errors = [];
-  const toPush = all.filter((map) => {
-    const changed = (map.tags || []).filter((t) => tagNeedsCloudPush(t));
-    return map.cloudPending || changed.length > 0;
-  });
 
-  // 1) PUSH prima: le note del tablet devono uscire anche se il pull è lento
-  report(
-    toPush.length
-      ? `Invio note locali · ${toPush.length} mappe…`
-      : "Nessuna nota nuova da inviare…"
+  // Solo mappe con tag davvero sporchi (non cloudPending vuoto)
+  const toPush = all.filter((map) =>
+    (map.tags || []).some((t) => tagNeedsCloudPush(t))
   );
+
+  if (!toPush.length) {
+    for (const map of all) {
+      if (map.cloudPending) {
+        map.cloudPending = false;
+        await idbPut(map);
+      }
+    }
+    report("Sync ok · nulla di nuovo da inviare");
+    return { mapsPushed: 0, tagsPushed: 0, errors: [] };
+  }
+
+  report(`Invio ${toPush.length} mappe con novità…`);
   for (let i = 0; i < toPush.length; i++) {
     const map = toPush[i];
     const changed = (map.tags || []).filter((t) => tagNeedsCloudPush(t));
     report(
-      `Invio · ${map.name || map.id} (${changed.length} tag) · ${i + 1}/${toPush.length}`
+      `Invio novità · ${map.name || map.id} (${changed.length}) · ${i + 1}/${toPush.length}`
     );
     try {
       const wrote = await withTimeout(
@@ -1350,42 +1415,29 @@ export async function syncAllWithCloud(opts = {}) {
           onlyUserTags: true,
           onProgress: report,
         }),
-        120000,
+        45000,
         `push ${map.id}`
       );
       tagsPushed += Number(wrote) || 0;
       map.cloudPending = false;
       await idbPut(map);
-      mapsPushed += 1;
+      if (wrote > 0) mapsPushed += 1;
     } catch (err) {
       errors.push(`${map.id}: ${err?.message || err}`);
       console.warn("sync push", map.id, err);
-      report(`Errore su ${map.name || map.id} — passo oltre…`);
+      report(`Salto ${map.name || map.id}…`);
     }
     await new Promise((r) => setTimeout(r, 0));
   }
 
-  // 2) PULL incrementale (solo mappe più nuove)
-  report("Controllo novità dal cloud…");
-  try {
-    await withTimeout(
-      pullMapsFromCloud({ onlyChanged: true, onProgress: report }),
-      90000,
-      "pull incrementale"
-    );
-  } catch (err) {
-    console.warn("Pull cloud (ok se hai già inviato)", err);
-    report(`Cloud lento in ricezione — le note locali sono già partite`);
-  }
-
-  if (!mapsPushed && errors.length) {
+  if (!mapsPushed && !tagsPushed && errors.length) {
     throw new Error(errors[0]);
   }
   const errHint = errors.length ? ` · ${errors.length} errori` : "";
   report(
-    mapsPushed
-      ? `Sync ok · ${mapsPushed} mappe · ${tagsPushed} tag${errHint}`
-      : `Sync ok · nulla da inviare${errHint}`
+    tagsPushed
+      ? `Sync ok · ${tagsPushed} novità inviate${errHint}`
+      : `Sync ok · nulla inviato${errHint}`
   );
   return { mapsPushed, tagsPushed, errors };
 }
