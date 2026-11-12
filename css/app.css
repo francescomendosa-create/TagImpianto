@@ -203,6 +203,7 @@ body.has-update-banner #app {
   border-radius: 10px;
   padding: 6px 132px 6px 10px;
   box-sizing: border-box;
+  cursor: text;
 }
 .search-field:focus-within {
   border-color: var(--accent);

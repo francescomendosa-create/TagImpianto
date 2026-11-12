@@ -10,17 +10,17 @@ import {
   searchAllTags,
   syncAllWithCloud,
   pullMapsFromCloud,
-} from "./db.js?v=1.8.49";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.49";
-import { MapViewer } from "./viewer.js?v=1.8.49";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.49";
-import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.49";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.49";
+} from "./db.js?v=1.8.50";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.50";
+import { MapViewer } from "./viewer.js?v=1.8.50";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.50";
+import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.50";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.50";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.49";
+} from "./image-cache.js?v=1.8.50";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -797,12 +797,19 @@ els.searchInput.addEventListener("input", async () => {
   await runSearch(sigla, { liveFormat: true });
 });
 
-// Click sul bordo del campo → focus solo sulla sigla (i chip non rubano il cursore)
+// Qualsiasi tap nel riquadro ricerca (anche a destra dei chip) → focus sigla + tastiera
 els.searchField?.addEventListener("pointerdown", (e) => {
   if (e.target === els.searchInput) return;
-  if (e.target?.closest?.(".search-chip")) {
-    e.preventDefault();
-    els.searchInput?.focus();
+  // preventDefault: su mobile apre la tastiera anche se il tap non è sull'<input>
+  e.preventDefault();
+  const inp = els.searchInput;
+  if (!inp) return;
+  inp.focus();
+  const len = String(inp.value || "").length;
+  try {
+    inp.setSelectionRange(len, len);
+  } catch {
+    /* ignore */
   }
 });
 
