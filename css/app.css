@@ -630,20 +630,22 @@ body.has-update-banner #app {
 .tag-box .label {
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 6px);
-  transform: translateX(-50%);
+  bottom: calc(100% + 8px);
+  /* Contro-scala lo zoom mappa → stessa grandezza a schermo ovunque (stile sediflottatore B) */
+  transform: translateX(-50%) scale(calc(1 / var(--ti-scale, 1)));
+  transform-origin: center bottom;
   background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
   color: var(--glow);
   font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  padding: 3px 8px;
-  border-radius: 6px;
-  border: 1px solid rgba(253, 224, 71, 0.55);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(253, 224, 71, 0.65);
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.5);
   white-space: nowrap;
-  max-width: min(70vw, 280px);
+  max-width: min(78vw, 340px);
   overflow: hidden;
   text-overflow: ellipsis;
   opacity: 0;
@@ -654,7 +656,8 @@ body.has-update-banner #app {
 }
 .tag-box .label.label-below {
   bottom: auto;
-  top: calc(100% + 6px);
+  top: calc(100% + 8px);
+  transform-origin: center top;
 }
 .tag-box.hit .label,
 .tag-box.edit .label {

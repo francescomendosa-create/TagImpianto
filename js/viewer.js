@@ -1,4 +1,4 @@
-import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.55";
+import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.56";
 
 const MAX_MEM_IMAGES = 10;
 
@@ -309,6 +309,13 @@ export class MapViewer {
 
   applyTransform() {
     this.world.style.transform = `translate3d(${this.tx}px, ${this.ty}px, 0) scale(${this.scale})`;
+    this._syncLabelScreenScale();
+  }
+
+  /** Sigla digitale: stessa grandezza a schermo a ogni livello di zoom. */
+  _syncLabelScreenScale() {
+    const s = Math.max(Number(this.scale) || 1, 0.05);
+    this.overlayEl?.style?.setProperty("--ti-scale", String(s));
   }
 
   /** Zoom ancorato al punto (cx,cy) in coordinate viewport: quel pixel resta fermo. */
@@ -423,6 +430,7 @@ export class MapViewer {
     if (top < 36) lab.classList.add("label-below");
     lab.textContent = tag.label || tag.id;
     el.appendChild(lab);
+    this._syncLabelScreenScale();
     if (this.annotate) {
       el.addEventListener("pointerdown", (e) => {
         e.stopPropagation();
