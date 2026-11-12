@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.53";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.54";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -182,7 +182,7 @@ export async function mergeSeedsFromSite() {
         const merged = mergeSeedTags(seed.tags || [], localTags);
         if (seed.image && seed.image !== local.image) {
           try {
-            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.53");
+            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.54");
             await deleteLocalImage(local.image);
             await deleteLocalImage(seed.image);
           } catch (_) {
@@ -243,7 +243,7 @@ export async function mergeSeedsFromSite() {
 
       if (seed.image && local.image !== seed.image) {
         try {
-          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.53");
+          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.54");
           await deleteLocalImage(local.image);
           await deleteLocalImage(seed.image);
         } catch (_) {
@@ -547,7 +547,7 @@ function tagSearchKeys(tag) {
   keys.add(normalizeSearchKey(label));
   const codePart = label.split(/\s+/)[0] || "";
   if (codePart) keys.add(normalizeSearchKey(codePart));
-  // Nota: tutta la dicitura + singole parole (â‰¥3) per ritrovare dalla descrizione
+  // Nota: frase intera + singole parole (≥3) per ritrovare dalla descrizione
   if (note) {
     keys.add(normalizeSearchKey(note));
     for (const word of note.split(/[\s,;./\\|+\---]+/)) {
@@ -707,13 +707,169 @@ function bestScoreForTag(queryKeys, tagKeys) {
   return best;
 }
 
+/** Parole significative della query (≥3 lettere/cifre normalizzate). */
+function queryTokens(qRaw) {
+  return String(qRaw || "")
+    .split(/[\s,;./\\|+\---]+/)
+    .map((w) => normalizeSearchKey(w))
+    .filter((w) => w.length >= 3);
+}
+
+const KIND_TOKEN_SET = new Set(
+  Object.values(KIND_WORDS)
+    .flat()
+    .map((w) => normalizeSearchKey(w))
+    .concat(Object.keys(KIND_WORDS).map((k) => normalizeSearchKey(k)))
+);
+
+function isKindishToken(tok) {
+  if (!tok) return false;
+  if (KIND_TOKEN_SET.has(tok)) return true;
+  const st = stemSearchKey(tok);
+  for (const k of KIND_TOKEN_SET) {
+    if (stemSearchKey(k) === st) return true;
+  }
+  return false;
+}
+
+/** Token presente in nota/etichetta/id (non solo nel tipo). */
+function tokenInTagText(tok, noteN, labelN, idN) {
+  if (!tok) return false;
+  if (noteN.includes(tok) || labelN.includes(tok) || idN.includes(tok)) return true;
+  const st = stemSearchKey(tok);
+  if (st.length >= 3) {
+    if (noteN.includes(st) || labelN.includes(st) || idN.includes(st)) return true;
+  }
+  return false;
+}
+
+/**
+ * Punteggio tag: priorità alle NOTE.
+ * Evita che "pompa …" faccia match su tutte le pompe solo per il tipo.
+ */
+export function scoreTagForQuery(qRaw, tag) {
+  const noteN = normalizeSearchKey(tag.note);
+  const labelN = normalizeSearchKey(tag.label || "");
+  const idN = normalizeSearchKey(tag.id || "");
+  const qFull = normalizeSearchKey(qRaw);
+  const tokens = queryTokens(qRaw);
+  const tagKeys = tagSearchKeys(tag);
+
+  // Frase intera nella nota / etichetta
+  if (qFull.length >= 4) {
+    if (noteN && noteN.includes(qFull)) {
+      return { score: 100, tier: "exact", reason: "Nota: testo cercato" };
+    }
+    if (labelN && labelN.includes(qFull)) {
+      return { score: 99, tier: "exact", reason: "Etichetta: testo cercato" };
+    }
+    if (idN && idN.includes(qFull)) {
+      return { score: 98, tier: "exact", reason: "Sigla: testo cercato" };
+    }
+  }
+
+  // Più parole: devono stare (quasi tutte) nel testo; il solo tipo non basta
+  if (tokens.length >= 2) {
+    const textHits = tokens.filter((t) => tokenInTagText(t, noteN, labelN, idN));
+    const distinctive = tokens.filter((t) => !isKindishToken(t));
+    const distTextHits = distinctive.filter((t) =>
+      tokenInTagText(t, noteN, labelN, idN)
+    );
+
+    if (textHits.length === tokens.length) {
+      return {
+        score: 97,
+        tier: "exact",
+        reason: "Nota/etichetta: tutte le parole",
+      };
+    }
+    // Parole distintive (es. riciclofanghi) obbligatoriamente nel testo
+    if (distinctive.length && distTextHits.length === distinctive.length) {
+      const kindOk = tokens
+        .filter((t) => isKindishToken(t))
+        .every(
+          (t) =>
+            tokenInTagText(t, noteN, labelN, idN) ||
+            !!bestScoreForTag([t, stemSearchKey(t)], tagKeys)
+        );
+      if (kindOk || !tokens.some((t) => isKindishToken(t))) {
+        return {
+          score: 95,
+          tier: "exact",
+          reason: "Nota: parole chiave trovate",
+        };
+      }
+      return {
+        score: 93,
+        tier: "exact",
+        reason: "Nota: corrispondenza principale",
+      };
+    }
+    // Almeno una distintiva nel testo + altre parole (anche tipo)
+    if (distTextHits.length >= 1) {
+      let otherOk = 0;
+      for (const t of tokens) {
+        if (tokenInTagText(t, noteN, labelN, idN)) {
+          otherOk++;
+          continue;
+        }
+        if (bestScoreForTag([t, stemSearchKey(t)], tagKeys)) otherOk++;
+      }
+      if (otherOk === tokens.length) {
+        return {
+          score: 88,
+          tier: "exact",
+          reason: "Nota + tipo",
+        };
+      }
+      if (distTextHits.length === distinctive.length && otherOk >= tokens.length - 1) {
+        return {
+          score: 80,
+          tier: "near",
+          reason: "Nota quasi completa",
+        };
+      }
+    }
+    // Niente parole distintive nel testo → non elencare tutte le pompe/valvole
+    return null;
+  }
+
+  // Una sola parola: match classico, ma il solo tipo vale meno
+  const queryKeys = expandQueryKeys(qRaw);
+  const best = bestScoreForTag(queryKeys, tagKeys);
+  if (!best || best.score < 55) return null;
+
+  const onlyKind =
+    isKindishToken(tokens[0] || qFull) &&
+    !tokenInTagText(tokens[0] || qFull, noteN, labelN, idN) &&
+    best.score >= 88;
+
+  if (onlyKind) {
+    return {
+      score: Math.min(68, best.score - 25),
+      tier: "near",
+      reason: `Tipo: ${String(tag.kind || "").trim() || "altro"}`,
+    };
+  }
+
+  // Match nota/etichetta a singola parola
+  if (tokenInTagText(tokens[0] || qFull, noteN, labelN, idN)) {
+    return {
+      score: Math.max(best.score, 96),
+      tier: "exact",
+      reason: noteN ? "Trovato nella nota" : "Trovato in etichetta/sigla",
+    };
+  }
+
+  return best;
+}
+
 /**
  * Ricerca semantica leggera: radici IT, sinonimi, tipo tag, proposte vicine.
- * @returns {Promise<Array<{mapId,mapName,tag,match:{score,tier,reason}}>>}
- */
-/**
+ * Priorità alle note utente (non annegate tra centinaia di match per "tipo").
  * @param {string} query
  * @param {{ kind?: string|null }} [opts] kind = valore Tipo (pompa, valvola, ...) oppure "tutti"/vuoto
+ * @returns {Promise<Array<{mapId,mapName,tag,match:{score,tier,reason}}>>}
  */
 export async function searchAllTags(query, opts = {}) {
   const kindRaw = String(opts.kind || "tutti").trim().toLowerCase();
@@ -733,8 +889,7 @@ export async function searchAllTags(query, opts = {}) {
       if (kindFilter && tagKind !== kindFilter) continue;
 
       if (hasQuery) {
-        const keys = tagSearchKeys(tag);
-        const match = bestScoreForTag(queryKeys, keys);
+        const match = scoreTagForQuery(qRaw, tag);
         if (!match || match.score < 55) continue;
         hits.push({
           mapId: map.id,
@@ -765,11 +920,19 @@ export async function searchAllTags(query, opts = {}) {
     if (hasQuery) {
       if (b.match.score !== a.match.score) return b.match.score - a.match.score;
       if (a.match.tier !== b.match.tier) return a.match.tier === "exact" ? -1 : 1;
+      // A parità: prima chi ha nota (più utile in ricerca testuale)
+      const an = String(a.tag.note || "").trim() ? 1 : 0;
+      const bn = String(b.tag.note || "").trim() ? 1 : 0;
+      if (bn !== an) return bn - an;
     }
     return String(a.tag.id).localeCompare(String(b.tag.id), "it");
   });
 
   if (hasQuery) {
+    const strong = hits.filter((h) => h.match.score >= 88);
+    if (strong.length >= 1) {
+      return strong.slice(0, 40);
+    }
     const exactCount = hits.filter((h) => h.match.tier === "exact").length;
     if (exactCount >= 8) {
       return hits.filter((h) => h.match.tier === "exact").slice(0, 40);
