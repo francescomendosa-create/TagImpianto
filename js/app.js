@@ -10,17 +10,17 @@ import {
   searchAllTags,
   syncAllWithCloud,
   pullMapsFromCloud,
-} from "./db.js?v=1.8.44";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.44";
-import { MapViewer } from "./viewer.js?v=1.8.44";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.44";
-import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.44";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.44";
+} from "./db.js?v=1.8.45";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.45";
+import { MapViewer } from "./viewer.js?v=1.8.45";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.45";
+import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.45";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.45";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.44";
+} from "./image-cache.js?v=1.8.45";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -1091,16 +1091,15 @@ function isDesktopPc() {
   return true;
 }
 
-function setupPcPullCloudButton() {
-  if (!els.btnPullCloud) return;
-  const show = isDesktopPc();
-  els.btnPullCloud.hidden = !show;
-  if (show) {
-    try {
-      localStorage.setItem("ti-device", "pc");
-    } catch (_) {
-      /* ignore */
-    }
+/** PC: solo Scarica cloud. Tablet: solo Sync (invio). */
+function setupDeviceCloudButtons() {
+  const pc = isDesktopPc();
+  if (els.btnPullCloud) els.btnPullCloud.hidden = !pc;
+  if (els.btnSync) els.btnSync.hidden = !!pc;
+  try {
+    localStorage.setItem("ti-device", pc ? "pc" : "tablet");
+  } catch (_) {
+    /* ignore */
   }
 }
 
@@ -1198,7 +1197,7 @@ async function boot() {
     els.appVersion.textContent = `v${APP_VERSION}`;
     els.appVersion.title = `Versione ${APP_VERSION} (${APP_BUILD})`;
   }
-  setupPcPullCloudButton();
+  setupDeviceCloudButtons();
   setStatus("Avvio Tag Impianto...");
   renderPlantNav(els.plantNav, {
     onSelect: (page) => {
