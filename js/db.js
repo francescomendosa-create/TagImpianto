@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.72";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.73";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -193,7 +193,7 @@ export async function mergeSeedsFromSite() {
         const merged = mergeSeedTags(seed.tags || [], localTags);
         if (seed.image && seed.image !== local.image) {
           try {
-            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.72");
+            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.73");
             await deleteLocalImage(local.image);
             await deleteLocalImage(seed.image);
           } catch (_) {
@@ -254,7 +254,7 @@ export async function mergeSeedsFromSite() {
 
       if (seed.image && local.image !== seed.image) {
         try {
-          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.72");
+          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.73");
           await deleteLocalImage(local.image);
           await deleteLocalImage(seed.image);
         } catch (_) {
@@ -1158,16 +1158,59 @@ function tagCloudPayload(tag, map) {
   return { id, payload };
 }
 
+function firestoreRestValue(v) {
+  if (typeof v === "boolean") return { booleanValue: v };
+  if (typeof v === "number" && Number.isFinite(v)) {
+    if (Math.floor(v) === v && Math.abs(v) <= Number.MAX_SAFE_INTEGER) {
+      return { integerValue: String(v) };
+    }
+    return { doubleValue: v };
+  }
+  return { stringValue: v == null ? "" : String(v) };
+}
+
+function firestoreTagDocName(mapId, tagId) {
+  const seg = (s) => encodeURIComponent(String(s));
+  return `projects/${firebaseConfig.projectId}/databases/(default)/documents/tagImpianto_maps/${seg(mapId)}/tags/${seg(tagId)}`;
+}
+
+/** Un POST HTTP: niente WebChannel SDK (quello che sul tablet resta appeso). */
+async function firestoreRestCommit(writes, timeoutMs) {
+  const url =
+    `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}` +
+    `/databases/(default)/documents:commit?key=${encodeURIComponent(firebaseConfig.apiKey)}`;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ writes }),
+      signal: ctrl.signal,
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      throw new Error(`Firestore HTTP ${res.status}: ${text.slice(0, 180)}`);
+    }
+    return text ? JSON.parse(text) : {};
+  } catch (err) {
+    if (err?.name === "AbortError") {
+      throw new Error(`Timeout invio (${Math.round(timeoutMs / 1000)}s)`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
- * Invio a BATCH Firestore (un round-trip per pezzo): secondi, non minuti.
- * Dopo ogni pezzo OK → fuori coda pending (niente ripartenza da capo).
+ * Tutte le note in 1 richiesta HTTP (file microscopici).
+ * Dopo l'OK escono dalla coda: il Sync successivo non riparte da capo.
  * @returns {Promise<{ wrote: number, errors: string[] }>}
  */
 async function commitTagQueue(queue, report) {
   if (!queue.length) return { wrote: 0, errors: [] };
-  const { doc, collection, writeBatch, setDoc } = await loadFirestoreMod();
-  const CHUNK = 25;
-  const BATCH_MS = 60000;
+  const CHUNK = 200;
   let wrote = 0;
   const errors = [];
 
@@ -1181,81 +1224,59 @@ async function commitTagQueue(queue, report) {
       try {
         await idbPut(map);
       } catch (err) {
-        console.warn("idbPut dopo batch", map.id, err);
+        console.warn("idbPut dopo sync", map.id, err);
       }
     }
   }
 
-  async function commitSlice(slice, label) {
-    const batch = writeBatch(firestore);
+  for (let i = 0; i < queue.length; i += CHUNK) {
+    const slice = queue.slice(i, i + CHUNK);
+    const writes = [];
     const okItems = [];
     for (const item of slice) {
       const { map, tag } = item;
       if (!tagNeedsCloudPush(tag, map.id)) continue;
       const packed = tagCloudPayload(tag, map);
       if (!packed) continue;
-      const ref = doc(
-        collection(firestore, "tagImpianto_maps", map.id, "tags"),
-        packed.id
-      );
-      batch.set(ref, packed.payload, { merge: true });
+      const fields = {};
+      for (const [k, v] of Object.entries(packed.payload)) {
+        fields[k] = firestoreRestValue(v);
+      }
+      writes.push({
+        update: {
+          name: firestoreTagDocName(map.id, packed.id),
+          fields,
+        },
+      });
       okItems.push(item);
     }
-    if (!okItems.length) return 0;
-    await withTimeout(batch.commit(), BATCH_MS, label);
+    if (!writes.length) continue;
+    report(`Invio ${writes.length} note in un colpo…`);
+    let lastErr = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        await firestoreRestCommit(writes, 20000);
+        lastErr = null;
+        break;
+      } catch (err) {
+        lastErr = err;
+        report(
+          attempt === 1
+            ? `Rete lenta, riprovo lo stesso invio…`
+            : `Invio non riuscito`
+        );
+      }
+    }
+    if (lastErr) {
+      errors.push(String(lastErr?.message || lastErr));
+      continue;
+    }
     markTagsCloudSyncedMany(
       okItems.map(({ map, tag }) => ({ tag, mapId: map.id }))
     );
     await persistMaps(okItems);
-    return okItems.length;
-  }
-
-  for (let i = 0; i < queue.length; i += CHUNK) {
-    const slice = queue.slice(i, i + CHUNK);
-    const n = Math.min(i + slice.length, queue.length);
-    report(`Batch ${n}/${queue.length} (veloce)…`);
-    try {
-      wrote += await commitSlice(slice, `batch ${i}-${n}`);
-      report(`Inviati ${wrote}/${queue.length}…`);
-    } catch (batchErr) {
-      // Fallback: pezzi da 5, poi uno a uno — senza perdere i già inviati
-      report(`Batch lento · provo a pezzi…`);
-      for (let j = 0; j < slice.length; j += 5) {
-        const mini = slice.slice(j, j + 5);
-        try {
-          wrote += await commitSlice(mini, `mini ${i + j}`);
-          report(`Inviati ${wrote}/${queue.length}…`);
-        } catch (miniErr) {
-          for (const item of mini) {
-            const { map, tag } = item;
-            if (!tagNeedsCloudPush(tag, map.id)) continue;
-            const packed = tagCloudPayload(tag, map);
-            if (!packed) continue;
-            const label = `${map.name || map.id} · ${packed.id}`;
-            try {
-              const ref = doc(
-                collection(firestore, "tagImpianto_maps", map.id, "tags"),
-                packed.id
-              );
-              await withTimeout(
-                setDoc(ref, packed.payload, { merge: true }),
-                30000,
-                label
-              );
-              markTagCloudSynced(tag, map.id);
-              await persistMaps([item]);
-              wrote += 1;
-              report(`Inviati ${wrote}/${queue.length}…`);
-            } catch (err) {
-              errors.push(`${label}: ${err?.message || err}`);
-            }
-          }
-        }
-      }
-      if (!wrote && errors.length === 0) {
-        errors.push(String(batchErr?.message || batchErr));
-      }
-    }
+    wrote += okItems.length;
+    report(`Inviate ${wrote}…`);
   }
 
   return { wrote, errors };
