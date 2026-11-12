@@ -1,4 +1,4 @@
-import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.54";
+import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.55";
 
 const MAX_MEM_IMAGES = 10;
 
@@ -419,6 +419,8 @@ export class MapViewer {
     el.dataset.tagId = tag.id;
     const lab = document.createElement("div");
     lab.className = "label";
+    // In alto sul disegno la label sopra uscirebbe dal viewport: mettila sotto
+    if (top < 36) lab.classList.add("label-below");
     lab.textContent = tag.label || tag.id;
     el.appendChild(lab);
     if (this.annotate) {
