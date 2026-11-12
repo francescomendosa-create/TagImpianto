@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.66";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.67";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -182,7 +182,7 @@ export async function mergeSeedsFromSite() {
         const merged = mergeSeedTags(seed.tags || [], localTags);
         if (seed.image && seed.image !== local.image) {
           try {
-            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.66");
+            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.67");
             await deleteLocalImage(local.image);
             await deleteLocalImage(seed.image);
           } catch (_) {
@@ -243,7 +243,7 @@ export async function mergeSeedsFromSite() {
 
       if (seed.image && local.image !== seed.image) {
         try {
-          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.66");
+          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.67");
           await deleteLocalImage(local.image);
           await deleteLocalImage(seed.image);
         } catch (_) {
@@ -431,16 +431,24 @@ function tagNeedsCloudPush(t, mapId) {
   return !synced || updated > synced;
 }
 
-function markTagCloudSynced(t, mapId) {
+function markTagCloudSynced(t, mapId, reg) {
   if (!t) return;
   const at = Number(t.updatedAt) || Date.now();
   t.updatedAt = at;
   t.cloudSyncedAt = at;
   if (mapId && t.id) {
-    const reg = readSyncedRegistry();
-    reg[syncedRegKey(mapId, t.id)] = at;
-    writeSyncedRegistry(reg);
+    const r = reg || readSyncedRegistry();
+    r[syncedRegKey(mapId, t.id)] = at;
+    if (!reg) writeSyncedRegistry(r);
   }
+}
+
+function markTagsCloudSyncedMany(items) {
+  const reg = readSyncedRegistry();
+  for (const { tag, mapId } of items) {
+    markTagCloudSynced(tag, mapId, reg);
+  }
+  writeSyncedRegistry(reg);
 }
 
 /** Dopo modifica locale: va rimandato al Sync. */
@@ -1131,9 +1139,70 @@ function tagCloudPayload(tag, map) {
 }
 
 /**
+ * Scrive in batch Firestore (veloce). Niente PNG, niente IDB a ogni tag.
+ * @returns {Promise<number>} tag scritti
+ */
+async function commitTagQueue(queue, report) {
+  if (!queue.length) return 0;
+  const { doc, collection, writeBatch } = await loadFirestoreMod();
+  const CHUNK = 40; // Firestore max 500; pezzi piccoli = commit rapidi
+  let wrote = 0;
+  const mapsTouched = new Map(); // mapId -> map
+
+  for (let i = 0; i < queue.length; i += CHUNK) {
+    const slice = queue.slice(i, i + CHUNK);
+    report(
+      `Invio batch ${Math.min(i + slice.length, queue.length)}/${queue.length}…`
+    );
+    const batch = writeBatch(firestore);
+    const okItems = [];
+    const parentSeen = new Set();
+    for (const item of slice) {
+      const { map, tag } = item;
+      const packed = tagCloudPayload(tag, map);
+      if (!packed) continue;
+      // doc padre leggero (solo id/updatedAt) — evita regole/path spezzati
+      if (!parentSeen.has(map.id)) {
+        parentSeen.add(map.id);
+        batch.set(
+          doc(firestore, "tagImpianto_maps", map.id),
+          {
+            id: map.id,
+            name: map.name || map.id,
+            updatedAt: Date.now(),
+          },
+          { merge: true }
+        );
+      }
+      const ref = doc(
+        collection(firestore, "tagImpianto_maps", map.id, "tags"),
+        packed.id
+      );
+      batch.set(ref, packed.payload, { merge: true });
+      okItems.push(item);
+    }
+    if (!okItems.length) continue;
+    await withTimeout(batch.commit(), 20000, `batch ${i}`);
+    markTagsCloudSyncedMany(
+      okItems.map(({ map, tag }) => ({ tag, mapId: map.id }))
+    );
+    for (const { map } of okItems) mapsTouched.set(map.id, map);
+    wrote += okItems.length;
+  }
+
+  // Un solo IDB put per mappa toccata
+  for (const map of mapsTouched.values()) {
+    map.cloudPending = (map.tags || []).some((t) =>
+      tagNeedsCloudPush(t, map.id)
+    );
+    await idbPut(map);
+  }
+  return wrote;
+}
+
+/**
  * @param {object} map
  * @param {{ onlyUserTags?: boolean, onProgress?: (msg: string) => void }} [opts]
- *   onlyUserTags: SOLO note/posizioni sporche — niente meta mappa, niente PNG
  */
 async function pushMapToCloud(map, opts = {}) {
   const onlyUserTags = !!opts.onlyUserTags;
@@ -1144,12 +1213,10 @@ async function pushMapToCloud(map, opts = {}) {
       /* ignore */
     }
   };
-  const { doc, setDoc, collection } = await loadFirestoreMod();
   const allTags = map.tags || [];
   let tags = onlyUserTags
     ? allTags.filter((t) => tagNeedsCloudPush(t, map.id))
     : allTags;
-  // Prima le più recenti (novità), poi eventuali vecchi non ancora confermati
   if (onlyUserTags) {
     tags = [...tags].sort(
       (a, b) => (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0)
@@ -1157,8 +1224,8 @@ async function pushMapToCloud(map, opts = {}) {
   }
   if (!tags.length) return 0;
 
-  // Sync tablet: NON scrivere meta mappa (è lì che si bloccava per ore su “Meta…”)
   if (!onlyUserTags) {
+    const { doc, setDoc } = await loadFirestoreMod();
     const meta = stripUndefined({
       id: map.id,
       name: map.name || map.id,
@@ -1179,37 +1246,10 @@ async function pushMapToCloud(map, opts = {}) {
     );
   }
 
-  // Un tag alla volta + salvataggio locale subito (così non si riparte sempre dai vecchi)
-  const TAG_MS = 10000;
-  let wrote = 0;
-  for (let i = 0; i < tags.length; i++) {
-    const tag = tags[i];
-    const packed = tagCloudPayload(tag, map);
-    if (!packed) continue;
-    report(
-      `Invio novità · ${map.name || map.id} · ${packed.id} · ${i + 1}/${tags.length}`
-    );
-    const ref = doc(
-      collection(firestore, "tagImpianto_maps", map.id, "tags"),
-      packed.id
-    );
-    try {
-      await withTimeout(
-        setDoc(ref, packed.payload, { merge: true }),
-        TAG_MS,
-        packed.id
-      );
-      markTagCloudSynced(tag, map.id);
-      wrote += 1;
-      // Persisti SUBITO: se Sync si interrompe, i già inviati non ripartono
-      await idbPut(map);
-    } catch (err) {
-      console.warn("push tag", map.id, packed.id, err);
-      report(`Salto ${packed.id}…`);
-    }
-    await new Promise((r) => setTimeout(r, 0));
-  }
-  return wrote;
+  return commitTagQueue(
+    tags.map((tag) => ({ map, tag })),
+    report
+  );
 }
 
 /**
@@ -1408,10 +1448,9 @@ export async function pushAllMapsToCloud() {
 }
 
 /**
- * Sync tablet = SOLO invio note/posizioni NUOVE (niente PNG, niente “Meta”, niente pull lungo).
- * Il PC usa “Scarica cloud” per il download completo.
+ * Sync tablet = batch Firestore delle SOLE novità (secondi, non mezz’ore).
+ * Niente PNG, niente pull, niente IDB a ogni tag.
  * @param {{ onProgress?: (msg: string) => void }} [opts]
- * @returns {Promise<{ mapsPushed: number, tagsPushed: number, errors?: string[] }>}
  */
 export async function syncAllWithCloud(opts = {}) {
   if (!cloudReady) throw new Error("Cloud non pronto");
@@ -1422,22 +1461,14 @@ export async function syncAllWithCloud(opts = {}) {
       /* ignore */
     }
   };
+  const errors = [];
 
-  report("Preparo Sync (solo novità)…");
-  const migrated = await migrateExistingEditsAsSynced();
-  if (migrated > 0) {
-    report(`Note già presenti: ${migrated} segnate come già inviate`);
-  }
+  report("Cerco novità…");
+  await migrateExistingEditsAsSynced();
 
   const all = (await idbGetAll()).filter(
     (m) => m?.id && !String(m.id).startsWith("__")
   );
-  let mapsPushed = 0;
-  let tagsPushed = 0;
-  const errors = [];
-
-  // Solo mappe con tag davvero sporchi (non cloudPending vuoto)
-  // Coda piatta: prima le note più nuove (qualsiasi mappa), non sempre carboni→…
   const queue = [];
   for (const map of all) {
     for (const tag of map.tags || []) {
@@ -1459,56 +1490,25 @@ export async function syncAllWithCloud(opts = {}) {
     return { mapsPushed: 0, tagsPushed: 0, errors: [] };
   }
 
-  report(`Invio ${queue.length} novità (prima le più recenti)…`);
-  const touchedMaps = new Set();
-  const { doc, setDoc, collection } = await loadFirestoreMod();
-  for (let i = 0; i < queue.length; i++) {
-    const { map, tag } = queue[i];
-    // Ricosidera: forse già inviato in questo giro / registro
-    if (!tagNeedsCloudPush(tag, map.id)) continue;
-    const packed = tagCloudPayload(tag, map);
-    if (!packed) continue;
-    report(
-      `Novità ${i + 1}/${queue.length} · ${map.name || map.id} · ${packed.id}`
+  report(`Invio ${queue.length} novità in batch…`);
+  let tagsPushed = 0;
+  try {
+    tagsPushed = await withTimeout(
+      commitTagQueue(queue, report),
+      60000,
+      "sync batch"
     );
-    try {
-      const ref = doc(
-        collection(firestore, "tagImpianto_maps", map.id, "tags"),
-        packed.id
-      );
-      await withTimeout(
-        setDoc(ref, packed.payload, { merge: true }),
-        10000,
-        packed.id
-      );
-      markTagCloudSynced(tag, map.id);
-      await idbPut(map);
-      tagsPushed += 1;
-      touchedMaps.add(map.id);
-    } catch (err) {
-      errors.push(`${map.id}/${packed.id}: ${err?.message || err}`);
-      console.warn("sync push", map.id, packed.id, err);
-      report(`Salto ${packed.id}…`);
-    }
-    await new Promise((r) => setTimeout(r, 0));
-  }
-  mapsPushed = touchedMaps.size;
-  for (const map of all) {
-    if (!touchedMaps.has(map.id)) continue;
-    if (!(map.tags || []).some((t) => tagNeedsCloudPush(t, map.id))) {
-      map.cloudPending = false;
-      await idbPut(map);
-    }
+  } catch (err) {
+    errors.push(String(err?.message || err));
+    console.warn("sync batch", err);
+    throw new Error(`Sync lenta/errore: ${err?.message || err}`);
   }
 
-  if (!mapsPushed && !tagsPushed && errors.length) {
-    throw new Error(errors[0]);
-  }
-  const errHint = errors.length ? ` · ${errors.length} errori` : "";
+  const mapsPushed = new Set(queue.map((q) => q.map.id)).size;
   report(
     tagsPushed
-      ? `Sync ok · ${tagsPushed} novità inviate${errHint}`
-      : `Sync ok · nulla inviato${errHint}`
+      ? `Sync ok · ${tagsPushed} novità inviate in pochi secondi`
+      : "Sync ok · nulla inviato"
   );
   return { mapsPushed, tagsPushed, errors };
 }
