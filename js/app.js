@@ -10,17 +10,17 @@ import {
   searchAllTags,
   syncAllWithCloud,
   pullMapsFromCloud,
-} from "./db.js?v=1.8.50";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.50";
-import { MapViewer } from "./viewer.js?v=1.8.50";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.50";
-import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.50";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.50";
+} from "./db.js?v=1.8.51";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.51";
+import { MapViewer } from "./viewer.js?v=1.8.51";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.51";
+import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.51";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.51";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.50";
+} from "./image-cache.js?v=1.8.51";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -797,6 +797,33 @@ els.searchInput.addEventListener("input", async () => {
   await runSearch(sigla, { liveFormat: true });
 });
 
+function clearSearchSiglaField({ keepFocus = true } = {}) {
+  els.searchInput.value = "";
+  clearSearchMetaChips();
+  els.clearBtn.classList.remove("visible");
+  closeSuggestions();
+  viewer.highlight(null);
+  if (currentSearchKind() !== "tutti") {
+    runSearch("");
+  }
+  if (keepFocus) {
+    try {
+      els.searchInput.focus();
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+/** Un click sulla riga: ripresenta i suggerimenti se la sigla non è cambiata. Doppio: azzera. */
+let searchRowLastTapAt = 0;
+async function reopenSuggestionsFromField() {
+  if (els.suggestions.classList.contains("open") && sugHits.length) return;
+  const q = extractSearchSigla(els.searchInput.value);
+  if (!q.trim() && currentSearchKind() === "tutti") return;
+  await runSearch(q, { liveFormat: false });
+}
+
 // Qualsiasi tap nel riquadro ricerca (anche a destra dei chip) → focus sigla + tastiera
 els.searchField?.addEventListener("pointerdown", (e) => {
   if (e.target === els.searchInput) return;
@@ -811,6 +838,23 @@ els.searchField?.addEventListener("pointerdown", (e) => {
   } catch {
     /* ignore */
   }
+});
+
+els.searchField?.addEventListener("click", async () => {
+  const now = Date.now();
+  if (now - searchRowLastTapAt < 380) {
+    searchRowLastTapAt = 0;
+    clearSearchSiglaField();
+    return;
+  }
+  searchRowLastTapAt = now;
+  await reopenSuggestionsFromField();
+});
+
+els.searchField?.addEventListener("dblclick", (e) => {
+  e.preventDefault();
+  searchRowLastTapAt = 0;
+  clearSearchSiglaField();
 });
 
 /** Snapshot tipo al tocco: se riscelgo lo stesso con lista aperta → chiudi popup. */
@@ -953,16 +997,7 @@ els.searchInput.addEventListener("keydown", async (e) => {
 });
 
 els.clearBtn.addEventListener("click", () => {
-  els.searchInput.value = "";
-  clearSearchMetaChips();
-  els.clearBtn.classList.remove("visible");
-  if (currentSearchKind() !== "tutti") {
-    runSearch("");
-  } else {
-    closeSuggestions();
-    viewer.highlight(null);
-  }
-  els.searchInput.focus();
+  clearSearchSiglaField();
 });
 
 els.btnRefresh?.addEventListener("click", async () => {
@@ -1297,9 +1332,10 @@ els.btnSync.addEventListener("click", async () => {
 });
 
 document.addEventListener("click", (e) => {
-  if (!els.suggestions.contains(e.target) && e.target !== els.searchInput) {
-    closeSuggestions();
-  }
+  if (els.suggestions.contains(e.target)) return;
+  // Click sulla riga ricerca: non chiudere (serve per riaprire i suggerimenti)
+  if (els.searchField?.contains(e.target) || e.target === els.searchInput) return;
+  closeSuggestions();
 });
 
 // resize: non forzare fit - l'inquadratura resta quella dell'utente
