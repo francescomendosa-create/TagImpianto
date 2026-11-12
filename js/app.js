@@ -10,17 +10,17 @@ import {
   searchAllTags,
   syncAllWithCloud,
   pullMapsFromCloud,
-} from "./db.js?v=1.8.45";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.45";
-import { MapViewer } from "./viewer.js?v=1.8.45";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.45";
-import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.45";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.45";
+} from "./db.js?v=1.8.46";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.46";
+import { MapViewer } from "./viewer.js?v=1.8.46";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.46";
+import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.46";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.46";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.45";
+} from "./image-cache.js?v=1.8.46";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -494,16 +494,53 @@ function formatTagSearchText(tag, mapId, mapName) {
   return note ? `${sigla}${kindPart} - ${note}${pagePart}` : `${sigla}${kindPart}${pagePart}`;
 }
 
-async function runSearch(query, { autoPick = false } = {}) {
+/**
+ * Dalla barra togli [tipo]/[pagina]/nota: resta solo la sigla digitata.
+ * Così mentre scrivi non cerchi anche "valvola" / "Ultrafiltrazione…".
+ */
+function extractSearchSigla(raw) {
+  let s = String(raw || "");
+  s = s.replace(/\s*\[[^\]]*\]/g, " ");
+  const dash = s.indexOf(" - ");
+  if (dash >= 0) s = s.slice(0, dash);
+  return s.replace(/\s+/g, " ").trim();
+}
+
+/** Aggiorna subito [tipo] e [pagina] sul miglior risultato, cursore resta sulla sigla. */
+function applyLiveSearchChrome(typedSigla, hit) {
+  const input = els.searchInput;
+  if (!input) return;
+  const sigla = String(typedSigla || "");
+  let next = sigla;
+  if (hit?.tag) {
+    const kind = kindLabelForTag(hit.tag);
+    const page = pageLabelForMap(hit.mapId, hit.mapName);
+    const kindPart = kind ? ` [${kind}]` : "";
+    const pagePart = page ? ` [${page}]` : "";
+    next = `${sigla}${kindPart}${pagePart}`;
+  }
+  if (input.value === next) return;
+  input.value = next;
+  try {
+    const pos = sigla.length;
+    input.setSelectionRange(pos, pos);
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+async function runSearch(query, { autoPick = false, liveFormat = false } = {}) {
   const kind = currentSearchKind();
-  const hits = await searchAllTags(query, { kind });
+  const q = extractSearchSigla(query);
+  const hits = await searchAllTags(q, { kind });
   if (!hits.length) {
     closeSuggestions();
-    if (query.trim() || kind !== "tutti") {
+    if (liveFormat) applyLiveSearchChrome(q, null);
+    if (q.trim() || kind !== "tutti") {
       const kindHint = kind !== "tutti" ? ` (tipo ${escapeHtml(kind)})` : "";
       setStatus(
-        query.trim()
-          ? `Nessuna sigla vicina a "${escapeHtml(query)}"${kindHint} - prova un altro tipo o senza trattini`
+        q.trim()
+          ? `Nessuna sigla vicina a "${escapeHtml(q)}"${kindHint} - prova un altro tipo o senza trattini`
           : `Nessun tag di tipo "${escapeHtml(kind)}"`
       );
     }
@@ -548,6 +585,16 @@ async function runSearch(query, { autoPick = false } = {}) {
   sugIndex = 0;
   sugHits = hits.slice(0, 40);
   sugTouchHandled = false;
+
+  // Digitando: [tipo] e [pagina] seguono subito il primo risultato
+  if (liveFormat) {
+    applyLiveSearchChrome(q, hits[0]);
+    const top = hits[0];
+    if (top && currentMap?.id === top.mapId) {
+      activeTagId = top.tag.id;
+      viewer.highlight(top.tag.id);
+    }
+  }
 
   if (exactN && nearN) {
     setStatus(
@@ -694,14 +741,17 @@ els.noteDelete.addEventListener("click", async () => {
 els.mapSelect.addEventListener("change", () => selectMap(els.mapSelect.value));
 
 els.searchInput.addEventListener("input", async () => {
-  const q = els.searchInput.value;
-  els.clearBtn.classList.toggle("visible", !!q);
-  if (!q.trim() && currentSearchKind() === "tutti") {
+  const raw = els.searchInput.value;
+  const sigla = extractSearchSigla(raw);
+  els.clearBtn.classList.toggle("visible", !!raw);
+  if (!sigla && currentSearchKind() === "tutti") {
+    applyLiveSearchChrome("", null);
     closeSuggestions();
     viewer.highlight(null);
     return;
   }
-  await runSearch(q);
+  // Ricerca istantanea sulla sola sigla; [tipo]/[pagina] si aggiornano al volo
+  await runSearch(sigla, { liveFormat: true });
 });
 
 /** Snapshot tipo al tocco: se riscelgo lo stesso con lista aperta → chiudi popup. */
@@ -710,7 +760,7 @@ els.searchKind?.addEventListener("pointerdown", () => {
   searchKindSnapshot = currentSearchKind();
 });
 els.searchKind?.addEventListener("change", async () => {
-  const q = String(els.searchInput.value || "");
+  const q = extractSearchSigla(els.searchInput.value);
   const kind = currentSearchKind();
   const sugOpen = els.suggestions.classList.contains("open");
   // Stesso tipo di nuovo (lista già aperta) → solo chiudi, niente messaggio sotto
@@ -723,7 +773,7 @@ els.searchKind?.addEventListener("change", async () => {
     viewer.highlight(null);
     return;
   }
-  await runSearch(q);
+  await runSearch(q, { liveFormat: true });
 });
 // Stesso valore: molti browser non emettono "change" → chiudi al blur
 els.searchKind?.addEventListener("blur", () => {
@@ -829,7 +879,9 @@ els.searchInput.addEventListener("keydown", async (e) => {
     items.forEach((el, i) => el.classList.toggle("active", i === sugIndex));
   } else if (e.key === "Enter") {
     e.preventDefault();
-    const hits = await searchAllTags(els.searchInput.value, { kind: currentSearchKind() });
+    const hits = await searchAllTags(extractSearchSigla(els.searchInput.value), {
+      kind: currentSearchKind(),
+    });
     if (!hits.length) {
       toast("Nessun risultato");
       return;
