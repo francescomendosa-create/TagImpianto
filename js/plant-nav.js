@@ -54,7 +54,7 @@ export const PLANT_AREAS = [
   },
   {
     id: "interconnecting",
-    label: "Interconn.",
+    label: "Interc.",
     pages: [
       { id: "interconnecting", label: "Interconnecting", mapId: "interconnecting" },
       { id: "acque-acide-hf", label: "Acque acide HF", mapId: null },
@@ -65,7 +65,7 @@ export const PLANT_AREAS = [
   },
   {
     id: "vasche-api",
-    label: "Vasche API",
+    label: "API",
     pages: [
       { id: "servizi-lurgi", label: "Servizi Lurgi API", mapId: null },
       { id: "accumulo-vasche", label: "Accumulo vasche API", mapId: null },
@@ -149,12 +149,22 @@ export function renderPlantNav(root, handlers) {
     }
   }
 
+  const areaTitles = {
+    wwt: "WWT",
+    sf3: "SF3",
+    holdup: "HOLD-UP",
+    interconnecting: "Interconnecting",
+    "vasche-api": "Vasche API",
+    assetto: "Assetto",
+  };
   for (const area of PLANT_AREAS) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "plant-area-btn";
     btn.dataset.areaId = area.id;
     btn.textContent = area.label;
+    btn.title = areaTitles[area.id] || area.label;
+    btn.setAttribute("aria-label", areaTitles[area.id] || area.label);
     btn.addEventListener("click", () => paintPages(area.id));
     areasEl.appendChild(btn);
   }
