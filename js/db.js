@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.64";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.65";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -182,7 +182,7 @@ export async function mergeSeedsFromSite() {
         const merged = mergeSeedTags(seed.tags || [], localTags);
         if (seed.image && seed.image !== local.image) {
           try {
-            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.64");
+            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.65");
             await deleteLocalImage(local.image);
             await deleteLocalImage(seed.image);
           } catch (_) {
@@ -243,7 +243,7 @@ export async function mergeSeedsFromSite() {
 
       if (seed.image && local.image !== seed.image) {
         try {
-          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.64");
+          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.65");
           await deleteLocalImage(local.image);
           await deleteLocalImage(seed.image);
         } catch (_) {
@@ -475,14 +475,21 @@ function mergeSeedTags(seedTags, localTags) {
   return merged;
 }
 
-export async function saveMap(map, { sync = true } = {}) {
+/**
+ * Salva in IndexedDB. Di default NON tocca Firebase (veloce, non blocca la UI).
+ * Il cloud si fa con Sync (solo novità).
+ */
+export async function saveMap(map, { sync = false } = {}) {
   map.updatedAt = Date.now();
+  // Qualcosa da mandare al prossimo Sync
+  if ((map.tags || []).some((t) => tagNeedsCloudPush(t))) {
+    map.cloudPending = true;
+  }
   await idbPut(map);
   let cloudSynced = false;
   let cloudError = null;
   if (sync && cloudReady) {
     try {
-      // Solo tag sporchi (note/posizioni nuove), mai tutto il catalogo / PNG
       await pushMapToCloud(map, { onlyUserTags: true });
       cloudSynced = true;
       map.cloudPending = false;
@@ -493,9 +500,6 @@ export async function saveMap(map, { sync = true } = {}) {
       map.cloudPending = true;
       await idbPut(map);
     }
-  } else if (sync && !cloudReady) {
-    map.cloudPending = true;
-    await idbPut(map);
   }
   return { map, cloudSynced, cloudError };
 }
