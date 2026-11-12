@@ -194,8 +194,8 @@ body.has-update-banner #app {
 .search-field {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 4px;
+  flex-wrap: nowrap;
   width: 100%;
   min-height: 46px;
   background: var(--bg);
@@ -210,9 +210,12 @@ body.has-update-banner #app {
 }
 
 #searchInput {
-  flex: 1 1 7rem;
-  min-width: 5rem;
+  /* Non espandere: i chip restano subito dopo la sigla */
+  flex: 0 1 auto;
   width: auto;
+  min-width: 7ch;
+  max-width: 14ch;
+  field-sizing: content;
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -220,7 +223,7 @@ body.has-update-banner #app {
   font-family: var(--mono);
   font-size: 1rem;
   font-weight: 700;
-  padding: 6px 4px;
+  padding: 6px 2px;
   outline: none;
   box-shadow: none;
 }
@@ -234,8 +237,8 @@ body.has-update-banner #app {
 .search-chip {
   display: inline-flex;
   align-items: center;
-  max-width: 46%;
-  padding: 4px 10px;
+  max-width: 38%;
+  padding: 4px 8px;
   border-radius: 999px;
   font-family: var(--font);
   font-size: 0.78rem;
@@ -248,6 +251,7 @@ body.has-update-banner #app {
   user-select: none;
   -webkit-user-select: none;
   flex: 0 1 auto;
+  margin: 0;
 }
 .search-chip[hidden] { display: none !important; }
 .chip-kind {
@@ -304,8 +308,9 @@ body.has-update-banner #app {
 .clear-btn.visible { display: block; }
 
 @media (max-width: 520px) {
-  .search-field { padding-right: 118px; gap: 6px; }
-  .search-chip { max-width: 42%; font-size: 0.72rem; padding: 3px 8px; }
+  .search-field { padding-right: 118px; gap: 3px; }
+  .search-chip { max-width: 36%; font-size: 0.72rem; padding: 3px 7px; }
+  #searchInput { max-width: 12ch; }
   .search-kind {
     right: 34px;
     min-width: 5.4rem;
