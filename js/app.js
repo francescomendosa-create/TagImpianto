@@ -8,19 +8,20 @@ import {
   getMap,
   saveMap,
   searchAllTags,
+  markTagPendingCloud,
   syncAllWithCloud,
   pullMapsFromCloud,
-} from "./db.js?v=1.8.65";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.65";
-import { MapViewer } from "./viewer.js?v=1.8.65";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.65";
-import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.65";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.65";
+} from "./db.js?v=1.8.66";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.66";
+import { MapViewer } from "./viewer.js?v=1.8.66";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.66";
+import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.66";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.66";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.65";
+} from "./image-cache.js?v=1.8.66";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -114,8 +115,7 @@ viewer.onTagMoved = async (tagId) => {
   if (tag) {
     tag.source = "manual";
     tag.locked = true;
-    tag.updatedAt = Date.now();
-    delete tag.cloudSyncedAt; // va reinviato al Sync
+    markTagPendingCloud(tag, currentMap.id);
   }
   await persistCurrent();
   toast("Posizione salvata · Sync per il cloud");
@@ -716,8 +716,7 @@ els.noteSave.addEventListener("click", async () => {
   tag.note = els.noteBody.value.trim();
   tag.source = "manual";
   tag.locked = true;
-  tag.updatedAt = Date.now();
-  delete tag.cloudSyncedAt; // modifica locale → da Sync di nuovo
+  markTagPendingCloud(tag, currentMap.id);
   const applyGeom =
     isNew || els.drawer.dataset.recalibrate === "1";
   // Aggiungi / Ricalibra: geometria dal riquadro disegnato

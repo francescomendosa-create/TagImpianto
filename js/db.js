@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.65";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.66";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -182,7 +182,7 @@ export async function mergeSeedsFromSite() {
         const merged = mergeSeedTags(seed.tags || [], localTags);
         if (seed.image && seed.image !== local.image) {
           try {
-            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.65");
+            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.66");
             await deleteLocalImage(local.image);
             await deleteLocalImage(seed.image);
           } catch (_) {
@@ -243,7 +243,7 @@ export async function mergeSeedsFromSite() {
 
       if (seed.image && local.image !== seed.image) {
         try {
-          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.65");
+          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.66");
           await deleteLocalImage(local.image);
           await deleteLocalImage(seed.image);
         } catch (_) {
@@ -391,23 +391,68 @@ function tagHasLocalEdits(t) {
   return false;
 }
 
+function syncedRegKey(mapId, tagId) {
+  return `${String(mapId || "")}::${String(tagId || "").toUpperCase()}`;
+}
+
+function readSyncedRegistry() {
+  try {
+    const raw = localStorage.getItem("ti-tag-synced-v1");
+    const o = raw ? JSON.parse(raw) : {};
+    return o && typeof o === "object" ? o : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeSyncedRegistry(reg) {
+  try {
+    localStorage.setItem("ti-tag-synced-v1", JSON.stringify(reg));
+  } catch {
+    /* quota / private mode */
+  }
+}
+
 /**
- * Da inviare SOLO se modificato e non ancora copiato sul cloud.
- * cloudSyncedAt (solo locale) = updatedAt dell'ultimo invio ok.
+ * Da inviare SOLO se modificato e non ancora sul cloud.
+ * Usa cloudSyncedAt sul tag + registro localStorage (sopravvive se IDB non scrive in tempo).
  */
-function tagNeedsCloudPush(t) {
+function tagNeedsCloudPush(t, mapId) {
   if (!tagHasLocalEdits(t)) return false;
   const updated = Number(t.updatedAt) || 0;
-  const synced = Number(t.cloudSyncedAt) || 0;
-  // Mai inviato, oppure modificato dopo l'ultimo invio
+  let synced = Number(t.cloudSyncedAt) || 0;
+  if (mapId) {
+    const regAt = Number(readSyncedRegistry()[syncedRegKey(mapId, t.id)] || 0);
+    if (regAt > synced) {
+      synced = regAt;
+      t.cloudSyncedAt = regAt; // ripara il tag in memoria
+    }
+  }
   return !synced || updated > synced;
 }
 
-function markTagCloudSynced(t) {
+function markTagCloudSynced(t, mapId) {
   if (!t) return;
   const at = Number(t.updatedAt) || Date.now();
   t.updatedAt = at;
   t.cloudSyncedAt = at;
+  if (mapId && t.id) {
+    const reg = readSyncedRegistry();
+    reg[syncedRegKey(mapId, t.id)] = at;
+    writeSyncedRegistry(reg);
+  }
+}
+
+/** Dopo modifica locale: va rimandato al Sync. */
+export function markTagPendingCloud(t, mapId) {
+  if (!t) return;
+  t.updatedAt = Date.now();
+  delete t.cloudSyncedAt;
+  if (mapId && t.id) {
+    const reg = readSyncedRegistry();
+    delete reg[syncedRegKey(mapId, t.id)];
+    writeSyncedRegistry(reg);
+  }
 }
 
 function withTimeout(promise, ms, label) {
@@ -482,7 +527,7 @@ function mergeSeedTags(seedTags, localTags) {
 export async function saveMap(map, { sync = false } = {}) {
   map.updatedAt = Date.now();
   // Qualcosa da mandare al prossimo Sync
-  if ((map.tags || []).some((t) => tagNeedsCloudPush(t))) {
+  if ((map.tags || []).some((t) => tagNeedsCloudPush(t, map.id))) {
     map.cloudPending = true;
   }
   await idbPut(map);
@@ -1101,9 +1146,15 @@ async function pushMapToCloud(map, opts = {}) {
   };
   const { doc, setDoc, collection } = await loadFirestoreMod();
   const allTags = map.tags || [];
-  const tags = onlyUserTags
-    ? allTags.filter((t) => tagNeedsCloudPush(t))
+  let tags = onlyUserTags
+    ? allTags.filter((t) => tagNeedsCloudPush(t, map.id))
     : allTags;
+  // Prima le più recenti (novità), poi eventuali vecchi non ancora confermati
+  if (onlyUserTags) {
+    tags = [...tags].sort(
+      (a, b) => (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0)
+    );
+  }
   if (!tags.length) return 0;
 
   // Sync tablet: NON scrivere meta mappa (è lì che si bloccava per ore su “Meta…”)
@@ -1128,41 +1179,36 @@ async function pushMapToCloud(map, opts = {}) {
     );
   }
 
-  // Parallelismo leggero (niente immagini — solo JSON nota/posizione)
-  const CONCURRENCY = 6;
-  const TAG_MS = 8000;
+  // Un tag alla volta + salvataggio locale subito (così non si riparte sempre dai vecchi)
+  const TAG_MS = 10000;
   let wrote = 0;
-  for (let i = 0; i < tags.length; i += CONCURRENCY) {
-    const slice = tags.slice(i, i + CONCURRENCY);
+  for (let i = 0; i < tags.length; i++) {
+    const tag = tags[i];
+    const packed = tagCloudPayload(tag, map);
+    if (!packed) continue;
     report(
-      `Nota/posizione · ${map.name || map.id} · ${Math.min(i + slice.length, tags.length)}/${tags.length}`
+      `Invio novità · ${map.name || map.id} · ${packed.id} · ${i + 1}/${tags.length}`
     );
-    const results = await Promise.all(
-      slice.map(async (tag) => {
-        const packed = tagCloudPayload(tag, map);
-        if (!packed) return false;
-        const ref = doc(
-          collection(firestore, "tagImpianto_maps", map.id, "tags"),
-          packed.id
-        );
-        try {
-          await withTimeout(
-            setDoc(ref, packed.payload, { merge: true }),
-            TAG_MS,
-            packed.id
-          );
-          markTagCloudSynced(tag);
-          return true;
-        } catch (err) {
-          console.warn("push tag", map.id, packed.id, err);
-          return false;
-        }
-      })
+    const ref = doc(
+      collection(firestore, "tagImpianto_maps", map.id, "tags"),
+      packed.id
     );
-    wrote += results.filter(Boolean).length;
+    try {
+      await withTimeout(
+        setDoc(ref, packed.payload, { merge: true }),
+        TAG_MS,
+        packed.id
+      );
+      markTagCloudSynced(tag, map.id);
+      wrote += 1;
+      // Persisti SUBITO: se Sync si interrompe, i già inviati non ripartono
+      await idbPut(map);
+    } catch (err) {
+      console.warn("push tag", map.id, packed.id, err);
+      report(`Salto ${packed.id}…`);
+    }
     await new Promise((r) => setTimeout(r, 0));
   }
-  if (wrote) await idbPut(map);
   return wrote;
 }
 
@@ -1183,7 +1229,7 @@ async function migrateExistingEditsAsSynced() {
     let touched = false;
     for (const t of map.tags || []) {
       if (tagHasLocalEdits(t) && !Number(t.cloudSyncedAt)) {
-        markTagCloudSynced(t);
+        markTagCloudSynced(t, map.id);
         touched = true;
         n += 1;
       }
@@ -1391,11 +1437,18 @@ export async function syncAllWithCloud(opts = {}) {
   const errors = [];
 
   // Solo mappe con tag davvero sporchi (non cloudPending vuoto)
-  const toPush = all.filter((map) =>
-    (map.tags || []).some((t) => tagNeedsCloudPush(t))
+  // Coda piatta: prima le note più nuove (qualsiasi mappa), non sempre carboni→…
+  const queue = [];
+  for (const map of all) {
+    for (const tag of map.tags || []) {
+      if (tagNeedsCloudPush(tag, map.id)) queue.push({ map, tag });
+    }
+  }
+  queue.sort(
+    (a, b) => (Number(b.tag.updatedAt) || 0) - (Number(a.tag.updatedAt) || 0)
   );
 
-  if (!toPush.length) {
+  if (!queue.length) {
     for (const map of all) {
       if (map.cloudPending) {
         map.cloudPending = false;
@@ -1406,32 +1459,46 @@ export async function syncAllWithCloud(opts = {}) {
     return { mapsPushed: 0, tagsPushed: 0, errors: [] };
   }
 
-  report(`Invio ${toPush.length} mappe con novità…`);
-  for (let i = 0; i < toPush.length; i++) {
-    const map = toPush[i];
-    const changed = (map.tags || []).filter((t) => tagNeedsCloudPush(t));
+  report(`Invio ${queue.length} novità (prima le più recenti)…`);
+  const touchedMaps = new Set();
+  const { doc, setDoc, collection } = await loadFirestoreMod();
+  for (let i = 0; i < queue.length; i++) {
+    const { map, tag } = queue[i];
+    // Ricosidera: forse già inviato in questo giro / registro
+    if (!tagNeedsCloudPush(tag, map.id)) continue;
+    const packed = tagCloudPayload(tag, map);
+    if (!packed) continue;
     report(
-      `Invio novità · ${map.name || map.id} (${changed.length}) · ${i + 1}/${toPush.length}`
+      `Novità ${i + 1}/${queue.length} · ${map.name || map.id} · ${packed.id}`
     );
     try {
-      const wrote = await withTimeout(
-        pushMapToCloud(map, {
-          onlyUserTags: true,
-          onProgress: report,
-        }),
-        45000,
-        `push ${map.id}`
+      const ref = doc(
+        collection(firestore, "tagImpianto_maps", map.id, "tags"),
+        packed.id
       );
-      tagsPushed += Number(wrote) || 0;
-      map.cloudPending = false;
+      await withTimeout(
+        setDoc(ref, packed.payload, { merge: true }),
+        10000,
+        packed.id
+      );
+      markTagCloudSynced(tag, map.id);
       await idbPut(map);
-      if (wrote > 0) mapsPushed += 1;
+      tagsPushed += 1;
+      touchedMaps.add(map.id);
     } catch (err) {
-      errors.push(`${map.id}: ${err?.message || err}`);
-      console.warn("sync push", map.id, err);
-      report(`Salto ${map.name || map.id}…`);
+      errors.push(`${map.id}/${packed.id}: ${err?.message || err}`);
+      console.warn("sync push", map.id, packed.id, err);
+      report(`Salto ${packed.id}…`);
     }
     await new Promise((r) => setTimeout(r, 0));
+  }
+  mapsPushed = touchedMaps.size;
+  for (const map of all) {
+    if (!touchedMaps.has(map.id)) continue;
+    if (!(map.tags || []).some((t) => tagNeedsCloudPush(t, map.id))) {
+      map.cloudPending = false;
+      await idbPut(map);
+    }
   }
 
   if (!mapsPushed && !tagsPushed && errors.length) {
@@ -1453,7 +1520,7 @@ export async function pushLocalChangesToCloud() {
   let n = 0;
   for (const map of all) {
     const pending = map.cloudPending;
-    const hasPush = (map.tags || []).some((t) => tagNeedsCloudPush(t));
+    const hasPush = (map.tags || []).some((t) => tagNeedsCloudPush(t, map.id));
     if (!pending && !hasPush) continue;
     await pushMapToCloud(map, { onlyUserTags: true });
     map.cloudPending = false;
