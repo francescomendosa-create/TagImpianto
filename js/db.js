@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.58";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.60";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -182,7 +182,7 @@ export async function mergeSeedsFromSite() {
         const merged = mergeSeedTags(seed.tags || [], localTags);
         if (seed.image && seed.image !== local.image) {
           try {
-            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.58");
+            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.60");
             await deleteLocalImage(local.image);
             await deleteLocalImage(seed.image);
           } catch (_) {
@@ -243,7 +243,7 @@ export async function mergeSeedsFromSite() {
 
       if (seed.image && local.image !== seed.image) {
         try {
-          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.58");
+          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.60");
           await deleteLocalImage(local.image);
           await deleteLocalImage(seed.image);
         } catch (_) {
@@ -487,6 +487,19 @@ const QUERY_SYNONYMS = {
 };
 
 /**
+ * Prefissi sigla equivalenti: MP ≈ P (P abbreviazione di MP).
+ * Solo se dopo il prefisso c'è almeno una cifra (evita di listare tutte le P cercando solo "MP").
+ */
+function expandSiglaPrefixKeys(key) {
+  const k = normalizeSearchKey(key);
+  if (!k) return [];
+  const out = new Set([k]);
+  if (/^MP\d/.test(k)) out.add(`P${k.slice(2)}`);
+  if (/^P\d/.test(k)) out.add(`MP${k.slice(1)}`);
+  return [...out];
+}
+
+/**
  * Radice "soft" IT: filtri/filtro -> FILTR, pompe/pompa -> POMP.
  * Serve a match semantici senza dizionario completo.
  */
@@ -517,8 +530,10 @@ function expandQueryKeys(qRaw) {
   const base = normalizeSearchKey(qRaw);
   const keys = new Set();
   if (!base) return [];
-  keys.add(base);
-  keys.add(stemSearchKey(base));
+  for (const v of expandSiglaPrefixKeys(base)) {
+    keys.add(v);
+    keys.add(stemSearchKey(v));
+  }
   for (const syn of QUERY_SYNONYMS[base] || []) {
     keys.add(normalizeSearchKey(syn));
     keys.add(stemSearchKey(syn));
@@ -527,8 +542,10 @@ function expandQueryKeys(qRaw) {
   for (const part of String(qRaw).split(/[\s,;./\\|+\---]+/)) {
     const p = normalizeSearchKey(part);
     if (p.length < 3) continue;
-    keys.add(p);
-    keys.add(stemSearchKey(p));
+    for (const v of expandSiglaPrefixKeys(p)) {
+      keys.add(v);
+      keys.add(stemSearchKey(v));
+    }
     for (const syn of QUERY_SYNONYMS[p] || []) {
       keys.add(normalizeSearchKey(syn));
       keys.add(stemSearchKey(syn));
@@ -543,10 +560,12 @@ function tagSearchKeys(tag) {
   const note = String(tag.note || "").trim();
   const kind = String(tag.kind || "").trim();
   const keys = new Set();
-  keys.add(normalizeSearchKey(id));
-  keys.add(normalizeSearchKey(label));
+  for (const v of expandSiglaPrefixKeys(id)) keys.add(v);
+  for (const v of expandSiglaPrefixKeys(label)) keys.add(v);
   const codePart = label.split(/\s+/)[0] || "";
-  if (codePart) keys.add(normalizeSearchKey(codePart));
+  if (codePart) {
+    for (const v of expandSiglaPrefixKeys(codePart)) keys.add(v);
+  }
   // Nota: frase intera + singole parole (≥3) per ritrovare dalla descrizione
   if (note) {
     keys.add(normalizeSearchKey(note));
@@ -735,10 +754,13 @@ function isKindishToken(tok) {
 /** Token presente in nota/etichetta/id (non solo nel tipo). */
 function tokenInTagText(tok, noteN, labelN, idN) {
   if (!tok) return false;
-  if (noteN.includes(tok) || labelN.includes(tok) || idN.includes(tok)) return true;
-  const st = stemSearchKey(tok);
-  if (st.length >= 3) {
-    if (noteN.includes(st) || labelN.includes(st) || idN.includes(st)) return true;
+  const variants = expandSiglaPrefixKeys(tok);
+  for (const t of variants.length ? variants : [tok]) {
+    if (noteN.includes(t) || labelN.includes(t) || idN.includes(t)) return true;
+    const st = stemSearchKey(t);
+    if (st.length >= 3) {
+      if (noteN.includes(st) || labelN.includes(st) || idN.includes(st)) return true;
+    }
   }
   return false;
 }
@@ -755,16 +777,31 @@ export function scoreTagForQuery(qRaw, tag) {
   const tokens = queryTokens(qRaw);
   const tagKeys = tagSearchKeys(tag);
 
-  // Frase intera nella nota / etichetta
+  // Frase intera nella nota / etichetta / sigla (anche MP ↔ P)
   if (qFull.length >= 4) {
-    if (noteN && noteN.includes(qFull)) {
-      return { score: 100, tier: "exact", reason: "Nota: testo cercato" };
-    }
-    if (labelN && labelN.includes(qFull)) {
-      return { score: 99, tier: "exact", reason: "Etichetta: testo cercato" };
-    }
-    if (idN && idN.includes(qFull)) {
-      return { score: 98, tier: "exact", reason: "Sigla: testo cercato" };
+    for (const alt of expandSiglaPrefixKeys(qFull)) {
+      if (alt.length < 4) continue;
+      if (noteN && noteN.includes(alt)) {
+        return {
+          score: 100,
+          tier: "exact",
+          reason: alt === qFull ? "Nota: testo cercato" : "Nota: MP≈P",
+        };
+      }
+      if (labelN && labelN.includes(alt)) {
+        return {
+          score: 99,
+          tier: "exact",
+          reason: alt === qFull ? "Etichetta: testo cercato" : "Sigla: MP≈P",
+        };
+      }
+      if (idN && idN.includes(alt)) {
+        return {
+          score: 98,
+          tier: "exact",
+          reason: alt === qFull ? "Sigla: testo cercato" : "Sigla: MP≈P",
+        };
+      }
     }
   }
 
@@ -971,10 +1008,18 @@ function stripUndefined(obj) {
   return out;
 }
 
-async function pushMapToCloud(map) {
+/**
+ * @param {object} map
+ * @param {{ onlyUserTags?: boolean }} [opts]
+ *   onlyUserTags: invia solo tag con note/riposizionamenti (Sync tablet veloce)
+ */
+async function pushMapToCloud(map, opts = {}) {
+  const onlyUserTags = !!opts.onlyUserTags;
   const { doc, setDoc, collection, writeBatch } = await import(
     "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js"
   );
+  const allTags = map.tags || [];
+  const tags = onlyUserTags ? allTags.filter((t) => tagHasUserData(t)) : allTags;
   const meta = stripUndefined({
     id: map.id,
     name: map.name || map.id,
@@ -985,12 +1030,16 @@ async function pushMapToCloud(map) {
     notes: map.notes || "",
     seedRev: Number(map.seedRev) || 0,
     updatedAt: Number(map.updatedAt) || Date.now(),
-    tagCount: (map.tags || []).length,
+    tagCount: allTags.length,
+    userTagCount: allTags.filter((t) => tagHasUserData(t)).length,
   });
   await setDoc(doc(firestore, "tagImpianto_maps", map.id), meta, { merge: true });
 
-  const tags = map.tags || [];
+  // Niente tag utente da mandare: solo meta aggiornata
+  if (onlyUserTags && !tags.length) return 0;
+
   const CHUNK = 400;
+  let wrote = 0;
   for (let i = 0; i < tags.length; i += CHUNK) {
     const batch = writeBatch(firestore);
     const slice = tags.slice(i, i + CHUNK);
@@ -1025,10 +1074,12 @@ async function pushMapToCloud(map) {
     if (!n) continue;
     try {
       await batch.commit();
+      wrote += n;
     } catch (err) {
       throw new Error(`${map.id} tags[${i}...]: ${err?.message || err}`);
     }
   }
+  return wrote;
 }
 
 /**
@@ -1123,26 +1174,66 @@ export async function pushAllMapsToCloud() {
   return ok;
 }
 
-/** Pull + push: allinea note/posizioni tra dispositivi (merge per updatedAt). */
-export async function syncAllWithCloud() {
+/**
+ * Sync tablet: 1 pull completo (ricevi note altrui) + push SOLO tag modificati.
+ * Niente secondo pull e niente riscrittura di tutti i ~1000 tag catalogo.
+ * @param {{ onProgress?: (msg: string) => void }} [opts]
+ * @returns {Promise<{ mapsPushed: number, tagsPushed: number }>}
+ */
+export async function syncAllWithCloud(opts = {}) {
   if (!cloudReady) throw new Error("Cloud non pronto");
+  const report = (msg) => {
+    try {
+      opts.onProgress?.(msg);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  report("Ricevo aggiornamenti dal cloud...");
   try {
     await pullMapsFromCloud();
   } catch (err) {
     throw new Error(`Pull cloud: ${err?.message || err}`);
   }
-  let n = 0;
-  try {
-    n = await pushAllMapsToCloud();
-  } catch (err) {
-    throw new Error(`Push cloud: ${err?.message || err}`);
+
+  const all = (await idbGetAll()).filter(
+    (m) => m?.id && !String(m.id).startsWith("__")
+  );
+  let mapsPushed = 0;
+  let tagsPushed = 0;
+  const errors = [];
+
+  for (let i = 0; i < all.length; i++) {
+    const map = all[i];
+    const changed = (map.tags || []).filter((t) => tagHasUserData(t));
+    if (!map.cloudPending && !changed.length) continue;
+    report(
+      `Invio modifiche · ${map.name || map.id} (${changed.length} tag) · ${i + 1}/${all.length}`
+    );
+    try {
+      const wrote = await pushMapToCloud(map, { onlyUserTags: true });
+      tagsPushed += Number(wrote) || changed.length;
+      map.cloudPending = false;
+      await idbPut(map);
+      mapsPushed += 1;
+    } catch (err) {
+      errors.push(`${map.id}: ${err?.message || err}`);
+      console.warn("sync push", map.id, err);
+    }
+    // Lascia respirare l'UI sul tablet
+    await new Promise((r) => setTimeout(r, 0));
   }
-  try {
-    await pullMapsFromCloud();
-  } catch (err) {
-    throw new Error(`Pull finale: ${err?.message || err}`);
+
+  if (!mapsPushed && errors.length) {
+    throw new Error(errors[0]);
   }
-  return n;
+  report(
+    mapsPushed
+      ? `Sync ok · ${mapsPushed} mappe · ${tagsPushed} tag inviati`
+      : "Sync ok · nessuna modifica locale da inviare"
+  );
+  return { mapsPushed, tagsPushed };
 }
 
 /** Dopo init cloud: porta subito online note/riposizionamenti locali. */
@@ -1155,7 +1246,7 @@ export async function pushLocalChangesToCloud() {
     const hasNotes = (map.tags || []).some((t) => String(t?.note || "").trim());
     const hasManual = (map.tags || []).some(tagHasUserData);
     if (!pending && !hasNotes && !hasManual) continue;
-    await pushMapToCloud(map);
+    await pushMapToCloud(map, { onlyUserTags: true });
     map.cloudPending = false;
     await idbPut(map);
     n += 1;

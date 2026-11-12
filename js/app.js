@@ -10,17 +10,17 @@ import {
   searchAllTags,
   syncAllWithCloud,
   pullMapsFromCloud,
-} from "./db.js?v=1.8.58";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.58";
-import { MapViewer } from "./viewer.js?v=1.8.58";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.58";
-import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.58";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.58";
+} from "./db.js?v=1.8.60";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.60";
+import { MapViewer } from "./viewer.js?v=1.8.60";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.60";
+import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.60";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.60";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.58";
+} from "./image-cache.js?v=1.8.60";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -1304,21 +1304,29 @@ els.btnSync.addEventListener("click", async () => {
       els.cloudBadge.innerHTML = `<span class="warn">Cloud errore</span>`;
       return;
     }
-    // Solo note/posizioni su Firebase - niente download PNG
-    setStatus("Sync note/posizioni su Firebase...");
-    const n = await syncAllWithCloud();
+    // Solo note/posizioni: 1 pull + push delle sole modifiche (niente PNG, niente riscrittura totale)
+    setStatus("Sync: ricevo dal cloud...");
+    const result = await syncAllWithCloud({
+      onProgress: (msg) => setStatus(escapeHtml(msg)),
+    });
+    const n = result?.mapsPushed ?? 0;
+    const tagsN = result?.tagsPushed ?? 0;
     await refreshMaps();
     if (currentMap) {
       await selectMap(currentMap.id, { keepHighlight: true, keepView: true });
     }
     const imgs = await countLocalImages().catch(() => 0);
     setMapsLocalBadge(imgs);
-    toast(`Sync cloud ok (${n} mappe)`);
+    toast(
+      n
+        ? `Sync ok · ${n} mappe · ${tagsN} tag inviati`
+        : "Sync ok · nulla di nuovo da inviare"
+    );
     els.cloudBadge.innerHTML = `<span class="ok">Cloud sync</span>`;
     setStatus(
       currentMap
-        ? `Sync ok · <strong>${escapeHtml(currentMap.name)}</strong> · ${(currentMap.tags || []).length} tag`
-        : `Sync cloud ok (${n} mappe)`
+        ? `Sync ok · <strong>${escapeHtml(currentMap.name)}</strong> · ${tagsN} tag inviati`
+        : `Sync ok · ${n} mappe · ${tagsN} tag`
     );
   } catch (err) {
     const msg = String(err?.message || err || "errore");
