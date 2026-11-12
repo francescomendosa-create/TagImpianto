@@ -17,9 +17,6 @@ concurrency:
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -85,21 +82,10 @@ jobs:
           force_orphan: true
           commit_message: 'mirror ${{ github.sha }}'
 
-      - name: Pausa rilascio lock
-        run: sleep 20
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
-
-      - name: Deploy (con retry)
-        id: deployment
-        uses: Wandalen/wretry.action@v3.8.0
-        with:
-          action: actions/deploy-pages@v4
-          attempt_limit: 4
-          attempt_delay: 45000
+      # Deploy ufficiale: branch gh-pages (mirror sopra).
+      # Evita actions/deploy-pages che resta spesso in coda/lock su questo repo.
+      - name: Conferma mirror
+        run: |
+          test -f _site/version.json
+          echo "Pubblicato su branch gh-pages — Pages legge da lì."
+          cat _site/version.json
