@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.60";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.61";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -182,7 +182,7 @@ export async function mergeSeedsFromSite() {
         const merged = mergeSeedTags(seed.tags || [], localTags);
         if (seed.image && seed.image !== local.image) {
           try {
-            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.60");
+            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.61");
             await deleteLocalImage(local.image);
             await deleteLocalImage(seed.image);
           } catch (_) {
@@ -243,7 +243,7 @@ export async function mergeSeedsFromSite() {
 
       if (seed.image && local.image !== seed.image) {
         try {
-          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.60");
+          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.61");
           await deleteLocalImage(local.image);
           await deleteLocalImage(seed.image);
         } catch (_) {
@@ -381,6 +381,35 @@ function tagHasUserData(t) {
     // Riposizionato almeno una volta (anche senza flag locked vecchio)
     Number(t?.updatedAt) > 0
   );
+}
+
+/** Solo questi vanno in Sync push (updatedAt da solo = troppo rumoroso dopo un pull). */
+function tagNeedsCloudPush(t) {
+  if (!t) return false;
+  if (String(t.note || "").trim()) return true;
+  if (t.locked || t.source === "manual") return true;
+  return false;
+}
+
+function withTimeout(promise, ms, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`Timeout ${label} (${Math.round(ms / 1000)}s)`)),
+      ms
+    );
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+let firestoreModPromise = null;
+function loadFirestoreMod() {
+  if (!firestoreModPromise) {
+    firestoreModPromise = import(
+      "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js"
+    );
+  }
+  return firestoreModPromise;
 }
 
 /**
@@ -1010,16 +1039,23 @@ function stripUndefined(obj) {
 
 /**
  * @param {object} map
- * @param {{ onlyUserTags?: boolean }} [opts]
- *   onlyUserTags: invia solo tag con note/riposizionamenti (Sync tablet veloce)
+ * @param {{ onlyUserTags?: boolean, onProgress?: (msg: string) => void }} [opts]
+ *   onlyUserTags: invia solo note/riposizionamenti (Sync tablet)
  */
 async function pushMapToCloud(map, opts = {}) {
   const onlyUserTags = !!opts.onlyUserTags;
-  const { doc, setDoc, collection, writeBatch } = await import(
-    "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js"
-  );
+  const report = (msg) => {
+    try {
+      opts.onProgress?.(msg);
+    } catch {
+      /* ignore */
+    }
+  };
+  const { doc, setDoc, collection } = await loadFirestoreMod();
   const allTags = map.tags || [];
-  const tags = onlyUserTags ? allTags.filter((t) => tagHasUserData(t)) : allTags;
+  const tags = onlyUserTags
+    ? allTags.filter((t) => tagNeedsCloudPush(t))
+    : allTags;
   const meta = stripUndefined({
     id: map.id,
     name: map.name || map.id,
@@ -1031,52 +1067,55 @@ async function pushMapToCloud(map, opts = {}) {
     seedRev: Number(map.seedRev) || 0,
     updatedAt: Number(map.updatedAt) || Date.now(),
     tagCount: allTags.length,
-    userTagCount: allTags.filter((t) => tagHasUserData(t)).length,
+    userTagCount: allTags.filter((t) => tagNeedsCloudPush(t)).length,
   });
-  await setDoc(doc(firestore, "tagImpianto_maps", map.id), meta, { merge: true });
+  report(`Meta ${map.name || map.id}...`);
+  await withTimeout(
+    setDoc(doc(firestore, "tagImpianto_maps", map.id), meta, { merge: true }),
+    25000,
+    `meta ${map.id}`
+  );
 
-  // Niente tag utente da mandare: solo meta aggiornata
   if (onlyUserTags && !tags.length) return 0;
 
-  const CHUNK = 400;
+  // Su tablet i batch grandi a volte non tornano mai: un setDoc per tag + timeout
   let wrote = 0;
-  for (let i = 0; i < tags.length; i += CHUNK) {
-    const batch = writeBatch(firestore);
-    const slice = tags.slice(i, i + CHUNK);
-    let n = 0;
-    for (const tag of slice) {
-      // Firestore: id senza "/" e non vuoto
-      const id = String(tag.id || "")
-        .trim()
-        .replace(/\//g, "_")
-        .slice(0, 700);
-      if (!id) continue;
-      const ref = doc(collection(firestore, "tagImpianto_maps", map.id, "tags"), id);
-      const payload = stripUndefined({
-        id,
-        label: tag.label || id,
-        kind: tag.kind || "altro",
-        x: Number(tag.x) || 0,
-        y: Number(tag.y) || 0,
-        w: Number(tag.w) || 0.04,
-        h: Number(tag.h) || 0.05,
-        note: tag.note || "",
-        source: tag.source || "manual",
-        locked: !!tag.locked,
-        confidence: tag.confidence == null ? null : Number(tag.confidence),
-        updatedAt: Number(tag.updatedAt) || Number(map.updatedAt) || Date.now(),
-      });
-      // null su confidence: meglio omettere
-      if (payload.confidence == null) delete payload.confidence;
-      batch.set(ref, payload, { merge: true });
-      n += 1;
+  for (let i = 0; i < tags.length; i++) {
+    const tag = tags[i];
+    const id = String(tag.id || "")
+      .trim()
+      .replace(/\//g, "_")
+      .slice(0, 700);
+    if (!id) continue;
+    const payload = stripUndefined({
+      id,
+      label: tag.label || id,
+      kind: tag.kind || "altro",
+      x: Number(tag.x) || 0,
+      y: Number(tag.y) || 0,
+      w: Number(tag.w) || 0.04,
+      h: Number(tag.h) || 0.05,
+      note: tag.note || "",
+      source: tag.source || "manual",
+      locked: !!tag.locked,
+      confidence: tag.confidence == null ? null : Number(tag.confidence),
+      updatedAt: Number(tag.updatedAt) || Number(map.updatedAt) || Date.now(),
+    });
+    if (payload.confidence == null) delete payload.confidence;
+    const ref = doc(collection(firestore, "tagImpianto_maps", map.id, "tags"), id);
+    if (i === 0 || (i + 1) % 5 === 0 || i === tags.length - 1) {
+      report(
+        `Invio ${map.name || map.id} · tag ${i + 1}/${tags.length}`
+      );
     }
-    if (!n) continue;
     try {
-      await batch.commit();
-      wrote += n;
+      await withTimeout(setDoc(ref, payload, { merge: true }), 20000, `tag ${id}`);
+      wrote += 1;
     } catch (err) {
-      throw new Error(`${map.id} tags[${i}...]: ${err?.message || err}`);
+      throw new Error(`${map.id}/${id}: ${err?.message || err}`);
+    }
+    if (i % 3 === 2) {
+      await new Promise((r) => setTimeout(r, 0));
     }
   }
   return wrote;
@@ -1090,17 +1129,34 @@ async function pushMapToCloud(map, opts = {}) {
 export async function pullMapsFromCloud(opts = {}) {
   if (!cloudReady) return [];
   const preferCloud = !!opts.preferCloud;
-  const { collection, getDocs } = await import(
-    "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js"
+  const report = (msg) => {
+    try {
+      opts.onProgress?.(msg);
+    } catch {
+      /* ignore */
+    }
+  };
+  const { collection, getDocs } = await loadFirestoreMod();
+  report("Elenco mappe cloud...");
+  const snap = await withTimeout(
+    getDocs(collection(firestore, "tagImpianto_maps")),
+    45000,
+    "elenco mappe"
   );
-  const snap = await getDocs(collection(firestore, "tagImpianto_maps"));
   const localAll = await idbGetAll();
   const localById = new Map(localAll.map((m) => [m.id, m]));
   const maps = [];
+  const docs = snap.docs;
 
-  for (const d of snap.docs) {
+  for (let di = 0; di < docs.length; di++) {
+    const d = docs[di];
     const meta = d.data();
-    const tagsSnap = await getDocs(collection(firestore, "tagImpianto_maps", d.id, "tags"));
+    report(`Scarico ${meta.name || d.id} · ${di + 1}/${docs.length}`);
+    const tagsSnap = await withTimeout(
+      getDocs(collection(firestore, "tagImpianto_maps", d.id, "tags")),
+      45000,
+      `tags ${d.id}`
+    );
     const cloudTags = tagsSnap.docs.map((t) => t.data());
     const local = localById.get(d.id);
     const byId = new Map();
@@ -1146,6 +1202,7 @@ export async function pullMapsFromCloud(opts = {}) {
     };
     await idbPut(map);
     maps.push(map);
+    await new Promise((r) => setTimeout(r, 0));
   }
   return maps;
 }
@@ -1192,9 +1249,11 @@ export async function syncAllWithCloud(opts = {}) {
 
   report("Ricevo aggiornamenti dal cloud...");
   try {
-    await pullMapsFromCloud();
+    await pullMapsFromCloud({ onProgress: report });
   } catch (err) {
-    throw new Error(`Pull cloud: ${err?.message || err}`);
+    // Pull fallito/timeout: comunque prova a inviare le note locali
+    console.warn("Pull cloud (continuo con push)", err);
+    report(`Pull lento/errore — invio comunque le note locali…`);
   }
 
   const all = (await idbGetAll()).filter(
@@ -1203,37 +1262,44 @@ export async function syncAllWithCloud(opts = {}) {
   let mapsPushed = 0;
   let tagsPushed = 0;
   const errors = [];
+  const toPush = all.filter((map) => {
+    const changed = (map.tags || []).filter((t) => tagNeedsCloudPush(t));
+    return map.cloudPending || changed.length > 0;
+  });
 
-  for (let i = 0; i < all.length; i++) {
-    const map = all[i];
-    const changed = (map.tags || []).filter((t) => tagHasUserData(t));
-    if (!map.cloudPending && !changed.length) continue;
+  for (let i = 0; i < toPush.length; i++) {
+    const map = toPush[i];
+    const changed = (map.tags || []).filter((t) => tagNeedsCloudPush(t));
     report(
-      `Invio modifiche · ${map.name || map.id} (${changed.length} tag) · ${i + 1}/${all.length}`
+      `Invio · ${map.name || map.id} (${changed.length} tag) · ${i + 1}/${toPush.length || 1}`
     );
     try {
-      const wrote = await pushMapToCloud(map, { onlyUserTags: true });
-      tagsPushed += Number(wrote) || changed.length;
+      const wrote = await pushMapToCloud(map, {
+        onlyUserTags: true,
+        onProgress: report,
+      });
+      tagsPushed += Number(wrote) || 0;
       map.cloudPending = false;
       await idbPut(map);
       mapsPushed += 1;
     } catch (err) {
       errors.push(`${map.id}: ${err?.message || err}`);
       console.warn("sync push", map.id, err);
+      report(`Errore su ${map.name || map.id} — passo oltre…`);
     }
-    // Lascia respirare l'UI sul tablet
     await new Promise((r) => setTimeout(r, 0));
   }
 
   if (!mapsPushed && errors.length) {
     throw new Error(errors[0]);
   }
+  const errHint = errors.length ? ` · ${errors.length} errori` : "";
   report(
     mapsPushed
-      ? `Sync ok · ${mapsPushed} mappe · ${tagsPushed} tag inviati`
+      ? `Sync ok · ${mapsPushed} mappe · ${tagsPushed} tag${errHint}`
       : "Sync ok · nessuna modifica locale da inviare"
   );
-  return { mapsPushed, tagsPushed };
+  return { mapsPushed, tagsPushed, errors };
 }
 
 /** Dopo init cloud: porta subito online note/riposizionamenti locali. */
@@ -1243,9 +1309,8 @@ export async function pushLocalChangesToCloud() {
   let n = 0;
   for (const map of all) {
     const pending = map.cloudPending;
-    const hasNotes = (map.tags || []).some((t) => String(t?.note || "").trim());
-    const hasManual = (map.tags || []).some(tagHasUserData);
-    if (!pending && !hasNotes && !hasManual) continue;
+    const hasPush = (map.tags || []).some((t) => tagNeedsCloudPush(t));
+    if (!pending && !hasPush) continue;
     await pushMapToCloud(map, { onlyUserTags: true });
     map.cloudPending = false;
     await idbPut(map);

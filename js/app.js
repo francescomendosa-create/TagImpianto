@@ -10,17 +10,17 @@ import {
   searchAllTags,
   syncAllWithCloud,
   pullMapsFromCloud,
-} from "./db.js?v=1.8.60";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.60";
-import { MapViewer } from "./viewer.js?v=1.8.60";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.60";
-import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.60";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.60";
+} from "./db.js?v=1.8.61";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.61";
+import { MapViewer } from "./viewer.js?v=1.8.61";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.61";
+import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.61";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.61";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.60";
+} from "./image-cache.js?v=1.8.61";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -1317,12 +1317,15 @@ els.btnSync.addEventListener("click", async () => {
     }
     const imgs = await countLocalImages().catch(() => 0);
     setMapsLocalBadge(imgs);
+    const errN = result?.errors?.length || 0;
     toast(
       n
-        ? `Sync ok · ${n} mappe · ${tagsN} tag inviati`
+        ? `Sync ok · ${n} mappe · ${tagsN} tag${errN ? ` · ${errN} errori` : ""}`
         : "Sync ok · nulla di nuovo da inviare"
     );
-    els.cloudBadge.innerHTML = `<span class="ok">Cloud sync</span>`;
+    els.cloudBadge.innerHTML = errN
+      ? `<span class="warn">Sync parziale</span>`
+      : `<span class="ok">Cloud sync</span>`;
     setStatus(
       currentMap
         ? `Sync ok · <strong>${escapeHtml(currentMap.name)}</strong> · ${tagsN} tag inviati`
@@ -1335,6 +1338,7 @@ els.btnSync.addEventListener("click", async () => {
     setStatus(`Sync fallita: <span class="warn">${escapeHtml(msg)}</span>`);
     els.cloudBadge.innerHTML = `<span class="warn">Sync errore</span>`;
   } finally {
+    // Sempre riattivabile, anche dopo timeout
     els.btnSync.disabled = false;
   }
 });
