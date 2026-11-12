@@ -1,4 +1,4 @@
-import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.67";
+import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.68";
 
 const MAX_MEM_IMAGES = 10;
 

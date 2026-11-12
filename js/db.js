@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.67";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.68";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -182,7 +182,7 @@ export async function mergeSeedsFromSite() {
         const merged = mergeSeedTags(seed.tags || [], localTags);
         if (seed.image && seed.image !== local.image) {
           try {
-            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.67");
+            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.68");
             await deleteLocalImage(local.image);
             await deleteLocalImage(seed.image);
           } catch (_) {
@@ -243,7 +243,7 @@ export async function mergeSeedsFromSite() {
 
       if (seed.image && local.image !== seed.image) {
         try {
-          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.67");
+          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.68");
           await deleteLocalImage(local.image);
           await deleteLocalImage(seed.image);
         } catch (_) {
@@ -1139,65 +1139,71 @@ function tagCloudPayload(tag, map) {
 }
 
 /**
- * Scrive in batch Firestore (veloce). Niente PNG, niente IDB a ogni tag.
- * @returns {Promise<number>} tag scritti
+ * Invio parallelo (veloce e affidabile). Niente PNG, niente IDB a ogni tag.
+ * Un setDoc fallito non blocca gli altri.
+ * @returns {Promise<{ wrote: number, errors: string[] }>}
  */
 async function commitTagQueue(queue, report) {
-  if (!queue.length) return 0;
-  const { doc, collection, writeBatch } = await loadFirestoreMod();
-  const CHUNK = 40; // Firestore max 500; pezzi piccoli = commit rapidi
+  if (!queue.length) return { wrote: 0, errors: [] };
+  const { doc, setDoc, collection } = await loadFirestoreMod();
+  const CONCURRENCY = 8;
   let wrote = 0;
+  const errors = [];
   const mapsTouched = new Map(); // mapId -> map
 
-  for (let i = 0; i < queue.length; i += CHUNK) {
-    const slice = queue.slice(i, i + CHUNK);
+  for (let i = 0; i < queue.length; i += CONCURRENCY) {
+    const slice = queue.slice(i, i + CONCURRENCY);
     report(
-      `Invio batch ${Math.min(i + slice.length, queue.length)}/${queue.length}…`
+      `Invio ${Math.min(i + slice.length, queue.length)}/${queue.length}…`
     );
-    const batch = writeBatch(firestore);
+    const results = await Promise.all(
+      slice.map(async (item) => {
+        const { map, tag } = item;
+        if (!tagNeedsCloudPush(tag, map.id)) return { ok: true, skipped: true };
+        const packed = tagCloudPayload(tag, map);
+        if (!packed) return { ok: true, skipped: true };
+        try {
+          const ref = doc(
+            collection(firestore, "tagImpianto_maps", map.id, "tags"),
+            packed.id
+          );
+          await withTimeout(
+            setDoc(ref, packed.payload, { merge: true }),
+            12000,
+            packed.id
+          );
+          return { ok: true, item, packed };
+        } catch (err) {
+          return {
+            ok: false,
+            err: `${map.id}/${packed.id}: ${err?.message || err}`,
+          };
+        }
+      })
+    );
+
     const okItems = [];
-    const parentSeen = new Set();
-    for (const item of slice) {
-      const { map, tag } = item;
-      const packed = tagCloudPayload(tag, map);
-      if (!packed) continue;
-      // doc padre leggero (solo id/updatedAt) — evita regole/path spezzati
-      if (!parentSeen.has(map.id)) {
-        parentSeen.add(map.id);
-        batch.set(
-          doc(firestore, "tagImpianto_maps", map.id),
-          {
-            id: map.id,
-            name: map.name || map.id,
-            updatedAt: Date.now(),
-          },
-          { merge: true }
-        );
-      }
-      const ref = doc(
-        collection(firestore, "tagImpianto_maps", map.id, "tags"),
-        packed.id
-      );
-      batch.set(ref, packed.payload, { merge: true });
-      okItems.push(item);
+    for (const r of results) {
+      if (r.ok && r.item) okItems.push(r.item);
+      else if (!r.ok && r.err) errors.push(r.err);
     }
-    if (!okItems.length) continue;
-    await withTimeout(batch.commit(), 20000, `batch ${i}`);
-    markTagsCloudSyncedMany(
-      okItems.map(({ map, tag }) => ({ tag, mapId: map.id }))
-    );
-    for (const { map } of okItems) mapsTouched.set(map.id, map);
-    wrote += okItems.length;
+    if (okItems.length) {
+      markTagsCloudSyncedMany(
+        okItems.map(({ map, tag }) => ({ tag, mapId: map.id }))
+      );
+      for (const { map } of okItems) mapsTouched.set(map.id, map);
+      wrote += okItems.length;
+    }
   }
 
-  // Un solo IDB put per mappa toccata
+  // Un solo IDB put per mappa toccata (non a ogni tag)
   for (const map of mapsTouched.values()) {
     map.cloudPending = (map.tags || []).some((t) =>
       tagNeedsCloudPush(t, map.id)
     );
     await idbPut(map);
   }
-  return wrote;
+  return { wrote, errors };
 }
 
 /**
@@ -1246,10 +1252,11 @@ async function pushMapToCloud(map, opts = {}) {
     );
   }
 
-  return commitTagQueue(
+  const { wrote } = await commitTagQueue(
     tags.map((tag) => ({ map, tag })),
     report
   );
+  return wrote;
 }
 
 /**
@@ -1448,8 +1455,7 @@ export async function pushAllMapsToCloud() {
 }
 
 /**
- * Sync tablet = batch Firestore delle SOLE novità (secondi, non mezz’ore).
- * Niente PNG, niente pull, niente IDB a ogni tag.
+ * Sync tablet = solo novità, parallelo (veloce). Niente PNG / pull / IDB a ogni tag.
  * @param {{ onProgress?: (msg: string) => void }} [opts]
  */
 export async function syncAllWithCloud(opts = {}) {
@@ -1461,7 +1467,6 @@ export async function syncAllWithCloud(opts = {}) {
       /* ignore */
     }
   };
-  const errors = [];
 
   report("Cerco novità…");
   await migrateExistingEditsAsSynced();
@@ -1490,25 +1495,23 @@ export async function syncAllWithCloud(opts = {}) {
     return { mapsPushed: 0, tagsPushed: 0, errors: [] };
   }
 
-  report(`Invio ${queue.length} novità in batch…`);
-  let tagsPushed = 0;
-  try {
-    tagsPushed = await withTimeout(
-      commitTagQueue(queue, report),
-      60000,
-      "sync batch"
-    );
-  } catch (err) {
-    errors.push(String(err?.message || err));
-    console.warn("sync batch", err);
-    throw new Error(`Sync lenta/errore: ${err?.message || err}`);
+  report(`Invio ${queue.length} novità…`);
+  const { wrote: tagsPushed, errors } = await commitTagQueue(queue, report);
+
+  if (!tagsPushed && errors.length) {
+    throw new Error(errors[0]);
   }
 
-  const mapsPushed = new Set(queue.map((q) => q.map.id)).size;
+  const mapsPushed = new Set(
+    queue
+      .filter((q) => !tagNeedsCloudPush(q.tag, q.map.id))
+      .map((q) => q.map.id)
+  ).size;
+  const errHint = errors.length ? ` · ${errors.length} errori` : "";
   report(
     tagsPushed
-      ? `Sync ok · ${tagsPushed} novità inviate in pochi secondi`
-      : "Sync ok · nulla inviato"
+      ? `Sync ok · ${tagsPushed} novità inviate${errHint}`
+      : `Sync ok · nulla inviato${errHint}`
   );
   return { mapsPushed, tagsPushed, errors };
 }
