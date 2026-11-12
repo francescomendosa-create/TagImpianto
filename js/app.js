@@ -10,17 +10,17 @@ import {
   searchAllTags,
   syncAllWithCloud,
   pullMapsFromCloud,
-} from "./db.js?v=1.8.61";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.61";
-import { MapViewer } from "./viewer.js?v=1.8.61";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.61";
-import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.61";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.61";
+} from "./db.js?v=1.8.62";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.62";
+import { MapViewer } from "./viewer.js?v=1.8.62";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.62";
+import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.62";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.62";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.61";
+} from "./image-cache.js?v=1.8.62";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -210,9 +210,8 @@ function hideUpdateBanner() {
  */
 async function applyAppUpdate({ wipeImages = false } = {}) {
   setStatus("Aggiornamento: pulizia cache...");
-  toast("Aggiorno senza reinstallare...");
+  toast("Aggiorno…");
   try {
-    // Solo catalogo seed al prossimo avvio - NON scaricare tutte le PNG
     localStorage.setItem("ti-force-seed", "1");
     localStorage.removeItem("ti-force-images");
   } catch (_) {
@@ -224,51 +223,47 @@ async function applyAppUpdate({ wipeImages = false } = {}) {
     /* ignore */
   }
 
-  try {
-    if ("serviceWorker" in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      for (const reg of regs) {
-        try {
-          reg.waiting?.postMessage({ type: "SKIP_WAITING" });
-        } catch (_) {
-          /* ignore */
+  // Non aspettare 90s Pages: pulizia breve + ricarica subito (cache-bust)
+  const cleanup = (async () => {
+    try {
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const reg of regs) {
+          try {
+            reg.waiting?.postMessage({ type: "SKIP_WAITING" });
+          } catch (_) {
+            /* ignore */
+          }
+          try {
+            await reg.unregister();
+          } catch (_) {
+            /* ignore */
+          }
         }
-        await reg.unregister();
       }
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+    } catch (err) {
+      console.warn("Pulizia cache app:", err);
     }
-    if ("caches" in window) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map((k) => caches.delete(k)));
-    }
-  } catch (err) {
-    console.warn("Pulizia cache app:", err);
-  }
+  })();
+  await Promise.race([cleanup, sleep(6000)]);
 
-  // Se online c'è già una versione più nuova -> ok.
-  // Se Pages sta ancora pubblicando, aspetta fino a ~90s una più nuova della tua.
-  setStatus("Controllo versione online...");
   let live = APP_VERSION;
   try {
-    live = (await fetchLiveAppVersion()) || APP_VERSION;
+    live =
+      (await Promise.race([
+        fetchLiveAppVersion(),
+        sleep(4000).then(() => null),
+      ])) || APP_VERSION;
   } catch (_) {
     /* ignore */
   }
-  if (!versionNewer(live, APP_VERSION)) {
-    for (let i = 0; i < 18; i++) {
-      setStatus(`Attendo pubblicazione online... (${i + 1}/18)`);
-      await sleep(5000);
-      try {
-        live = (await fetchLiveAppVersion()) || live;
-        if (versionNewer(live, APP_VERSION)) break;
-      } catch (_) {
-        /* rete */
-      }
-    }
-  }
   liveVersionCache = live || liveVersionCache || APP_VERSION;
-  setStatus(`Carico v${liveVersionCache}...`);
+  setStatus(`Ricarico v${liveVersionCache}...`);
 
-  // Sempre index.html pulito (non restare su URL/cache strani della PWA)
   const base = new URL("./index.html", location.href);
   base.searchParams.set("_ts", String(Date.now()));
   base.searchParams.set("_ver", String(liveVersionCache));
