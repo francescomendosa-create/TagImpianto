@@ -1,4 +1,4 @@
-import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.57";
+import { resolveLocalImageUrl } from "./image-cache.js?v=1.8.58";
 
 const MAX_MEM_IMAGES = 10;
 
@@ -440,11 +440,55 @@ export class MapViewer {
     lab.className = "label";
     // In alto sul disegno la label sopra uscirebbe dal viewport: mettila sotto
     if (top < 36) lab.classList.add("label-below");
-    lab.textContent = tag.label || tag.id;
+    const siglaText = String(tag.label || tag.id || "").trim();
+    lab.textContent = siglaText;
+    lab.title = "Clicca per copiare la sigla";
+    lab.setAttribute("role", "button");
+    lab.tabIndex = 0;
+    // Click sulla sigla digitale → copia negli appunti (niente dialoghi)
+    const copySigla = async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!siglaText) return;
+      let ok = false;
+      try {
+        await navigator.clipboard.writeText(siglaText);
+        ok = true;
+      } catch {
+        try {
+          const ta = document.createElement("textarea");
+          ta.value = siglaText;
+          ta.setAttribute("readonly", "");
+          ta.style.position = "fixed";
+          ta.style.left = "-9999px";
+          document.body.appendChild(ta);
+          ta.select();
+          ok = document.execCommand("copy");
+          ta.remove();
+        } catch {
+          ok = false;
+        }
+      }
+      if (ok) {
+        lab.classList.add("copied");
+        clearTimeout(lab._copyFlash);
+        lab._copyFlash = setTimeout(() => lab.classList.remove("copied"), 450);
+      }
+    };
+    lab.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    lab.addEventListener("pointerup", copySigla);
+    lab.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
     el.appendChild(lab);
     this._syncLabelScreenScale();
     if (this.annotate) {
       el.addEventListener("pointerdown", (e) => {
+        if (e.target?.closest?.(".label")) return;
         e.stopPropagation();
         el.setPointerCapture(e.pointerId);
         this._dragTag = {

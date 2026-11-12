@@ -662,6 +662,16 @@ body.has-update-banner #app {
 .tag-box.hit .label,
 .tag-box.edit .label {
   opacity: 1;
+  pointer-events: auto;
+  cursor: copy;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+.tag-box .label.copied {
+  color: #86efac;
+  border-color: #4ade80;
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.45), 0 3px 14px rgba(0, 0, 0, 0.5);
 }
 
 @keyframes tag-blink {
