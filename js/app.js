@@ -12,17 +12,17 @@ import {
   countPendingCloud,
   syncAllWithCloud,
   pullMapsFromCloud,
-} from "./db.js?v=1.8.70";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.70";
-import { MapViewer } from "./viewer.js?v=1.8.70";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.70";
-import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.70";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.70";
+} from "./db.js?v=1.8.71";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.71";
+import { MapViewer } from "./viewer.js?v=1.8.71";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.71";
+import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.71";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.71";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.70";
+} from "./image-cache.js?v=1.8.71";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -1301,32 +1301,46 @@ els.btnSync.addEventListener("click", async () => {
       onProgress: (msg) => setStatus(escapeHtml(msg)),
     });
     const tagsN = result?.tagsPushed ?? 0;
+    const errN = result?.errors?.length || 0;
+    const leftN = result?.pendingLeft ?? countPendingCloud();
     await refreshMaps();
     if (currentMap) {
       await selectMap(currentMap.id, { keepHighlight: true, keepView: true });
     }
     const imgs = await countLocalImages().catch(() => 0);
     setMapsLocalBadge(imgs);
-    const errN = result?.errors?.length || 0;
-    toast(
-      tagsN
-        ? `Sync ok · ${tagsN} novità inviate${errN ? ` · ${errN} errori` : ""}`
-        : "Sync ok · nulla di nuovo"
-    );
-    els.cloudBadge.innerHTML = errN
-      ? `<span class="warn">Sync parziale</span>`
-      : `<span class="ok">Cloud sync</span>`;
-    setStatus(
-      tagsN
-        ? `Sync ok · <strong>${tagsN}</strong> note/posizioni inviate`
-        : `Sync ok · niente di nuovo da mandare`
-    );
+    if (tagsN && !leftN) {
+      toast(`Sync ok · ${tagsN} inviate`);
+      els.cloudBadge.innerHTML = `<span class="ok">Cloud sync</span>`;
+      setStatus(`Sync ok · <strong>${tagsN}</strong> note/posizioni inviate`);
+    } else if (tagsN) {
+      toast(`Sync parziale · ${tagsN} ok · restano ${leftN}`);
+      els.cloudBadge.innerHTML = `<span class="warn">Restano ${leftN}</span>`;
+      setStatus(
+        `Sync parziale · <strong>${tagsN}</strong> inviate · restano <strong>${leftN}</strong> in coda` +
+          (errN ? ` · ${errN} errori` : "")
+      );
+    } else if (leftN) {
+      const first = result?.errors?.[0] || "rete lenta";
+      toast(`Sync: 0 inviate · restano ${leftN}`);
+      els.cloudBadge.innerHTML = `<span class="warn">Coda ${leftN}</span>`;
+      setStatus(
+        `Sync: nessuna inviata · restano <strong>${leftN}</strong> · <span class="warn">${escapeHtml(String(first).slice(0, 120))}</span>`
+      );
+    } else {
+      toast("Sync ok · nulla di nuovo");
+      els.cloudBadge.innerHTML = `<span class="ok">Cloud sync</span>`;
+      setStatus("Sync ok · niente di nuovo da mandare");
+    }
   } catch (err) {
     const msg = String(err?.message || err || "errore");
+    const leftN = countPendingCloud();
     console.warn("Sync fallita", err);
-    toast(`Sync fallita: ${msg.slice(0, 140)}`);
-    setStatus(`Sync fallita: <span class="warn">${escapeHtml(msg)}</span>`);
-    els.cloudBadge.innerHTML = `<span class="warn">Sync errore</span>`;
+    toast(`Sync errore · in coda restano ${leftN}`);
+    setStatus(
+      `Sync errore: <span class="warn">${escapeHtml(msg)}</span> · in coda <strong>${leftN}</strong>`
+    );
+    els.cloudBadge.innerHTML = `<span class="warn">Coda ${leftN}</span>`;
   } finally {
     // Sempre riattivabile, anche dopo timeout
     els.btnSync.disabled = false;

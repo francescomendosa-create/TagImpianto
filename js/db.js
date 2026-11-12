@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.70";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.71";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -182,7 +182,7 @@ export async function mergeSeedsFromSite() {
         const merged = mergeSeedTags(seed.tags || [], localTags);
         if (seed.image && seed.image !== local.image) {
           try {
-            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.70");
+            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.71");
             await deleteLocalImage(local.image);
             await deleteLocalImage(seed.image);
           } catch (_) {
@@ -243,7 +243,7 @@ export async function mergeSeedsFromSite() {
 
       if (seed.image && local.image !== seed.image) {
         try {
-          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.70");
+          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.71");
           await deleteLocalImage(local.image);
           await deleteLocalImage(seed.image);
         } catch (_) {
@@ -466,13 +466,20 @@ export function countPendingCloud() {
 
 function withTimeout(promise, ms, label) {
   let timer;
-  const timeout = new Promise((_, reject) => {
-    timer = setTimeout(
-      () => reject(new Error(`Timeout ${label} (${Math.round(ms / 1000)}s)`)),
-      ms
-    );
+  // Evita rejection non gestita se setDoc finisce DOPO il timeout
+  const guarded = Promise.resolve(promise).catch((err) => {
+    if (err && err.__tiTimeout) throw err;
+    const e = err instanceof Error ? err : new Error(String(err));
+    throw e;
   });
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      const err = new Error(`Timeout ${label} (${Math.round(ms / 1000)}s)`);
+      err.__tiTimeout = true;
+      reject(err);
+    }, ms);
+  });
+  return Promise.race([guarded, timeout]).finally(() => clearTimeout(timer));
 }
 
 let firestoreModPromise = null;
@@ -1141,74 +1148,51 @@ function tagCloudPayload(tag, map) {
 }
 
 /**
- * Invio parallelo (veloce e affidabile). Niente PNG, niente IDB a ogni tag.
- * Un setDoc fallito non blocca gli altri.
+ * Invio SEQUENZIALE: sul tablet i paralleli andavano in timeout e
+ * corrompevano la coda pending (race su localStorage).
+ * Ogni tag OK esce SUBITO dalla coda → il prossimo Sync riprende solo i restanti.
  * @returns {Promise<{ wrote: number, errors: string[] }>}
  */
 async function commitTagQueue(queue, report) {
   if (!queue.length) return { wrote: 0, errors: [] };
   const { doc, setDoc, collection } = await loadFirestoreMod();
-  const CONCURRENCY = 8;
+  const TAG_TIMEOUT_MS = 45000;
   let wrote = 0;
   const errors = [];
-  const mapsTouched = new Map(); // mapId -> map
 
-  for (let i = 0; i < queue.length; i += CONCURRENCY) {
-    const slice = queue.slice(i, i + CONCURRENCY);
-    report(
-      `Invio ${Math.min(i + slice.length, queue.length)}/${queue.length}…`
-    );
-    const results = await Promise.all(
-      slice.map(async (item) => {
-        const { map, tag } = item;
-        if (!tagNeedsCloudPush(tag, map.id)) return { ok: true, skipped: true };
-        const packed = tagCloudPayload(tag, map);
-        if (!packed) return { ok: true, skipped: true };
-        try {
-          const ref = doc(
-            collection(firestore, "tagImpianto_maps", map.id, "tags"),
-            packed.id
-          );
-          await withTimeout(
-            setDoc(ref, packed.payload, { merge: true }),
-            12000,
-            packed.id
-          );
-          return { ok: true, item, packed };
-        } catch (err) {
-          return {
-            ok: false,
-            err: `${map.id}/${packed.id}: ${err?.message || err}`,
-          };
-        }
-      })
-    );
-
-    const okItems = [];
-    for (const r of results) {
-      if (r.ok && r.item) okItems.push(r.item);
-      else if (!r.ok && r.err) errors.push(r.err);
+  for (let i = 0; i < queue.length; i++) {
+    const { map, tag } = queue[i];
+    if (!tagNeedsCloudPush(tag, map.id)) {
+      report(`Inviati ${wrote}/${queue.length} · salto già ok…`);
+      continue;
     }
-    if (okItems.length) {
-      // Esce subito dalla coda pending (anche se Sync si interrompe dopo)
-      markTagsCloudSyncedMany(
-        okItems.map(({ map, tag }) => ({ tag, mapId: map.id }))
+    const packed = tagCloudPayload(tag, map);
+    if (!packed) continue;
+    const label = `${map.name || map.id} · ${packed.id}`;
+    report(`Invio ${i + 1}/${queue.length} · ${label}…`);
+    try {
+      const ref = doc(
+        collection(firestore, "tagImpianto_maps", map.id, "tags"),
+        packed.id
       );
-      wrote += okItems.length;
-      // IDB subito per le mappe di QUESTO chunk: progresso non si perde
-      const chunkMaps = new Map();
-      for (const { map } of okItems) chunkMaps.set(map.id, map);
-      for (const map of chunkMaps.values()) {
-        mapsTouched.set(map.id, map);
-        map.cloudPending = (map.tags || []).some((t) =>
-          tagNeedsCloudPush(t, map.id)
-        );
-        try {
-          await idbPut(map);
-        } catch (err) {
-          console.warn("idbPut dopo sync chunk", map.id, err);
-        }
+      await withTimeout(
+        setDoc(ref, packed.payload, { merge: true }),
+        TAG_TIMEOUT_MS,
+        label
+      );
+      markTagCloudSynced(tag, map.id);
+      map.cloudPending = (map.tags || []).some((t) =>
+        tagNeedsCloudPush(t, map.id)
+      );
+      try {
+        await idbPut(map);
+      } catch (err) {
+        console.warn("idbPut dopo sync tag", map.id, err);
       }
+      wrote += 1;
+    } catch (err) {
+      errors.push(`${label}: ${err?.message || err}`);
+      report(`Errore ${label} · continuo con i successivi…`);
     }
   }
 
@@ -1558,25 +1542,26 @@ export async function syncAllWithCloud(opts = {}) {
     return { mapsPushed: 0, tagsPushed: 0, errors: [] };
   }
 
-  report(`Invio ${queue.length} in coda (non riparte dallo storico)…`);
+  report(`In coda ${queue.length} · parto (i già ok non si rimandano)…`);
   const { wrote: tagsPushed, errors } = await commitTagQueue(queue, report);
 
-  if (!tagsPushed && errors.length) {
-    throw new Error(errors[0]);
-  }
-
+  const still = countPendingCloud();
   const mapsPushed = new Set(
     queue
       .filter((q) => !tagNeedsCloudPush(q.tag, q.map.id))
       .map((q) => q.map.id)
   ).size;
   const errHint = errors.length ? ` · ${errors.length} errori` : "";
+  const leftHint = still ? ` · restano ${still} in coda` : "";
+  // Mai throw: anche 33/34 ok è Sync riuscita; i falliti restano in coda
   report(
     tagsPushed
-      ? `Sync ok · ${tagsPushed} novità inviate${errHint}`
-      : `Sync ok · nulla inviato${errHint}`
+      ? `Sync ok · ${tagsPushed} inviate${errHint}${leftHint}`
+      : still
+        ? `Sync: 0 inviate${errHint}${leftHint}`
+        : `Sync ok · coda vuota${errHint}`
   );
-  return { mapsPushed, tagsPushed, errors };
+  return { mapsPushed, tagsPushed, errors, pendingLeft: still };
 }
 
 /** Dopo init cloud: porta subito online note/riposizionamenti locali. */
