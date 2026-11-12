@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.71";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.72";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -61,13 +61,24 @@ export async function initCloud() {
   // Già connesso (secondo Sync / hot reload)
   if (cloudReady && firestore) return { ok: true };
   try {
-    const [{ initializeApp, getApps, getApp }, { getFirestore }, { getStorage }] = await Promise.all([
+    const [
+      { initializeApp, getApps, getApp },
+      { initializeFirestore, getFirestore },
+      { getStorage },
+    ] = await Promise.all([
       import("https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js"),
       import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js"),
       import("https://www.gstatic.com/firebasejs/11.0.2/firebase-storage.js"),
     ]);
     const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-    firestore = getFirestore(app);
+    // Long polling: su tablet/PWA il canale WebChannel si blocca (1 tag/minuto).
+    try {
+      firestore = initializeFirestore(app, {
+        experimentalForceLongPolling: true,
+      });
+    } catch {
+      firestore = getFirestore(app);
+    }
     storage = getStorage(app);
     cloudReady = true;
     return { ok: true };
@@ -182,7 +193,7 @@ export async function mergeSeedsFromSite() {
         const merged = mergeSeedTags(seed.tags || [], localTags);
         if (seed.image && seed.image !== local.image) {
           try {
-            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.71");
+            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.72");
             await deleteLocalImage(local.image);
             await deleteLocalImage(seed.image);
           } catch (_) {
@@ -243,7 +254,7 @@ export async function mergeSeedsFromSite() {
 
       if (seed.image && local.image !== seed.image) {
         try {
-          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.71");
+          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.72");
           await deleteLocalImage(local.image);
           await deleteLocalImage(seed.image);
         } catch (_) {
@@ -1148,51 +1159,102 @@ function tagCloudPayload(tag, map) {
 }
 
 /**
- * Invio SEQUENZIALE: sul tablet i paralleli andavano in timeout e
- * corrompevano la coda pending (race su localStorage).
- * Ogni tag OK esce SUBITO dalla coda → il prossimo Sync riprende solo i restanti.
+ * Invio a BATCH Firestore (un round-trip per pezzo): secondi, non minuti.
+ * Dopo ogni pezzo OK → fuori coda pending (niente ripartenza da capo).
  * @returns {Promise<{ wrote: number, errors: string[] }>}
  */
 async function commitTagQueue(queue, report) {
   if (!queue.length) return { wrote: 0, errors: [] };
-  const { doc, setDoc, collection } = await loadFirestoreMod();
-  const TAG_TIMEOUT_MS = 45000;
+  const { doc, collection, writeBatch, setDoc } = await loadFirestoreMod();
+  const CHUNK = 25;
+  const BATCH_MS = 60000;
   let wrote = 0;
   const errors = [];
 
-  for (let i = 0; i < queue.length; i++) {
-    const { map, tag } = queue[i];
-    if (!tagNeedsCloudPush(tag, map.id)) {
-      report(`Inviati ${wrote}/${queue.length} · salto già ok…`);
-      continue;
-    }
-    const packed = tagCloudPayload(tag, map);
-    if (!packed) continue;
-    const label = `${map.name || map.id} · ${packed.id}`;
-    report(`Invio ${i + 1}/${queue.length} · ${label}…`);
-    try {
-      const ref = doc(
-        collection(firestore, "tagImpianto_maps", map.id, "tags"),
-        packed.id
-      );
-      await withTimeout(
-        setDoc(ref, packed.payload, { merge: true }),
-        TAG_TIMEOUT_MS,
-        label
-      );
-      markTagCloudSynced(tag, map.id);
+  async function persistMaps(items) {
+    const maps = new Map();
+    for (const { map } of items) maps.set(map.id, map);
+    for (const map of maps.values()) {
       map.cloudPending = (map.tags || []).some((t) =>
         tagNeedsCloudPush(t, map.id)
       );
       try {
         await idbPut(map);
       } catch (err) {
-        console.warn("idbPut dopo sync tag", map.id, err);
+        console.warn("idbPut dopo batch", map.id, err);
       }
-      wrote += 1;
-    } catch (err) {
-      errors.push(`${label}: ${err?.message || err}`);
-      report(`Errore ${label} · continuo con i successivi…`);
+    }
+  }
+
+  async function commitSlice(slice, label) {
+    const batch = writeBatch(firestore);
+    const okItems = [];
+    for (const item of slice) {
+      const { map, tag } = item;
+      if (!tagNeedsCloudPush(tag, map.id)) continue;
+      const packed = tagCloudPayload(tag, map);
+      if (!packed) continue;
+      const ref = doc(
+        collection(firestore, "tagImpianto_maps", map.id, "tags"),
+        packed.id
+      );
+      batch.set(ref, packed.payload, { merge: true });
+      okItems.push(item);
+    }
+    if (!okItems.length) return 0;
+    await withTimeout(batch.commit(), BATCH_MS, label);
+    markTagsCloudSyncedMany(
+      okItems.map(({ map, tag }) => ({ tag, mapId: map.id }))
+    );
+    await persistMaps(okItems);
+    return okItems.length;
+  }
+
+  for (let i = 0; i < queue.length; i += CHUNK) {
+    const slice = queue.slice(i, i + CHUNK);
+    const n = Math.min(i + slice.length, queue.length);
+    report(`Batch ${n}/${queue.length} (veloce)…`);
+    try {
+      wrote += await commitSlice(slice, `batch ${i}-${n}`);
+      report(`Inviati ${wrote}/${queue.length}…`);
+    } catch (batchErr) {
+      // Fallback: pezzi da 5, poi uno a uno — senza perdere i già inviati
+      report(`Batch lento · provo a pezzi…`);
+      for (let j = 0; j < slice.length; j += 5) {
+        const mini = slice.slice(j, j + 5);
+        try {
+          wrote += await commitSlice(mini, `mini ${i + j}`);
+          report(`Inviati ${wrote}/${queue.length}…`);
+        } catch (miniErr) {
+          for (const item of mini) {
+            const { map, tag } = item;
+            if (!tagNeedsCloudPush(tag, map.id)) continue;
+            const packed = tagCloudPayload(tag, map);
+            if (!packed) continue;
+            const label = `${map.name || map.id} · ${packed.id}`;
+            try {
+              const ref = doc(
+                collection(firestore, "tagImpianto_maps", map.id, "tags"),
+                packed.id
+              );
+              await withTimeout(
+                setDoc(ref, packed.payload, { merge: true }),
+                30000,
+                label
+              );
+              markTagCloudSynced(tag, map.id);
+              await persistMaps([item]);
+              wrote += 1;
+              report(`Inviati ${wrote}/${queue.length}…`);
+            } catch (err) {
+              errors.push(`${label}: ${err?.message || err}`);
+            }
+          }
+        }
+      }
+      if (!wrote && errors.length === 0) {
+        errors.push(String(batchErr?.message || batchErr));
+      }
     }
   }
 
