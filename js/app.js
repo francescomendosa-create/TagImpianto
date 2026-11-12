@@ -9,19 +9,20 @@ import {
   saveMap,
   searchAllTags,
   markTagPendingCloud,
+  countPendingCloud,
   syncAllWithCloud,
   pullMapsFromCloud,
-} from "./db.js?v=1.8.68";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.68";
-import { MapViewer } from "./viewer.js?v=1.8.68";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.68";
-import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.68";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.68";
+} from "./db.js?v=1.8.69";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.69";
+import { MapViewer } from "./viewer.js?v=1.8.69";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.69";
+import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.69";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.69";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.68";
+} from "./image-cache.js?v=1.8.69";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -1289,8 +1290,13 @@ els.btnSync.addEventListener("click", async () => {
       els.cloudBadge.innerHTML = `<span class="warn">Cloud errore</span>`;
       return;
     }
-    // Solo note/posizioni NUOVE — mai PNG, mai “Meta” mappa, niente pull lungo
-    setStatus("Sync: cerco novità da inviare…");
+    // Solo coda pending (Salva/sposta) — mai PNG, mai storico intero
+    const pendingN = countPendingCloud();
+    setStatus(
+      pendingN
+        ? `Sync: in coda ${pendingN}…`
+        : "Sync: controllo coda…"
+    );
     const result = await syncAllWithCloud({
       onProgress: (msg) => setStatus(escapeHtml(msg)),
     });

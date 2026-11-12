@@ -1,6 +1,6 @@
 /* Shell leggera: HTML/JS/CSS sempre da rete se online. Niente precache che blocca gli aggiornamenti. */
-const CACHE = "tag-impianto-shell-v104";
-const MAP_CACHE = "tag-impianto-maps-v104";
+const CACHE = "tag-impianto-shell-v105";
+const MAP_CACHE = "tag-impianto-maps-v105";
 
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {

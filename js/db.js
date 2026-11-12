@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.68";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.69";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -182,7 +182,7 @@ export async function mergeSeedsFromSite() {
         const merged = mergeSeedTags(seed.tags || [], localTags);
         if (seed.image && seed.image !== local.image) {
           try {
-            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.68");
+            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.69");
             await deleteLocalImage(local.image);
             await deleteLocalImage(seed.image);
           } catch (_) {
@@ -243,7 +243,7 @@ export async function mergeSeedsFromSite() {
 
       if (seed.image && local.image !== seed.image) {
         try {
-          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.68");
+          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.69");
           await deleteLocalImage(local.image);
           await deleteLocalImage(seed.image);
         } catch (_) {
@@ -391,76 +391,77 @@ function tagHasLocalEdits(t) {
   return false;
 }
 
-function syncedRegKey(mapId, tagId) {
+function pendingKey(mapId, tagId) {
   return `${String(mapId || "")}::${String(tagId || "").toUpperCase()}`;
 }
 
-function readSyncedRegistry() {
+/** Coda esplicita: SOLO ciò che l’utente ha salvato dopo il baseline. */
+const PENDING_LS = "ti-cloud-pending-v3";
+const PENDING_FLAG = "ti-sync-pending-v3";
+
+function readPendingMap() {
   try {
-    const raw = localStorage.getItem("ti-tag-synced-v1");
+    const raw = localStorage.getItem(PENDING_LS);
     const o = raw ? JSON.parse(raw) : {};
-    return o && typeof o === "object" ? o : {};
+    return o && typeof o === "object" && !Array.isArray(o) ? o : {};
   } catch {
     return {};
   }
 }
 
-function writeSyncedRegistry(reg) {
+function writePendingMap(pend) {
   try {
-    localStorage.setItem("ti-tag-synced-v1", JSON.stringify(reg));
-  } catch {
-    /* quota / private mode */
+    localStorage.setItem(PENDING_LS, JSON.stringify(pend));
+  } catch (err) {
+    console.warn("pending cloud registry write failed", err);
   }
 }
 
 /**
- * Da inviare SOLO se modificato e non ancora sul cloud.
- * Usa cloudSyncedAt sul tag + registro localStorage (sopravvive se IDB non scrive in tempo).
+ * Da inviare SOLO se è in coda pending (Salva/sposta).
+ * Mai più “tutte le note storiche” a ogni Sync.
  */
 function tagNeedsCloudPush(t, mapId) {
+  if (!t?.id || !mapId) return false;
   if (!tagHasLocalEdits(t)) return false;
-  const updated = Number(t.updatedAt) || 0;
-  let synced = Number(t.cloudSyncedAt) || 0;
-  if (mapId) {
-    const regAt = Number(readSyncedRegistry()[syncedRegKey(mapId, t.id)] || 0);
-    if (regAt > synced) {
-      synced = regAt;
-      t.cloudSyncedAt = regAt; // ripara il tag in memoria
-    }
-  }
-  return !synced || updated > synced;
+  return !!readPendingMap()[pendingKey(mapId, t.id)];
 }
 
-function markTagCloudSynced(t, mapId, reg) {
+function markTagCloudSynced(t, mapId, pend) {
   if (!t) return;
   const at = Number(t.updatedAt) || Date.now();
   t.updatedAt = at;
   t.cloudSyncedAt = at;
   if (mapId && t.id) {
-    const r = reg || readSyncedRegistry();
-    r[syncedRegKey(mapId, t.id)] = at;
-    if (!reg) writeSyncedRegistry(r);
+    const p = pend || readPendingMap();
+    delete p[pendingKey(mapId, t.id)];
+    if (!pend) writePendingMap(p);
   }
 }
 
 function markTagsCloudSyncedMany(items) {
-  const reg = readSyncedRegistry();
+  const pend = readPendingMap();
   for (const { tag, mapId } of items) {
-    markTagCloudSynced(tag, mapId, reg);
+    markTagCloudSynced(tag, mapId, pend);
   }
-  writeSyncedRegistry(reg);
+  writePendingMap(pend);
 }
 
-/** Dopo modifica locale: va rimandato al Sync. */
+/** Dopo modifica locale: entra in coda Sync (solo questo tag). */
 export function markTagPendingCloud(t, mapId) {
   if (!t) return;
   t.updatedAt = Date.now();
   delete t.cloudSyncedAt;
   if (mapId && t.id) {
-    const reg = readSyncedRegistry();
-    delete reg[syncedRegKey(mapId, t.id)];
-    writeSyncedRegistry(reg);
+    const pend = readPendingMap();
+    pend[pendingKey(mapId, t.id)] = t.updatedAt;
+    writePendingMap(pend);
   }
+}
+
+/** Quanti tag sono in coda Sync (per UI). */
+export function countPendingCloud() {
+  return Object.keys(readPendingMap()).length;
 }
 
 function withTimeout(promise, ms, label) {
@@ -505,7 +506,7 @@ function mergeSeedTags(seedTags, localTags) {
       merged.push({ ...st });
       continue;
     }
-    // Geometria e note utente vincono sempre
+    // Geometria e note utente vincono sempre (cloudSyncedAt locale non si perde)
     merged.push({
       ...st,
       ...loc,
@@ -520,6 +521,7 @@ function mergeSeedTags(seedTags, localTags) {
       locked: !!(loc.locked || st.locked),
       source: loc.source || st.source,
       updatedAt: Math.max(Number(loc.updatedAt) || 0, Number(st.updatedAt) || 0) || undefined,
+      cloudSyncedAt: loc.cloudSyncedAt,
     });
   }
   for (const [key, loc] of localById) {
@@ -1188,21 +1190,28 @@ async function commitTagQueue(queue, report) {
       else if (!r.ok && r.err) errors.push(r.err);
     }
     if (okItems.length) {
+      // Esce subito dalla coda pending (anche se Sync si interrompe dopo)
       markTagsCloudSyncedMany(
         okItems.map(({ map, tag }) => ({ tag, mapId: map.id }))
       );
-      for (const { map } of okItems) mapsTouched.set(map.id, map);
       wrote += okItems.length;
+      // IDB subito per le mappe di QUESTO chunk: progresso non si perde
+      const chunkMaps = new Map();
+      for (const { map } of okItems) chunkMaps.set(map.id, map);
+      for (const map of chunkMaps.values()) {
+        mapsTouched.set(map.id, map);
+        map.cloudPending = (map.tags || []).some((t) =>
+          tagNeedsCloudPush(t, map.id)
+        );
+        try {
+          await idbPut(map);
+        } catch (err) {
+          console.warn("idbPut dopo sync chunk", map.id, err);
+        }
+      }
     }
   }
 
-  // Un solo IDB put per mappa toccata (non a ogni tag)
-  for (const map of mapsTouched.values()) {
-    map.cloudPending = (map.tags || []).some((t) =>
-      tagNeedsCloudPush(t, map.id)
-    );
-    await idbPut(map);
-  }
   return { wrote, errors };
 }
 
@@ -1260,38 +1269,80 @@ async function pushMapToCloud(map, opts = {}) {
 }
 
 /**
- * Una tantum: le note già sul dispositivo (prima del dirty-tracking)
- * si considerano già inviate, così Sync non le rimanda tutte.
+ * Baseline una tantum (v3):
+ * - storico senza sync recente → già a posto (NON in coda)
+ * - modifiche recenti non inviate → restano in coda pending
+ * Dopo il flag, solo Salva/sposta aggiunge alla coda.
  */
 async function migrateExistingEditsAsSynced() {
   try {
-    if (localStorage.getItem("ti-sync-dirty-v2") === "1") return 0;
+    if (localStorage.getItem(PENDING_FLAG) === "1") return 0;
   } catch {
     return 0;
   }
+
+  let oldSynced = {};
+  try {
+    const raw = localStorage.getItem("ti-tag-synced-v1");
+    oldSynced = raw ? JSON.parse(raw) : {};
+    if (!oldSynced || typeof oldSynced !== "object") oldSynced = {};
+  } catch {
+    oldSynced = {};
+  }
+
+  const pend = {};
+  const now = Date.now();
+  const RECENT_MS = 3 * 24 * 60 * 60 * 1000; // 3 giorni
   const all = await idbGetAll();
-  let n = 0;
+  let baselined = 0;
+  let kept = 0;
+
   for (const map of all) {
     if (!map?.id || String(map.id).startsWith("__")) continue;
     let touched = false;
     for (const t of map.tags || []) {
-      if (tagHasLocalEdits(t) && !Number(t.cloudSyncedAt)) {
-        markTagCloudSynced(t, map.id);
+      if (!tagHasLocalEdits(t) || !t.id) continue;
+      const key = pendingKey(map.id, t.id);
+      const updated = Number(t.updatedAt) || 0;
+      const synced = Number(t.cloudSyncedAt) || 0;
+      const regAt = Number(oldSynced[key] || 0);
+      const effectiveSynced = Math.max(synced, regAt);
+
+      // Sporco vero: modificato dopo un sync, oppure tocco recente mai syncato
+      const dirtyAfterSync = effectiveSynced > 0 && updated > effectiveSynced;
+      const recentNeverSynced =
+        effectiveSynced <= 0 && updated > 0 && now - updated < RECENT_MS;
+
+      if (dirtyAfterSync || recentNeverSynced) {
+        pend[key] = updated || now;
+        if (regAt > synced) t.cloudSyncedAt = regAt;
+        kept += 1;
+      } else {
+        const at = Math.max(updated, effectiveSynced, now);
+        t.updatedAt = updated || at;
+        t.cloudSyncedAt = at;
+        baselined += 1;
         touched = true;
-        n += 1;
       }
     }
-    if (touched || map.cloudPending) {
-      map.cloudPending = false;
+    const wasPending = !!map.cloudPending;
+    map.cloudPending = (map.tags || []).some(
+      (t) => t?.id && !!pend[pendingKey(map.id, t.id)]
+    );
+    if (touched || wasPending || map.cloudPending) {
       await idbPut(map);
     }
   }
+
+  writePendingMap(pend);
   try {
-    localStorage.setItem("ti-sync-dirty-v2", "1");
+    localStorage.removeItem("ti-tag-synced-v1");
+    localStorage.removeItem("ti-sync-dirty-v2");
+    localStorage.setItem(PENDING_FLAG, "1");
   } catch {
     /* ignore */
   }
-  return n;
+  return kept;
 }
 
 /**
@@ -1468,18 +1519,30 @@ export async function syncAllWithCloud(opts = {}) {
     }
   };
 
-  report("Cerco novità…");
-  await migrateExistingEditsAsSynced();
+  report("Cerco coda Sync…");
+  const kept = await migrateExistingEditsAsSynced();
+  if (kept > 0) {
+    report(`Ripreso ${kept} modifiche recenti non ancora inviate…`);
+  }
 
   const all = (await idbGetAll()).filter(
     (m) => m?.id && !String(m.id).startsWith("__")
   );
+  // Coda = solo pending espliciti (mai tutto lo storico)
+  const pend = readPendingMap();
   const queue = [];
   for (const map of all) {
     for (const tag of map.tags || []) {
-      if (tagNeedsCloudPush(tag, map.id)) queue.push({ map, tag });
+      if (!tag?.id) continue;
+      if (!pend[pendingKey(map.id, tag.id)]) continue;
+      if (!tagHasLocalEdits(tag)) {
+        delete pend[pendingKey(map.id, tag.id)];
+        continue;
+      }
+      queue.push({ map, tag });
     }
   }
+  writePendingMap(pend);
   queue.sort(
     (a, b) => (Number(b.tag.updatedAt) || 0) - (Number(a.tag.updatedAt) || 0)
   );
@@ -1491,11 +1554,11 @@ export async function syncAllWithCloud(opts = {}) {
         await idbPut(map);
       }
     }
-    report("Sync ok · nulla di nuovo da inviare");
+    report("Sync ok · coda vuota");
     return { mapsPushed: 0, tagsPushed: 0, errors: [] };
   }
 
-  report(`Invio ${queue.length} novità…`);
+  report(`Invio ${queue.length} in coda (non riparte dallo storico)…`);
   const { wrote: tagsPushed, errors } = await commitTagQueue(queue, report);
 
   if (!tagsPushed && errors.length) {
