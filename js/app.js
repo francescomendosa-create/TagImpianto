@@ -10,17 +10,17 @@ import {
   searchAllTags,
   syncAllWithCloud,
   pullMapsFromCloud,
-} from "./db.js?v=1.8.62";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.62";
-import { MapViewer } from "./viewer.js?v=1.8.62";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.62";
-import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.62";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.62";
+} from "./db.js?v=1.8.63";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.63";
+import { MapViewer } from "./viewer.js?v=1.8.63";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.63";
+import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.63";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.63";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.62";
+} from "./image-cache.js?v=1.8.63";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -115,6 +115,7 @@ viewer.onTagMoved = async (tagId) => {
     tag.source = "manual";
     tag.locked = true;
     tag.updatedAt = Date.now();
+    delete tag.cloudSyncedAt; // va reinviato al Sync
   }
   const { cloudSynced } = await persistCurrent();
   toast(
@@ -721,6 +722,7 @@ els.noteSave.addEventListener("click", async () => {
   tag.source = "manual";
   tag.locked = true;
   tag.updatedAt = Date.now();
+  delete tag.cloudSyncedAt; // modifica locale → da Sync di nuovo
   const applyGeom =
     isNew || els.drawer.dataset.recalibrate === "1";
   // Aggiungi / Ricalibra: geometria dal riquadro disegnato
