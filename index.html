@@ -8,10 +8,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <title>Tag Impianto</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=1.8.46" />
+  <link rel="manifest" href="./manifest.webmanifest?v=1.8.47" />
   <link rel="icon" href="./icons/icon-192.png" />
   <link rel="apple-touch-icon" href="./icons/icon-192.png" />
-  <link rel="stylesheet" href="./css/app.css?v=1.8.46" />
+  <link rel="stylesheet" href="./css/app.css?v=1.8.47" />
   <script>
     /* Niente redirect e niente reload automatici (causavano lampeggio infinito). */
     window.addEventListener("load", function () {
@@ -32,7 +32,7 @@
   </div>
   <div id="app">
     <header class="topbar">
-      <div class="brand">TAG <span>IMPIANTO</span> <small id="appVersion" class="app-version" title="Versione app">v1.8.46</small></div>
+      <div class="brand">TAG <span>IMPIANTO</span> <small id="appVersion" class="app-version" title="Versione app">v1.8.47</small></div>
       <select id="mapSelect" class="map-select visually-hidden" aria-label="Parte di impianto" tabindex="-1"></select>
       <div class="map-title" id="mapTitle" aria-live="polite"></div>
       <div class="top-actions">
@@ -49,15 +49,20 @@
 
     <div class="search-bar">
       <div class="search-wrap">
-        <input
-          id="searchInput"
-          type="search"
-          enterkeyhint="search"
-          autocomplete="off"
-          autocorrect="off"
-          spellcheck="false"
-          placeholder="Cerca tag... es. P11100A, XV11120, TK-11100B"
-        />
+        <div class="search-field" id="searchField">
+          <input
+            id="searchInput"
+            type="search"
+            enterkeyhint="search"
+            autocomplete="off"
+            autocorrect="off"
+            spellcheck="false"
+            placeholder="Sigla… es. P11100A, XV11120"
+            aria-label="Sigla da cercare"
+          />
+          <span id="searchKindChip" class="search-chip chip-kind" hidden aria-hidden="true"></span>
+          <span id="searchPageChip" class="search-chip chip-page" hidden aria-hidden="true"></span>
+        </div>
         <select id="searchKind" class="search-kind" aria-label="Filtra per tipo" title="Filtra per tipo">
           <option value="tutti" selected>Tutti</option>
           <option value="pompa">Pompa</option>
@@ -127,6 +132,6 @@
   </div>
 
   <div id="toast" class="toast" role="status"></div>
-  <script type="module" src="./js/app.js?v=1.8.46"></script>
+  <script type="module" src="./js/app.js?v=1.8.47"></script>
 </body>
 </html>

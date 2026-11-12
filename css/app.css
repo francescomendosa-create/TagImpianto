@@ -191,22 +191,75 @@ body.has-update-banner #app {
   min-width: 0;
 }
 
-#searchInput {
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   width: 100%;
+  min-height: 46px;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 10px;
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: 1rem;
-  padding: 12px 132px 12px 14px;
-  outline: none;
+  padding: 6px 132px 6px 10px;
+  box-sizing: border-box;
 }
-#searchInput:focus {
+.search-field:focus-within {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-dim);
 }
-#searchInput::placeholder { color: var(--muted); font-family: var(--font); }
+
+#searchInput {
+  flex: 1 1 7rem;
+  min-width: 5rem;
+  width: auto;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 6px 4px;
+  outline: none;
+  box-shadow: none;
+}
+#searchInput:focus {
+  border: 0;
+  box-shadow: none;
+}
+#searchInput::placeholder { color: var(--muted); font-family: var(--font); font-weight: 500; }
+
+/* Riferimenti non editabili: solo lettura, non intercettano click/digitazione */
+.search-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 46%;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: var(--font);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  flex: 0 1 auto;
+}
+.search-chip[hidden] { display: none !important; }
+.chip-kind {
+  color: #0b1220;
+  background: #5eead4;
+  border: 1px solid #2dd4bf;
+}
+.chip-page {
+  color: #f8fafc;
+  background: #2563eb;
+  border: 1px solid #3b82f6;
+}
 
 .search-kind {
   position: absolute;
@@ -251,7 +304,8 @@ body.has-update-banner #app {
 .clear-btn.visible { display: block; }
 
 @media (max-width: 520px) {
-  #searchInput { padding-right: 118px; }
+  .search-field { padding-right: 118px; gap: 6px; }
+  .search-chip { max-width: 42%; font-size: 0.72rem; padding: 3px 8px; }
   .search-kind {
     right: 34px;
     min-width: 5.4rem;

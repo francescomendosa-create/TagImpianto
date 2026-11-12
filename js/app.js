@@ -10,17 +10,17 @@ import {
   searchAllTags,
   syncAllWithCloud,
   pullMapsFromCloud,
-} from "./db.js?v=1.8.46";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.46";
-import { MapViewer } from "./viewer.js?v=1.8.46";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.46";
-import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.46";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.46";
+} from "./db.js?v=1.8.47";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.47";
+import { MapViewer } from "./viewer.js?v=1.8.47";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.47";
+import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.47";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.47";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.46";
+} from "./image-cache.js?v=1.8.47";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -32,6 +32,9 @@ const els = {
   updateBannerText: $("#updateBannerText"),
   btnUpdateNow: $("#btnUpdateNow"),
   searchInput: $("#searchInput"),
+  searchKindChip: $("#searchKindChip"),
+  searchPageChip: $("#searchPageChip"),
+  searchField: $("#searchField"),
   searchKind: $("#searchKind"),
   clearBtn: $("#clearBtn"),
   suggestions: $("#suggestions"),
@@ -84,17 +87,17 @@ function turnOffAddModes() {
 // Riposiziona: niente nuovi tag al tap - solo trascinamento del tag evidenziato
 viewer.onAnnotatePlace = null;
 
-/** Click/tap sul tag: barra ricerca = sigla [tipo] (+ nota) [pagina], senza suggerimenti. */
+/** Click/tap sul tag: sigla nel campo editabile + chip [tipo]/[pagina]. */
 viewer.onTagDoubleSelect = (tag) => {
   if (!tag || !currentMap) return;
   const sigla = String(tag.label || tag.id || "").trim();
   if (!sigla) return;
-  const text = formatTagSearchText(tag, currentMap.id, currentMap.name);
   const note = String(tag.note || "").trim();
   const kind = kindLabelForTag(tag);
   const page = pageLabelForMap(currentMap.id, currentMap.name);
   closeSuggestions();
-  els.searchInput.value = text;
+  els.searchInput.value = sigla;
+  setSearchMetaChips(kind, page);
   els.clearBtn.classList.add("visible");
   activeTagId = tag.id;
   viewer.highlight(tag.id);
@@ -482,51 +485,62 @@ function kindLabelForTag(tag) {
   return String(tag?.kind || "").trim().toLowerCase();
 }
 
-/** Testo barra ricerca: sigla [tipo] - nota [pagina] */
-function formatTagSearchText(tag, mapId, mapName) {
-  const sigla = String(tag?.label || tag?.id || "").trim();
-  if (!sigla) return "";
-  const kind = kindLabelForTag(tag);
-  const kindPart = kind ? ` [${kind}]` : "";
-  const note = String(tag?.note || "").trim();
-  const page = pageLabelForMap(mapId, mapName);
-  const pagePart = page ? ` [${page}]` : "";
-  return note ? `${sigla}${kindPart} - ${note}${pagePart}` : `${sigla}${kindPart}${pagePart}`;
+/** Chip riferimento non editabili (tipo / pagina). */
+function setSearchMetaChips(kind, page) {
+  const k = String(kind || "").trim();
+  const p = String(page || "").trim();
+  if (els.searchKindChip) {
+    if (k) {
+      els.searchKindChip.textContent = k;
+      els.searchKindChip.hidden = false;
+      els.searchKindChip.title = `Tipo: ${k}`;
+    } else {
+      els.searchKindChip.textContent = "";
+      els.searchKindChip.hidden = true;
+    }
+  }
+  if (els.searchPageChip) {
+    if (p) {
+      els.searchPageChip.textContent = p;
+      els.searchPageChip.hidden = false;
+      els.searchPageChip.title = `Pagina: ${p}`;
+    } else {
+      els.searchPageChip.textContent = "";
+      els.searchPageChip.hidden = true;
+    }
+  }
 }
 
-/**
- * Dalla barra togli [tipo]/[pagina]/nota: resta solo la sigla digitata.
- * Così mentre scrivi non cerchi anche "valvola" / "Ultrafiltrazione…".
- */
+function clearSearchMetaChips() {
+  setSearchMetaChips("", "");
+}
+
+/** Sigla = solo il campo editabile (i chip non sono testo digitabile). */
 function extractSearchSigla(raw) {
-  let s = String(raw || "");
-  s = s.replace(/\s*\[[^\]]*\]/g, " ");
-  const dash = s.indexOf(" - ");
-  if (dash >= 0) s = s.slice(0, dash);
-  return s.replace(/\s+/g, " ").trim();
+  return String(raw ?? els.searchInput?.value ?? "")
+    .replace(/\s*\[[^\]]*\]/g, " ")
+    .replace(/\s+-\s+.*$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-/** Aggiorna subito [tipo] e [pagina] sul miglior risultato, cursore resta sulla sigla. */
+/** Aggiorna i chip [tipo]/[pagina] sul miglior risultato (input resta solo sigla). */
 function applyLiveSearchChrome(typedSigla, hit) {
-  const input = els.searchInput;
-  if (!input) return;
-  const sigla = String(typedSigla || "");
-  let next = sigla;
-  if (hit?.tag) {
-    const kind = kindLabelForTag(hit.tag);
-    const page = pageLabelForMap(hit.mapId, hit.mapName);
-    const kindPart = kind ? ` [${kind}]` : "";
-    const pagePart = page ? ` [${page}]` : "";
-    next = `${sigla}${kindPart}${pagePart}`;
+  if (els.searchInput && typedSigla != null && els.searchInput.value !== typedSigla) {
+    // Solo se abbiamo ripulito vecchi bracket residui
+    const cleaned = extractSearchSigla(els.searchInput.value);
+    if (cleaned === typedSigla && /\[/.test(els.searchInput.value)) {
+      els.searchInput.value = typedSigla;
+    }
   }
-  if (input.value === next) return;
-  input.value = next;
-  try {
-    const pos = sigla.length;
-    input.setSelectionRange(pos, pos);
-  } catch (_) {
-    /* ignore */
+  if (!hit?.tag) {
+    clearSearchMetaChips();
+    return;
   }
+  setSearchMetaChips(
+    kindLabelForTag(hit.tag),
+    pageLabelForMap(hit.mapId, hit.mapName)
+  );
 }
 
 async function runSearch(query, { autoPick = false, liveFormat = false } = {}) {
@@ -621,7 +635,8 @@ async function pickHit(hit) {
   const note = String(hit.tag.note || "").trim();
   const kind = kindLabelForTag(hit.tag);
   const page = pageLabelForMap(hit.mapId, hit.mapName);
-  els.searchInput.value = formatTagSearchText(hit.tag, hit.mapId, hit.mapName);
+  els.searchInput.value = sigla;
+  setSearchMetaChips(kind, page);
   els.clearBtn.classList.add("visible");
   activeTagId = hit.tag.id;
   if (!currentMap || currentMap.id !== hit.mapId) {
@@ -741,17 +756,29 @@ els.noteDelete.addEventListener("click", async () => {
 els.mapSelect.addEventListener("change", () => selectMap(els.mapSelect.value));
 
 els.searchInput.addEventListener("input", async () => {
-  const raw = els.searchInput.value;
-  const sigla = extractSearchSigla(raw);
-  els.clearBtn.classList.toggle("visible", !!raw);
+  // Solo sigla digitabile; eventuali [vecchi] incollati vengono ripuliti
+  let sigla = extractSearchSigla(els.searchInput.value);
+  if (els.searchInput.value !== sigla) {
+    els.searchInput.value = sigla;
+  }
+  els.clearBtn.classList.toggle("visible", !!(sigla || !els.searchKindChip?.hidden || !els.searchPageChip?.hidden));
   if (!sigla && currentSearchKind() === "tutti") {
-    applyLiveSearchChrome("", null);
+    clearSearchMetaChips();
     closeSuggestions();
     viewer.highlight(null);
     return;
   }
-  // Ricerca istantanea sulla sola sigla; [tipo]/[pagina] si aggiornano al volo
+  // Ricerca istantanea; i chip tipo/pagina seguono il miglior risultato
   await runSearch(sigla, { liveFormat: true });
+});
+
+// Click sul bordo del campo → focus solo sulla sigla (i chip non rubano il cursore)
+els.searchField?.addEventListener("pointerdown", (e) => {
+  if (e.target === els.searchInput) return;
+  if (e.target?.closest?.(".search-chip")) {
+    e.preventDefault();
+    els.searchInput?.focus();
+  }
 });
 
 /** Snapshot tipo al tocco: se riscelgo lo stesso con lista aperta → chiudi popup. */
@@ -895,6 +922,7 @@ els.searchInput.addEventListener("keydown", async (e) => {
 
 els.clearBtn.addEventListener("click", () => {
   els.searchInput.value = "";
+  clearSearchMetaChips();
   els.clearBtn.classList.remove("visible");
   if (currentSearchKind() !== "tutti") {
     runSearch("");
