@@ -10,17 +10,17 @@ import {
   searchAllTags,
   syncAllWithCloud,
   pullMapsFromCloud,
-} from "./db.js?v=1.8.48";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.48";
-import { MapViewer } from "./viewer.js?v=1.8.48";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.48";
-import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.48";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.48";
+} from "./db.js?v=1.8.49";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.49";
+import { MapViewer } from "./viewer.js?v=1.8.49";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.49";
+import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.49";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.49";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.48";
+} from "./image-cache.js?v=1.8.49";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -515,13 +515,26 @@ function clearSearchMetaChips() {
   setSearchMetaChips("", "");
 }
 
-/** Sigla = solo il campo editabile (i chip non sono testo digitabile). */
-function extractSearchSigla(raw) {
-  return String(raw ?? els.searchInput?.value ?? "")
+/**
+ * Pulisce [tipo]/note incollate ma lascia gli spazi digitati (anche in coda).
+ * La ricerca normalizza comunque senza spazi; qui conta solo cosa vedi nel campo.
+ */
+function sanitizeSearchInput(raw) {
+  const s = String(raw ?? els.searchInput?.value ?? "");
+  const keepTrailingSpace = /\s$/.test(s);
+  let out = s
     .replace(/\s*\[[^\]]*\]/g, " ")
     .replace(/\s+-\s+.*$/, "")
+    .replace(/^\s+/, "")
     .replace(/\s+/g, " ")
-    .trim();
+    .replace(/\s+$/, "");
+  if (keepTrailingSpace && out) out += " ";
+  return out;
+}
+
+/** Query di ricerca (spazi estremi tolti; il match ignora comunque gli spazi). */
+function extractSearchSigla(raw) {
+  return sanitizeSearchInput(raw).trim();
 }
 
 /** Aggiorna i chip [tipo]/[pagina] sul miglior risultato (input resta solo sigla). */
@@ -756,11 +769,23 @@ els.noteDelete.addEventListener("click", async () => {
 els.mapSelect.addEventListener("change", () => selectMap(els.mapSelect.value));
 
 els.searchInput.addEventListener("input", async () => {
-  // Solo sigla digitabile; eventuali [vecchi] incollati vengono ripuliti
-  let sigla = extractSearchSigla(els.searchInput.value);
-  if (els.searchInput.value !== sigla) {
-    els.searchInput.value = sigla;
+  // Solo sigla digitabile; eventuali [vecchi] incollati vengono ripuliti.
+  // Gli spazi restano visibili (anche in coda); la ricerca li ignora nel match.
+  const raw = els.searchInput.value;
+  const display = sanitizeSearchInput(raw);
+  if (raw !== display) {
+    const pos = els.searchInput.selectionStart;
+    els.searchInput.value = display;
+    if (typeof pos === "number") {
+      const next = Math.min(pos, display.length);
+      try {
+        els.searchInput.setSelectionRange(next, next);
+      } catch {
+        /* ignore */
+      }
+    }
   }
+  const sigla = display.trim();
   els.clearBtn.classList.toggle("visible", !!(sigla || !els.searchKindChip?.hidden || !els.searchPageChip?.hidden));
   if (!sigla && currentSearchKind() === "tutti") {
     clearSearchMetaChips();
