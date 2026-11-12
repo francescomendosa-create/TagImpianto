@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.43";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=1.8.44";
 
 const DB_NAME = "tag-impianto";
 const DB_VER = 2;
@@ -182,7 +182,7 @@ export async function mergeSeedsFromSite() {
         const merged = mergeSeedTags(seed.tags || [], localTags);
         if (seed.image && seed.image !== local.image) {
           try {
-            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.43");
+            const { deleteLocalImage } = await import("./image-cache.js?v=1.8.44");
             await deleteLocalImage(local.image);
             await deleteLocalImage(seed.image);
           } catch (_) {
@@ -243,7 +243,7 @@ export async function mergeSeedsFromSite() {
 
       if (seed.image && local.image !== seed.image) {
         try {
-          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.43");
+          const { deleteLocalImage } = await import("./image-cache.js?v=1.8.44");
           await deleteLocalImage(local.image);
           await deleteLocalImage(seed.image);
         } catch (_) {
@@ -868,9 +868,14 @@ async function pushMapToCloud(map) {
   }
 }
 
-/** Carica dal cloud e unisce con IndexedDB (updatedAt più recente vince). */
-export async function pullMapsFromCloud() {
+/**
+ * Carica dal cloud e unisce con IndexedDB.
+ * @param {{ preferCloud?: boolean }} [opts]
+ *   preferCloud=true → i tag del cloud vincono (non si spinge nulla; uso “Scarica da cloud” sul PC).
+ */
+export async function pullMapsFromCloud(opts = {}) {
   if (!cloudReady) return [];
+  const preferCloud = !!opts.preferCloud;
   const { collection, getDocs } = await import(
     "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js"
   );
@@ -885,13 +890,23 @@ export async function pullMapsFromCloud() {
     const cloudTags = tagsSnap.docs.map((t) => t.data());
     const local = localById.get(d.id);
     const byId = new Map();
-    for (const t of local?.tags || []) {
-      if (t?.id) byId.set(String(t.id).toUpperCase(), t);
+    if (!preferCloud) {
+      for (const t of local?.tags || []) {
+        if (t?.id) byId.set(String(t.id).toUpperCase(), t);
+      }
     }
     for (const t of cloudTags) {
       if (!t?.id) continue;
       const key = String(t.id).toUpperCase();
-      byId.set(key, mergeTagCloudLocal(byId.get(key), t));
+      if (preferCloud) {
+        byId.set(key, { ...t });
+      } else {
+        byId.set(key, mergeTagCloudLocal(byId.get(key), t));
+      }
+    }
+    // preferCloud: non tenere tag “solo locali” sballati del PC se il cloud ha già la mappa
+    if (!preferCloud) {
+      /* already seeded from local above */
     }
     const cloudAt = Number(meta.updatedAt) || 0;
     const localAt = Number(local?.updatedAt) || 0;
@@ -902,7 +917,9 @@ export async function pullMapsFromCloud() {
       ...meta,
       id: d.id,
       tags: [...byId.values()],
-      updatedAt: Math.max(cloudAt, localAt, Date.now()),
+      updatedAt: preferCloud
+        ? Math.max(cloudAt, Date.now())
+        : Math.max(cloudAt, localAt, Date.now()),
       image: local?.image || meta.image,
       width: local?.width || meta.width,
       height: local?.height || meta.height,
@@ -911,6 +928,7 @@ export async function pullMapsFromCloud() {
       cropTop: local?.cropTop ?? meta.cropTop,
       area: local?.area || meta.area || "",
       name: local?.name || meta.name || d.id,
+      cloudPending: preferCloud ? false : local?.cloudPending,
     };
     await idbPut(map);
     maps.push(map);

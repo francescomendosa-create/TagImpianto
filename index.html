@@ -8,10 +8,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <title>Tag Impianto</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=1.8.43" />
+  <link rel="manifest" href="./manifest.webmanifest?v=1.8.44" />
   <link rel="icon" href="./icons/icon-192.png" />
   <link rel="apple-touch-icon" href="./icons/icon-192.png" />
-  <link rel="stylesheet" href="./css/app.css?v=1.8.43" />
+  <link rel="stylesheet" href="./css/app.css?v=1.8.44" />
   <script>
     /* Niente redirect e niente reload automatici (causavano lampeggio infinito). */
     window.addEventListener("load", function () {
@@ -32,7 +32,7 @@
   </div>
   <div id="app">
     <header class="topbar">
-      <div class="brand">TAG <span>IMPIANTO</span> <small id="appVersion" class="app-version" title="Versione app">v1.8.43</small></div>
+      <div class="brand">TAG <span>IMPIANTO</span> <small id="appVersion" class="app-version" title="Versione app">v1.8.44</small></div>
       <select id="mapSelect" class="map-select visually-hidden" aria-label="Parte di impianto" tabindex="-1"></select>
       <div class="map-title" id="mapTitle" aria-live="polite"></div>
       <div class="top-actions">
@@ -42,6 +42,7 @@
         <button type="button" class="btn" id="btnRecalibrate" title="Ridisegna il riquadro giallo del tag selezionato">Ricalibra</button>
         <button type="button" class="btn" id="btnAddTag" title="Disegna un riquadro sul tag mancante (OCR sulla selezione)">Aggiungi</button>
         <button type="button" class="btn" id="btnNotes" title="Nota sul tag">Nota</button>
+        <button type="button" class="btn" id="btnPullCloud" title="Solo scarica note/posizioni dal cloud (non invia le modifiche locali)" hidden>Scarica cloud</button>
         <button type="button" class="btn primary" id="btnSync" title="Allinea note e posizioni tra dispositivi (Firebase)">Sync</button>
       </div>
     </header>
@@ -126,6 +127,6 @@
   </div>
 
   <div id="toast" class="toast" role="status"></div>
-  <script type="module" src="./js/app.js?v=1.8.43"></script>
+  <script type="module" src="./js/app.js?v=1.8.44"></script>
 </body>
 </html>

@@ -9,17 +9,18 @@ import {
   saveMap,
   searchAllTags,
   syncAllWithCloud,
-} from "./db.js?v=1.8.43";
-import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.43";
-import { MapViewer } from "./viewer.js?v=1.8.43";
-import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.43";
-import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.43";
-import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.43";
+  pullMapsFromCloud,
+} from "./db.js?v=1.8.44";
+import { isFirebaseConfigured } from "./firebase-config.js?v=1.8.44";
+import { MapViewer } from "./viewer.js?v=1.8.44";
+import { runMapOcr, mergeOcrIntoMap, ocrImageRegion } from "./ocr.js?v=1.8.44";
+import { renderPlantNav, setPlantNavActive, pageForMapId } from "./plant-nav.js?v=1.8.44";
+import { APP_VERSION, APP_BUILD } from "./version.js?v=1.8.44";
 import {
   warmAllMapImages,
   countLocalImages,
   clearAllLocalImages,
-} from "./image-cache.js?v=1.8.43";
+} from "./image-cache.js?v=1.8.44";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -41,6 +42,7 @@ const els = {
   btnOcr: $("#btnOcr"),
   btnRefresh: $("#btnRefresh"),
   btnSync: $("#btnSync"),
+  btnPullCloud: $("#btnPullCloud"),
   btnNotes: $("#btnNotes"),
   drawer: $("#drawer"),
   noteTitle: $("#noteTitle"),
@@ -1069,6 +1071,77 @@ els.btnNotes.addEventListener("click", () => {
   if (tag) openNoteDrawer({ ...tag, isNew: false });
 });
 
+/** PC / desktop: mouse fine, non “solo touch”. Override: ?device=pc|tablet o localStorage ti-device. */
+function isDesktopPc() {
+  try {
+    const q = new URLSearchParams(location.search).get("device");
+    if (q === "pc") return true;
+    if (q === "tablet") return false;
+    const forced = localStorage.getItem("ti-device");
+    if (forced === "pc") return true;
+    if (forced === "tablet") return false;
+  } catch (_) {
+    /* ignore */
+  }
+  const coarse = window.matchMedia("(pointer: coarse)").matches;
+  const fine = window.matchMedia("(pointer: fine)").matches;
+  const touch = (navigator.maxTouchPoints || 0) > 0;
+  if (coarse && !fine) return false;
+  if (touch && coarse) return false;
+  return true;
+}
+
+function setupPcPullCloudButton() {
+  if (!els.btnPullCloud) return;
+  const show = isDesktopPc();
+  els.btnPullCloud.hidden = !show;
+  if (show) {
+    try {
+      localStorage.setItem("ti-device", "pc");
+    } catch (_) {
+      /* ignore */
+    }
+  }
+}
+
+els.btnPullCloud?.addEventListener("click", async () => {
+  if (!isFirebaseConfigured()) {
+    toast("Cloud non attivo: serve Firebase (vedi firebase-config)");
+    return;
+  }
+  els.btnPullCloud.disabled = true;
+  setStatus("Scarico note/posizioni dal cloud (senza inviare il PC)...");
+  try {
+    const cloud = await initCloud();
+    if (!cloud.ok || !isCloudReady()) {
+      const why = cloud?.reason || "non raggiungibile";
+      toast(`Cloud: ${why}`);
+      setStatus(`Cloud errore: ${escapeHtml(why)}`);
+      return;
+    }
+    const mapsPulled = await pullMapsFromCloud({ preferCloud: true });
+    await refreshMaps();
+    if (currentMap) {
+      await selectMap(currentMap.id, { keepHighlight: true, keepView: true });
+    }
+    const n = mapsPulled.length;
+    toast(`Scaricato dal cloud (${n} mappe) — nulla inviato dal PC`);
+    els.cloudBadge.innerHTML = `<span class="ok">Cloud scaricato</span>`;
+    setStatus(
+      currentMap
+        ? `Cloud → PC · <strong>${escapeHtml(currentMap.name)}</strong> · ${(currentMap.tags || []).length} tag`
+        : `Scaricato dal cloud (${n} mappe)`
+    );
+  } catch (err) {
+    const msg = String(err?.message || err || "errore");
+    console.warn("Pull cloud fallita", err);
+    toast(`Scarica cloud fallita: ${msg.slice(0, 140)}`);
+    setStatus(`Scarica cloud fallita: <span class="warn">${escapeHtml(msg)}</span>`);
+  } finally {
+    els.btnPullCloud.disabled = false;
+  }
+});
+
 els.btnSync.addEventListener("click", async () => {
   if (!isFirebaseConfigured()) {
     toast("Cloud non attivo: serve Firebase (vedi firebase-config)");
@@ -1125,6 +1198,7 @@ async function boot() {
     els.appVersion.textContent = `v${APP_VERSION}`;
     els.appVersion.title = `Versione ${APP_VERSION} (${APP_BUILD})`;
   }
+  setupPcPullCloudButton();
   setStatus("Avvio Tag Impianto...");
   renderPlantNav(els.plantNav, {
     onSelect: (page) => {
